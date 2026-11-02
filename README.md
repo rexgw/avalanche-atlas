@@ -98,6 +98,9 @@ Worker (`relay/worker.js`) that holds your Anthropic API key and calls Claude Ha
 such as HEIC, are redrawn as JPEG when the browser can decode them, and the relay path shrinks photos to about
 1 megapixel before sending.
 
+**Clear result** (top right of the results) removes the previous identification and its 3D model but keeps the photos
+and notes, ready to identify again. **Start over** also removes the photos and resets the notes.
+
 ### Identification method
 
 The identification steps follow the [Fieldbook pine cone identification guide](https://www.fieldbook-app.com/blog/pine-cone-identification).

@@ -531,6 +531,8 @@ button.ibr:hover { background: var(--gold-soft); }
 .ibr.other img { visibility: hidden; }
 .ibr.other .tr span { background: var(--muted); }
 .idcaveat { font-size: 12px; color: var(--muted); }
+.idres-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.idres-head .eyebrow { margin: 0; }
 .idmodel { display: grid; gap: 12px; padding-top: 14px; border-top: 1px solid var(--line); }
 .idmodel-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px 14px; }
 .idmodel-head label { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--muted); }
@@ -736,7 +738,7 @@ button.ibr:hover { background: var(--gold-soft); }
             <button class="dl" type="button" id="idGo" disabled>Identify this cone</button>
             <button class="small-btn" type="button" id="idPick">Choose photo</button>
             <button class="small-btn" type="button" id="idStop" hidden>Stop</button>
-            <button class="small-btn" type="button" id="idClear" hidden>Clear</button>
+            <button class="small-btn" type="button" id="idClear" hidden title="Remove the photos, notes and result">Start over</button>
           </div>
           <p class="idstatus" id="idStatus" role="status"></p>
           <div class="idctx">
@@ -3463,17 +3465,31 @@ window.ATLAS_DATA = (function () {
     });
     idSync();
   }
-  function idClear() {
+  // Clear result: drop the previous identification and its 3D model, keep the photos and notes
+  function idClearResult() {
     if (I.ctl) I.ctl.abort();
     if (I.mctl) I.mctl.abort();
-    idDisposeMini(); I.spec = null; I.result = null;
+    idDisposeMini(); I.spec = null; I.result = null; I.ranked = null; I.pct = null; I.ctxUsed = null;
+    $('idStatus').textContent = ''; $('idStatus').classList.remove('err');
+    $('idOut').replaceChildren(idEmpty());
+    idSync();
+  }
+  // Start over: also remove the photos and reset the notes
+  function idClear() {
+    idClearResult();
     for (const p of I.photos) URL.revokeObjectURL(p.url);
     I.photos = [];
-    $('idFile').value = ''; $('idStatus').textContent = '';
+    $('idFile').value = '';
+    $('idNeedles').value = ''; $('idLen').value = ''; $('idWhere').value = '';
     idRenderThumbs();
     $('idOut').replaceChildren(idEmpty());
   }
-  function idEmpty() { const d = el('div', 'idempty'); d.append(el('b', null, 'No photo yet'), el('span', null, 'The likelihood of each cone type appears here once a photo has been checked.')); return d; }
+  function idEmpty() {
+    const d = el('div', 'idempty'), has = I.photos.length > 0;
+    d.append(el('b', null, has ? 'No result yet' : 'No photo yet'),
+      el('span', null, has ? 'Press Identify to check ' + (I.photos.length > 1 ? 'these photos' : 'this photo') + '. The likelihood of each cone type appears here.' : 'The likelihood of each cone type appears here once a photo has been checked.'));
+    return d;
+  }
   $('idPick').addEventListener('click', e => { e.preventDefault(); $('idFile').click(); });
   $('idFile').addEventListener('change', () => { idAddFiles($('idFile').files); $('idFile').value = ''; });
   $('idDrop').addEventListener('click', e => { if ($('idDrop').classList.contains('has')) e.preventDefault(); });
@@ -3560,6 +3576,11 @@ window.ATLAS_DATA = (function () {
 
   function idRender(r) {
     const out = $('idOut'); out.replaceChildren();
+    const head = el('div', 'idres-head'), cb = el('button', 'small-btn', 'Clear result'); cb.type = 'button'; cb.id = 'idClearResult';
+    cb.title = 'Remove this identification and its 3D model. Your photos and notes stay.';
+    cb.addEventListener('click', () => { idClearResult(); $('idGo').focus(); });
+    head.append(el('p', 'eyebrow', 'Identification'), cb);
+    out.appendChild(head);
     const raw = r && typeof r === 'object' && r.scores && typeof r.scores === 'object' ? r.scores : {};
     const keys = ID_KEYS.concat(['other']);
     let vals = keys.map(k => Math.max(0, Number(raw[k]) || 0));
