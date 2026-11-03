@@ -26,8 +26,10 @@ If your browser blocks local images from `file://`, serve the folder instead:
 
 ## How a model is generated
 
-1. **Size.** Cone length is drawn from a normal distribution for the species: `L = mean + z * sd`, with z from the
-   chosen percentile, limited to P1-P99 and to the species' recorded range. Width and scale count follow length,
+1. **Size.** Cone length follows a normal distribution for the species: `L = mean + z * sd`, limited to P1-P99 and
+   to the species' recorded range. Each new specimen draws z at random from a standard normal (Box-Muller, seeded by
+   the specimen number), so most cones land near the mean and few at the extremes. The Size percentile slider shows
+   the drawn value and stays adjustable. Width and scale count follow length,
    each with a small seeded spread (truncated at +/-2 sigma).
 2. **Region climate.** Higher sites make slightly smaller cones. Damp air keeps open cones partly closed. In the
    Rockies a share of lodgepole cones stays sealed with resin (serotiny).
@@ -51,7 +53,7 @@ Bottom/Top and Arch Variation; Size and Open Variation, Asymmetry, Sun Side and 
 Each trait comes from a truncated normal inside a natural range for the species (`TRAIT_DEFS` in `src/engine.js`).
 About 1 cone in 50 gets a Lucas-sequence divergence angle (about 99.5 degrees) instead of the golden angle, as in
 real cones. Traits are not user controls. The app remembers which trait sets it has shown in this browser and never
-repeats one. Size percentile and age stay as user controls; humidity and elevation come from the region.
+repeats one. Size is drawn at random too (see step 1), and both size percentile and age stay as user controls; humidity and elevation come from the region.
 
 ## Early life (conelet to full size)
 
@@ -154,9 +156,9 @@ The Age slider starts at 1 month.
 The specimen number (for example **No. B1XGK8**) is the seed that drew its traits, written in base 36. The same number
 on the same cone type always grows the same 26 traits.
 
-- **Find a specimen by number**, below the trait list, regrows a number for the open cone type. It accepts the code
-  with or without "No." and in any case. Size percentile and age stay at their current settings, since the number
-  does not hold them.
+- **Find a specimen by number**, below the trait list, regrows a number for the open cone type, with the same
+  traits and the same drawn size. It accepts the code with or without "No." and in any case. Age stays at its
+  current setting, since the number does not hold it.
 - **Recent specimens** lists the last 10 specimens viewed in this browser, newest first, with cone type, region, size
   percentile and age. Clicking one brings it back exactly, including its region, size, age and print settings. Custom
   and photo specimens keep their edited or photo traits here, which a typed number cannot restore. The list is stored
