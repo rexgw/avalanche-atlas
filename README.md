@@ -149,6 +149,19 @@ returns to standard detail when the animation stops. Moving the slider or changi
 
 The Age slider starts at 1 month.
 
+## Find a specimen again
+
+The specimen number (for example **No. B1XGK8**) is the seed that drew its traits, written in base 36. The same number
+on the same cone type always grows the same 26 traits.
+
+- **Find a specimen by number**, below the trait list, regrows a number for the open cone type. It accepts the code
+  with or without "No." and in any case. Size percentile and age stay at their current settings, since the number
+  does not hold them.
+- **Recent specimens** lists the last 10 specimens viewed in this browser, newest first, with cone type, region, size
+  percentile and age. Clicking one brings it back exactly, including its region, size, age and print settings. Custom
+  and photo specimens keep their edited or photo traits here, which a typed number cannot restore. The list is stored
+  in `localStorage` (key `strobilus-atlas-recent-v1`); **Clear** empties it.
+
 ## Adjust traits by hand
 
 The specimen card has two modes:

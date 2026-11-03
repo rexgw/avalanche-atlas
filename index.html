@@ -253,6 +253,31 @@ p { margin: 0; }
 .trow .tv.changed { color: var(--gold); }
 .traitfoot { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
 .ghost.sm { padding: 6px 12px; font-size: 12.5px; }
+.specfind { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); display: grid; gap: 14px; }
+.findrow { display: grid; gap: 6px; margin: 0; }
+.findrow label { font-size: 12px; color: var(--muted); }
+.findctl { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.findpre { font-family: var(--font-data); font-size: 12.5px; color: var(--muted); }
+.findctl input { flex: 1 1 auto; min-width: 0; max-width: 200px; padding: 6px 9px; border-radius: 6px; border: 1px solid var(--line); background: var(--raise); color: var(--fg); font-family: var(--font-data); font-size: 13px; letter-spacing: 0.04em; text-transform: uppercase; }
+.findctl input::placeholder { text-transform: none; letter-spacing: 0; }
+.findmsg { margin: 0; font-size: 12px; color: var(--muted); min-height: 1em; }
+.findmsg:empty { display: none; }
+.findmsg.err { color: var(--warn, #b4442c); }
+.recent-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 6px; }
+.recent-head h4 { margin: 0; font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.linkish { border: 0; background: none; padding: 2px 0; font-size: 12px; color: var(--muted); text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
+.linkish:hover { color: var(--fg); }
+.recent-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.sec .recent-list li { min-width: 0; padding: 0; margin: 0; max-width: none; }
+.sec .recent-list li::before { content: none; }
+.recent-list button { width: 100%; display: flex; align-items: baseline; gap: 10px; min-width: 0; text-align: left; padding: 6px 9px; border-radius: 6px; border: 1px solid var(--line); background: var(--panel); color: var(--fg); font-size: 12.5px; cursor: pointer; }
+.recent-list button:hover { border-color: var(--gold); }
+.recent-list button[aria-current="true"] { border-color: var(--gold); cursor: default; }
+.recent-list .rno { font-family: var(--font-data); color: var(--gold); white-space: nowrap; flex: none; }
+.recent-list .rdesc { color: var(--muted); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1 1 auto; }
+.recent-list .rnow { flex: none; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--gold); }
+.recent-empty { font-size: 12px; color: var(--muted); margin: 0; }
+@media (max-width: 520px) { .recent-list .rdesc { white-space: normal; } }
 .specno { font-family: var(--font-data); font-size: 12.5px; padding: 6px 9px; border-radius: 6px; border: 1px solid var(--line); background: var(--panel); color: var(--gold); white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
 .a-region { grid-area: region; }
 .a-region .modelnote { font-size: 12.5px; color: var(--muted); }
@@ -622,6 +647,17 @@ button.ibr:hover { background: var(--gold-soft); }
               </div>
               <div class="traits" id="traitList"></div>
               <div class="traitfoot"><button class="ghost sm" type="button" id="traitMore" aria-expanded="false"></button></div>
+              <div class="specfind">
+                <form class="findrow" id="findForm" autocomplete="off" novalidate>
+                  <label for="findIn">Find a specimen by number</label>
+                  <div class="findctl"><span class="findpre" aria-hidden="true">No.</span><input id="findIn" type="text" maxlength="12" spellcheck="false" autocapitalize="characters" placeholder="e.g. B1XGK8"><button class="ghost sm" type="submit">Find</button></div>
+                  <p class="findmsg" id="findMsg" role="status"></p>
+                </form>
+                <div class="recent" id="recentBox">
+                  <div class="recent-head"><h4 id="recentTitle">Recent specimens</h4><button class="linkish" type="button" id="recentClear">Clear</button></div>
+                  <ul class="recent-list" id="recentList" aria-labelledby="recentTitle"></ul>
+                </div>
+              </div>
             </section>
             <section class="sec a-facts"><h3>About this cone</h3><ul id="tFacts"></ul></section>
             <section class="sec a-region"><h3>About the region</h3><ul id="rFacts"></ul><p class="modelnote" id="rModel"></p></section>
@@ -2416,6 +2452,7 @@ window.ATLAS_DATA = (function () {
     state.percentile = 50; state.ageMonths = E.defaultAge(sp);
     state.type = t;
     newSpecimen(t);
+    if ($('findMsg')) { $('findMsg').textContent = ''; $('findMsg').classList.remove('err'); }
     for (const b of $('tabs').children) { const on = b.dataset.t === t; b.setAttribute('aria-selected', String(on)); b.tabIndex = on ? 0 : -1; }
     const head = $('tHead'); head.replaceChildren();
     head.append(el('p', 'eyebrow', info.group + ' · ' + info.genus), el('h3', 'latin', sp.latin), el('p', 'common', sp.name + (r.types.length > 1 ? ' · one of ' + r.types.length + ' cone types here' : '')));
@@ -2567,6 +2604,82 @@ window.ATLAS_DATA = (function () {
   function growAnother() { newSpecimen(state.type); renderTraits(); rebuild(); }
   $('newSpec').addEventListener('click', growAnother);
   $('newSpec2').addEventListener('click', growAnother);
+
+  // ================= find by number + recent specimens =================
+  const RECENT_KEY = 'strobilus-atlas-recent-v1', RECENT_MAX = 10, SEED_MAX = 2147483646;
+  let recent = [];
+  try { const a = JSON.parse(localStorage.getItem(RECENT_KEY) || '[]'); if (Array.isArray(a)) recent = a.filter(x => x && E.SPECIES[x.species] && regionById(x.region) && x.seed > 0).slice(0, RECENT_MAX); } catch (e) { recent = []; }
+  const ageShort = m => { m = Math.round(m); return m < 24 ? m + ' mo' : (m % 12 ? (m / 12).toFixed(1) : m / 12) + ' yr'; };
+  const seedCode = seed => seed.toString(36).toUpperCase().padStart(6, '0');
+  const recentId = x => x.species + ':' + x.seed + ':' + (x.fromPhoto ? 'p' : x.edited ? 'c' : 'd');
+  function recentStore() { try { localStorage.setItem(RECENT_KEY, JSON.stringify(recent)); } catch (e) { /* ignore */ } }
+  function currentRecent() {
+    return { species: state.type, region: state.region, seed: state.seed, traits: Object.assign({}, state.traits), drawn: Object.assign({}, state.drawn || state.traits),
+      edited: !!state.edited, fromPhoto: !!state.fromPhoto, climate: state.climate || null, percentile: state.percentile, ageMonths: state.ageMonths,
+      printMode: state.printMode, fitHeight: state.fitHeight, t: Date.now() };
+  }
+  let recentTimer = 0;
+  function noteRecent() {
+    clearTimeout(recentTimer);
+    recentTimer = setTimeout(() => {
+      if (!state.region || !state.type || !state.traits || ageAnim) return;
+      const x = currentRecent(), id = recentId(x);
+      // a custom edit of a specimen replaces its untouched entry, so one cone takes one row
+      const base = x.species + ':' + x.seed + ':';
+      recent = [x].concat(recent.filter(r => recentId(r) !== id && !(x.edited && !x.fromPhoto && recentId(r) === base + 'd'))).slice(0, RECENT_MAX);
+      recentStore(); renderRecent();
+    }, 700);
+  }
+  function renderRecent() {
+    const list = $('recentList'); list.replaceChildren();
+    $('recentClear').hidden = !recent.length;
+    if (!recent.length) { const li = el('li'); li.appendChild(el('p', 'recent-empty', 'Specimens you grow will be listed here.')); list.appendChild(li); return; }
+    const cur = state.type && state.traits ? recentId(currentRecent()) : '';
+    for (const x of recent) {
+      const li = el('li'), b = el('button'); b.type = 'button';
+      const tag = x.fromPhoto ? ' · from photo' : x.edited ? ' · custom' : '';
+      const desc = E.SPECIES[x.species].name + tag + ' · ' + regionById(x.region).name + ' · P' + Math.round(x.percentile) + ' · ' + ageShort(x.ageMonths);
+      const now = recentId(x) === cur;
+      b.append(el('span', 'rno', 'No. ' + seedCode(x.seed)), el('span', 'rdesc', desc));
+      if (now) { b.append(el('span', 'rnow', 'Showing')); b.setAttribute('aria-current', 'true'); }
+      b.title = desc;
+      b.addEventListener('click', () => { if (!now) openRecent(x); });
+      li.appendChild(b); list.appendChild(li);
+    }
+  }
+  function openRecent(x) {
+    if (typeof ageAnim !== 'undefined' && ageAnim) stopAgeAnim(false);
+    if (x.region === state.region && x.species === state.type) {
+      state.seed = x.seed; state.traits = Object.assign({}, x.traits); state.drawn = Object.assign({}, x.drawn || x.traits);
+      state.percentile = x.percentile; state.ageMonths = Math.max(AGE_MIN, x.ageMonths); state.printMode = x.printMode || state.printMode; state.fitHeight = x.fitHeight || state.fitHeight;
+      state.fromPhoto = !!x.fromPhoto; state.climate = x.climate || null;
+      renderTraits(); syncControls(); rebuild(true);
+    } else openSaved(Object.assign({}, x, { printMode: x.printMode || state.printMode, fitHeight: x.fitHeight || state.fitHeight }));
+    $('findMsg').textContent = ''; $('findMsg').classList.remove('err');
+  }
+  function parseCode(v) {
+    const c = String(v || '').trim().toUpperCase().replace(/^NO\.?\s*/, '').replace(/^#/, '').replace(/[\s·]+(CUSTOM|FROM PHOTO).*$/, '').replace(/\s+/g, '');
+    if (!/^[0-9A-Z]{1,6}$/.test(c)) return null;
+    const n = parseInt(c, 36);
+    return n >= 1 && n <= SEED_MAX ? n : null;
+  }
+  $('findForm').addEventListener('submit', e => {
+    e.preventDefault();
+    const msg = $('findMsg'), seed = parseCode($('findIn').value);
+    msg.classList.remove('err');
+    if (!state.type) return;
+    if (seed == null) { msg.classList.add('err'); msg.textContent = 'Enter a specimen number of up to six letters and digits, like B1XGK8.'; return; }
+    if (typeof ageAnim !== 'undefined' && ageAnim) stopAgeAnim(false);
+    const sp = E.SPECIES[state.type];
+    state.seed = seed; state.traits = E.randomTraits(sp, seed); state.drawn = Object.assign({}, state.traits);
+    state.edited = false; state.fromPhoto = false; state.climate = null;
+    seen.add(state.type + ':' + E.traitKey(state.traits));
+    renderTraits(); rebuild();
+    msg.textContent = 'Regrew No. ' + seedCode(seed) + ' as ' + sp.name + ', at the current size and age.';
+    $('findIn').value = '';
+  });
+  $('recentClear').addEventListener('click', () => { recent = []; recentStore(); renderRecent(); });
+  renderRecent();
 
   // ================= viewer =================
   const V = { ok: false, renderer: null, scene: null, camera: null, controls: null, mesh: null, plate: null, needs: true, current: null, framed: null };
@@ -2862,6 +2975,7 @@ window.ATLAS_DATA = (function () {
     pending = false;
     if (!state.region || !state.type) return;
     const m = E.build(params()); V.current = m;
+    if (typeof noteRecent === 'function') noteRecent();
     const T = m.traits;
     V.meanCurrent = state.vsMean ? E.build(Object.assign(params(), { traits: E.meanTraits(E.SPECIES[state.type]), typical: true })) : null;
     $('pctOut').innerHTML = '';
