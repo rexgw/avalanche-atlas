@@ -1,0 +1,892 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Avalanche Risk Atlas: Whistler</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --navy:#0B1F3A; --navy2:#10294D; --navy3:#173663; --line:#25466f;
+  --gold:#C9A227; --gold2:#E3C463; --ink:#EEF2F7; --ink2:#B8C4D6; --ink3:#7F90AA;
+  --low:#52BA4A; --mod:#FFF300; --con:#F79218; --high:#EF1C29; --ext:#1A1A1A;
+  --map:#e9edf2;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--navy);color:var(--ink);font-family:Inter,system-ui,sans-serif;font-size:14px}
+button,select,input{font:inherit;color:inherit}
+header{display:flex;align-items:center;gap:12px;padding:10px 16px;border-bottom:1px solid var(--line);background:var(--navy)}
+header .mark{width:28px;height:28px;flex:none}
+header h1{font-size:16px;margin:0;font-weight:700;letter-spacing:.2px}
+header h1 span{color:var(--gold)}
+header .sub{color:var(--ink3);font-size:12px}
+.disclaimer{background:#2a1d05;color:#f3dfa4;border-bottom:1px solid #5b4510;padding:6px 16px;font-size:12px;line-height:1.4}
+.app{display:grid;grid-template-columns:1fr 410px;height:calc(100vh - 86px);min-height:520px}
+.mapwrap{position:relative;background:var(--map);overflow:hidden;touch-action:none}
+#map{position:absolute;inset:0;width:100%;height:100%;display:block;cursor:grab}
+#map.drawing{cursor:crosshair}
+.maptools{position:absolute;top:10px;left:10px;display:flex;gap:6px;flex-wrap:wrap}
+.seg{display:inline-flex;background:var(--navy);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{background:none;border:0;padding:6px 10px;cursor:pointer;color:var(--ink2);font-size:12px;font-weight:600}
+.seg button.on{background:var(--gold);color:var(--navy)}
+.zoom{position:absolute;right:10px;top:10px;display:flex;flex-direction:column;gap:4px}
+.zoom button{width:32px;height:32px;border-radius:8px;border:1px solid var(--line);background:var(--navy);cursor:pointer;font-size:16px}
+.legend{position:absolute;left:10px;bottom:10px;background:rgba(11,31,58,.92);border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-size:11px;max-width:calc(100% - 20px)}
+.legend .t{color:var(--ink3);margin-bottom:5px;font-weight:600;letter-spacing:.3px;text-transform:uppercase;font-size:10px}
+.legend .row{display:flex;gap:10px;flex-wrap:wrap}
+.legend .k{display:flex;align-items:center;gap:5px;white-space:nowrap}
+.sw{width:12px;height:12px;border-radius:3px;display:inline-block;border:1px solid rgba(255,255,255,.35)}
+.probe{position:absolute;pointer-events:none;background:rgba(11,31,58,.96);border:1px solid var(--gold);border-radius:8px;padding:8px 10px;font-size:12px;line-height:1.45;min-width:170px;display:none;z-index:5}
+.probe b{color:var(--gold2)}
+.modehint{position:absolute;left:50%;transform:translateX(-50%);top:52px;background:var(--gold);color:var(--navy);font-weight:600;font-size:12px;padding:6px 12px;border-radius:999px;display:none;white-space:nowrap}
+aside{background:var(--navy2);border-left:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+.tabs{display:flex;border-bottom:1px solid var(--line)}
+.tabs button{flex:1;background:none;border:0;padding:11px 6px;cursor:pointer;color:var(--ink3);font-weight:600;border-bottom:2px solid transparent}
+.tabs button.on{color:var(--gold2);border-bottom-color:var(--gold)}
+.pane{display:none;overflow:auto;padding:14px 16px 28px;flex:1}
+.pane.on{display:block}
+h2{font-size:13px;margin:18px 0 8px;color:var(--gold2);text-transform:uppercase;letter-spacing:.6px}
+h2:first-child{margin-top:2px}
+.card{background:var(--navy3);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:10px}
+.muted{color:var(--ink3)} .small{font-size:12px}
+.status{display:flex;flex-direction:column;gap:4px;font-size:12px}
+.status .s{display:flex;gap:6px;align-items:flex-start}
+.dot{width:8px;height:8px;border-radius:50%;margin-top:4px;flex:none;background:var(--ink3)}
+.dot.ok{background:#4cd07d}.dot.bad{background:#e36a6a}.dot.wait{background:var(--gold)}
+.btn{background:var(--gold);color:var(--navy);border:0;border-radius:8px;padding:7px 12px;font-weight:700;cursor:pointer}
+.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+.btn.sm{padding:5px 9px;font-size:12px}
+.btn:disabled{opacity:.45;cursor:default}
+.rowf{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.danger-row{display:grid;grid-template-columns:96px 1fr;gap:8px;align-items:center;margin:6px 0}
+.dsel{display:flex;gap:3px}
+.dsel button{flex:1;border:1px solid var(--line);background:var(--navy);border-radius:6px;padding:5px 0;cursor:pointer;font-size:11px;font-weight:700;color:var(--ink2)}
+.dsel button.on{color:#111;border-color:transparent}
+.prob{background:var(--navy);border:1px solid var(--line);border-radius:10px;padding:10px;margin-bottom:8px}
+.prob .top{display:flex;gap:6px;align-items:center}
+.prob select{flex:1}
+select,input[type=number]{background:var(--navy);border:1px solid var(--line);border-radius:6px;padding:5px 6px}
+input[type=number]{width:74px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px 10px}
+.field label{display:block;font-size:11px;color:var(--ink3);margin-bottom:3px}
+.chips{display:flex;gap:4px;flex-wrap:wrap}
+.chip{border:1px solid var(--line);background:var(--navy);border-radius:999px;padding:3px 9px;font-size:11px;cursor:pointer;color:var(--ink2)}
+.chip.on{background:var(--gold);color:var(--navy);border-color:var(--gold);font-weight:700}
+.rose{width:92px;height:92px;flex:none;cursor:pointer}
+.rose path{stroke:var(--navy2);stroke-width:1.5}
+.x{background:none;border:0;color:var(--ink3);cursor:pointer;font-size:16px}
+.rlist{display:flex;flex-direction:column;gap:6px}
+.ritem{display:flex;align-items:center;gap:8px;border:1px solid var(--line);background:var(--navy);border-radius:9px;padding:8px 10px;cursor:pointer}
+.ritem.on{border-color:var(--gold);box-shadow:inset 3px 0 0 var(--gold)}
+.ritem .nm{flex:1;font-weight:600;font-size:13px}
+.ritem .tag{font-size:10px;color:var(--ink3);text-transform:uppercase;letter-spacing:.4px}
+.badge{font-size:11px;font-weight:700;padding:3px 8px;border-radius:999px;color:#111;white-space:nowrap}
+.score{display:flex;align-items:center;gap:12px}
+.score .big{font-size:34px;font-weight:700;font-family:'JetBrains Mono',monospace}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:10px}
+.stat{background:var(--navy);border-radius:8px;padding:6px 8px}
+.stat .v{font-weight:700;font-size:14px}
+.stat .l{font-size:10px;color:var(--ink3);text-transform:uppercase;letter-spacing:.3px}
+.bar{display:flex;height:14px;border-radius:4px;overflow:hidden;margin:8px 0 4px;gap:2px;background:var(--navy)}
+.bar div{height:100%}
+.crux{border-left:3px solid var(--gold);padding:4px 0 4px 9px;margin:6px 0;cursor:pointer;font-size:12px;line-height:1.45}
+.crux:hover{background:rgba(201,162,39,.08)}
+#profile{width:100%;height:170px;display:block;background:var(--navy);border-radius:8px}
+.ptip{font-size:12px;min-height:18px;margin-top:4px;color:var(--ink2)}
+input[type=range]{width:100%;accent-color:var(--gold)}
+.method p,.method li{line-height:1.55;color:var(--ink2)}
+.method code{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--gold2)}
+a{color:var(--gold2)}
+.err{color:#ffb4b4;font-size:12px;margin-top:6px}
+.loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--navy);font-weight:600;background:var(--map)}
+@media (max-width: 860px){
+  .app{grid-template-columns:1fr;height:auto}
+  .mapwrap{height:62vh;min-height:380px}
+  aside{border-left:0;border-top:1px solid var(--line)}
+  .pane{overflow:visible}
+  header .sub{display:none}
+}
+</style>
+</head>
+<body>
+<header>
+  <svg class="mark" viewBox="0 0 32 32" aria-hidden="true"><path d="M2 27 L12 10 L17 18 L21 13 L30 27 Z" fill="#C9A227"/><path d="M12 10 L14.5 14.2 L12.6 13.4 L10.6 14.8 Z" fill="#EEF2F7"/></svg>
+  <div><h1>Avalanche Risk <span>Atlas</span></h1><div class="sub">Whistler · Blackcomb · Spearhead Range · Wedgemount</div></div>
+</header>
+<div class="disclaimer"><b>Educational model only.</b> Not a substitute for the <a href="https://avalanche.ca/forecasts" target="_blank" rel="noopener">Avalanche Canada forecast</a>, AST training, or field observations. Never make go/no-go decisions from this map.</div>
+<div class="app">
+  <div class="mapwrap" id="mapwrap">
+    <canvas id="map"></canvas>
+    <div class="loading" id="loading">Loading terrain…</div>
+    <div class="maptools">
+      <div class="seg" id="layerSeg"><button data-l="risk" class="on">Risk heat map</button><button data-l="ates">ATES terrain</button></div>
+    </div>
+    <div class="zoom"><button id="zin" aria-label="Zoom in">+</button><button id="zout" aria-label="Zoom out">−</button><button id="zfit" aria-label="Fit" style="font-size:12px">⤢</button></div>
+    <div class="modehint" id="modehint"></div>
+    <div class="probe" id="probe"></div>
+    <div class="legend" id="legend"></div>
+  </div>
+  <aside>
+    <div class="tabs"><button data-t="cond" class="on">Conditions</button><button data-t="routes">Routes</button><button data-t="method">Method</button></div>
+
+    <div class="pane on" id="pane-cond">
+      <h2>Data source</h2>
+      <div class="card">
+        <div class="status" id="liveStatus"></div>
+        <div class="rowf" style="margin-top:8px"><button class="btn sm" id="liveBtn">Retry live data</button><span class="muted small" id="srcLabel"></span></div>
+      </div>
+
+      <h2>Danger ratings</h2>
+      <div id="dangerRows"></div>
+
+      <h2>Avalanche problems</h2>
+      <div id="probs"></div>
+      <button class="btn ghost sm" id="addProb">+ Add problem</button>
+
+      <h2>Weather</h2>
+      <div class="grid2">
+        <div class="field"><label>New snow 24 h (cm)</label><input type="number" min="0" max="150" id="hn24"></div>
+        <div class="field"><label>New snow 72 h (cm)</label><input type="number" min="0" max="300" id="hn72"></div>
+        <div class="field"><label>Wind speed (km/h)</label><input type="number" min="0" max="200" id="wind"></div>
+        <div class="field"><label>Wind from</label><select id="windDir"></select></div>
+        <div class="field"><label>Alpine temp (°C)</label><input type="number" min="-40" max="25" id="temp"></div>
+        <div class="field"><label>Freezing level (m)</label><input type="number" min="0" max="5000" step="50" id="fl"></div>
+      </div>
+    </div>
+
+    <div class="pane" id="pane-routes">
+      <h2>Existing routes</h2>
+      <div class="rlist" id="routeList"></div>
+
+      <h2>New route</h2>
+      <div class="card">
+        <div class="rowf">
+          <button class="btn sm" id="drawBtn">Draw on map</button>
+          <label class="btn ghost sm" style="cursor:pointer">Upload GPX<input type="file" id="gpxIn" accept=".gpx,application/gpx+xml,text/xml" hidden></label>
+        </div>
+        <div class="rowf" id="drawCtl" style="margin-top:8px;display:none">
+          <span class="muted small" id="drawCount">0 points</span>
+          <button class="btn ghost sm" id="drawUndo">Undo</button>
+          <button class="btn ghost sm" id="drawClear">Clear</button>
+          <button class="btn sm" id="drawDone">Assess route</button>
+        </div>
+        <div class="err" id="routeErr"></div>
+      </div>
+
+      <h2>Ideal safest route</h2>
+      <div class="card">
+        <div class="rowf"><button class="btn ghost sm" id="setStart">Set start</button><button class="btn ghost sm" id="setEnd">Set end</button><span class="muted small" id="seLabel">Tap the map after each button</span></div>
+        <div style="margin-top:10px" class="small"><div class="rowf" style="justify-content:space-between"><span>Shortest</span><span id="wVal" class="muted"></span><span>Safest</span></div>
+        <input type="range" id="wSlider" min="0" max="100" value="75"></div>
+        <div class="rowf" style="margin-top:6px"><button class="btn sm" id="findBtn" disabled>Find route</button><span class="muted small" id="findMsg"></span></div>
+      </div>
+
+      <div id="assess"></div>
+    </div>
+
+    <div class="pane method" id="pane-method">
+      <h2>What the map shows</h2>
+      <p>Each 30 m cell gets a relative <b>risk index from 0 to 100</b>. It combines how likely an avalanche is to start there or reach there (terrain), how unstable the snowpack is (conditions), and how bad the outcome would be (consequence). It is a comparison tool, not a probability.</p>
+      <h2>Terrain layers (pre-computed)</h2>
+      <ul>
+        <li><b>Elevation:</b> USGS 3DEP 1 arc-second DEM, resampled to a 30 m grid.</li>
+        <li><b>Release areas:</b> fuzzy slope membership peaking near 40° (about 0.5 at 29° and 51°), reduced on very rough terrain and below treeline.</li>
+        <li><b>Runout exposure:</b> energy-line propagation downhill from release areas using a <code>24°</code> travel angle above treeline and <code>28°</code> below (forest friction proxy). This catches flat ground under big slopes.</li>
+        <li><b>Terrain traps:</b> gullies (concave curvature), cliffs (&gt;50°), and abrupt flats below steep slopes.</li>
+        <li><b>ATES class:</b> simplified AutoATES-style rules: Simple, Challenging, Complex, Extreme from slope angle, release areas, runout overlap and cliffs.</li>
+      </ul>
+      <h2>Conditions model</h2>
+      <ul>
+        <li>Danger rating for each elevation band (BTL &lt; 1500 m, TL 1500–1900 m, ALP &gt; 1900 m) scales hazard roughly ×2 per level, following the Avalanche Canada scale.</li>
+        <li>Avalanche problems raise hazard on the listed aspects and bands (likelihood and size) and lower it elsewhere. Persistent and deep persistent problems extend runout weight. Loose problems shorten it. Cornices add hazard on crests.</li>
+        <li>Weather: new snow loads all aspects above the freezing level. Wind over 15 km/h loads lee aspects near ridge crests. Warming above 0 °C adds hazard on sunny aspects and below the freezing level.</li>
+      </ul>
+      <h2>Formula</h2>
+      <p><code>terrain = 1 − (1 − release) × (1 − 0.85 × runout)</code><br><code>raw = terrain × danger × problem × weather × (1 + 0.6 × trap)</code><br><code>index = 100 × (1 − e^(−1.4 × raw))</code></p>
+      <p>Classes: Low &lt; 14, Moderate 14–31, Considerable 31–55, High 55–78, Extreme ≥ 78.</p>
+      <h2>Route scoring</h2>
+      <p>Routes are sampled every 15 m. <b>Route score = 0.55 × 90th percentile + 0.45 × maximum</b>, so one serious crux can't be averaged away by long safe sections. Cruxes are continuous stretches at Considerable or above.</p>
+      <h2>Safest route</h2>
+      <p>A* search over the 30 m grid. Step cost = distance × slope effort + uphill gain + slider weight × distance × (index/100)². Slopes over 48° are treated as impassable. The search finds the path with the lowest total cost.</p>
+      <h2>Limitations</h2>
+      <ul>
+        <li>No forest-cover data: treeline effects come from elevation bands only, so cleared ski runs and open avalanche paths below treeline are under-weighted.</li>
+        <li>The ski area is not modelled as controlled terrain.</li>
+        <li>Spearhead and Musical Bumps lines are approximate (real waypoints joined by a least-effort terrain path). The Wedgemount line is a real GPS track (Peakbagger, Seán Caulfield) of the summer trail.</li>
+        <li>30 m cells miss small features like rolls, cornice edges and short gullies.</li>
+        <li>Live data only loads when the page runs outside this viewer (self-hosted or opened as a file).</li>
+      </ul>
+      <h2>Sources</h2>
+      <ul class="small">
+        <li>USGS 3D Elevation Program, 1 arc-second DEM tile n51w123 (public domain)</li>
+        <li>Avalanche Canada public forecast API and danger scale</li>
+        <li>Open-Meteo forecast API (snowfall, wind, temperature, freezing level)</li>
+        <li>Statham et al. (2018) Conceptual Model of Avalanche Hazard; Larsen et al. (2020) AutoATES; Veitinger et al. (2016) PRA fuzzy model</li>
+      </ul>
+    </div>
+  </aside>
+</div>
+
+<script>
+const TERRAIN = /*__TERRAIN__*/null;
+const ROUTEDATA = /*__ROUTES__*/null;
+
+/* ---------------- constants ---------------- */
+const CLS = [
+  {n:'Low', c:'#52BA4A'}, {n:'Moderate', c:'#FFF300'}, {n:'Considerable', c:'#F79218'},
+  {n:'High', c:'#EF1C29'}, {n:'Extreme', c:'#1A1A1A'}];
+const CUT = [14,31,55,78];
+const ATES = [{n:'Non-avalanche', c:null},{n:'Simple',c:'#3FA34D'},{n:'Challenging',c:'#2F6FD8'},{n:'Complex',c:'#111111'},{n:'Extreme',c:'#B0122B'}];
+const DANGER = ['Low','Moderate','Considerable','High','Extreme'];
+const DFACT = [0.08,0.2,0.42,0.72,1.0];
+const ASP = ['N','NE','E','SE','S','SW','W','NW'];
+const PTYPES = [
+  ['storm','Storm slab'],['wind','Wind slab'],['persistent','Persistent slab'],['deep','Deep persistent slab'],
+  ['wetslab','Wet slab'],['wetloose','Loose wet'],['dryloose','Loose dry'],['cornice','Cornices']];
+const LIKE = ['Unlikely','Possible','Likely','Very likely','Almost certain'];
+const SIZES = [1,1.5,2,2.5,3,3.5,4];
+const BANDS = [['alp','Alpine'],['tl','Treeline'],['btl','Below treeline']];
+const clsOf = s => s>=CUT[3]?4:s>=CUT[2]?3:s>=CUT[1]?2:s>=CUT[0]?1:0;
+
+/* ---------------- state ---------------- */
+const S = {
+  danger:{alp:3, tl:2, btl:1},
+  problems:[
+    {type:'storm', bands:{alp:1,tl:1,btl:0}, asp:[1,1,1,1,1,1,1,1], like:2, size:1.5},
+    {type:'wind', bands:{alp:1,tl:1,btl:0}, asp:[1,1,1,0,0,0,0,0], like:2, size:2}],
+  wx:{hn24:15, hn72:35, wind:35, windDir:5, temp:-6, fl:900},
+  source:'example', layer:'risk', mode:'inspect',
+  draw:[], start:null, end:null, selected:null, userRoutes:[], safe:null
+};
+
+/* ---------------- data decode ---------------- */
+let G; // grid
+function b64bytes(b64){const bin=atob(b64);const u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);return u;}
+async function gunzip(b64){
+  const bytes=b64bytes(b64);
+  if('DecompressionStream' in window){
+    const st=new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
+    return new Uint8Array(await new Response(st).arrayBuffer());
+  }
+  throw new Error('This browser cannot decompress the terrain data. Use a recent Chrome, Edge, Firefox or Safari.');
+}
+async function loadTerrain(){
+  const m=TERRAIN.meta;
+  const out={...m, N:m.W*m.H};
+  const keys=['elev','slope','aspect','pra','runout','trap','crest','ates','hill'];
+  for(const k of keys){
+    const u=await gunzip(TERRAIN[k]);
+    out[k]= k==='elev' ? new Int16Array(u.buffer, u.byteOffset, u.byteLength/2) : u;
+  }
+  return out;
+}
+const toGrid=(lat,lon)=>[(lon-G.lonW)*G.mx/G.res,(G.latN-lat)*G.my/G.res];
+const toLL=(x,y)=>[G.latN-y*G.res/G.my, G.lonW+x*G.res/G.mx];
+const inGrid=(x,y)=>x>=0&&y>=0&&x<G.W&&y<G.H;
+const cellIdx=(x,y)=>Math.min(G.H-1,Math.max(0,Math.floor(y)))*G.W+Math.min(G.W-1,Math.max(0,Math.floor(x)));
+
+/* ---------------- risk model ---------------- */
+let SCORE, CLASS;
+function factorsAt(i){
+  const z=G.elev[i], s=G.slope[i], a=G.aspect[i]*360/256;
+  const p=G.pra[i]/255, r=G.runout[i]/255, t=G.trap[i]/255, c=G.crest[i]/255;
+  const band = z<G.btlTop?'btl':z<G.tlTop?'tl':'alp';
+  const sec = Math.round(a/45)%8;
+  const D = S.danger[band];
+  let f=1, rw=1, corn=0, matched=null;
+  if(S.problems.length){
+    f=0.6;
+    for(const P of S.problems){
+      if(!P.bands[band] || !P.asp[sec]) continue;
+      const pf = 1 + 0.12*(P.like-3) + 0.15*(P.size-2) + 0.0;
+      if(matched===null || pf>f){f=pf; matched=P;}
+      if(P.type==='persistent'||P.type==='deep') rw=Math.max(rw,1.25);
+      if((P.type==='wetloose'||P.type==='dryloose') && rw===1) rw=0.6;
+      if(P.type==='cornice') corn=Math.max(corn,c*(s>25?0.6:0.3));
+    }
+  }
+  const has = t=>S.problems.some(P=>P.type===t);
+  const W=S.wx;
+  // new snow (only where it falls as snow)
+  const snowF = z>=W.fl-100 ? 1 : 0.35;
+  let wSnow = 1 + (0.5*Math.min(1,W.hn24/30) + 0.3*Math.min(1,W.hn72/60))*snowF*(has('storm')?1.2:1);
+  // wind loading on lee slopes near crests
+  const downwind = (W.windDir*45+180)%360;
+  const align = Math.max(0,Math.cos((a-downwind)*Math.PI/180));
+  const avail = 0.4+0.6*Math.min(1,W.hn72/30);
+  const windLoad = align*(0.4+0.6*c)*Math.max(0,Math.min(1,(W.wind-15)/40))*(band==='btl'?0.3:band==='tl'?0.7:1)*avail;
+  const wWind = 1 + 0.6*windLoad*(has('wind')?1.3:1);
+  // warming
+  const solar = Math.max(0,Math.cos((a-180)*Math.PI/180));
+  const warm = Math.max(0,Math.min(1,(W.temp+2)/8));
+  const belowFL = z < W.fl ? 1 : 0.3;
+  const wWarm = 1 + 0.5*warm*(0.4+0.6*solar)*belowFL*((has('wetloose')||has('wetslab'))?1.3:1);
+  const Wx = Math.min(2.5, wSnow*wWind*wWarm);
+  let T = 1-(1-p)*(1-0.85*Math.min(1,r*rw));
+  T = Math.max(T, corn);
+  const raw = T*DFACT[D-1]*f*Wx*(1+0.6*t);
+  const score = 100*(1-Math.exp(-1.4*raw));
+  return {z,s,a,p,r,t,c,band,sec,D,f,matched,windLoad,warm:warm*solar*belowFL,Wx,T,raw,score};
+}
+function computeScores(){
+  const N=G.N; SCORE=SCORE||new Float32Array(N); CLASS=CLASS||new Uint8Array(N);
+  for(let i=0;i<N;i++){const sc=factorsAt(i).score; SCORE[i]=sc; CLASS[i]=clsOf(sc);}
+}
+
+/* ---------------- base image ---------------- */
+const off=document.createElement('canvas'); let offCtx;
+const hex2rgb=h=>[parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)];
+const RISKSTOPS=[[0,'#52BA4A'],[14,'#52BA4A'],[24,'#FFF300'],[40,'#F79218'],[62,'#EF1C29'],[82,'#1A1A1A'],[100,'#1A1A1A']].map(([v,h])=>[v,hex2rgb(h)]);
+function riskRGB(s){
+  for(let k=1;k<RISKSTOPS.length;k++){
+    if(s<=RISKSTOPS[k][0]){const [v0,c0]=RISKSTOPS[k-1],[v1,c1]=RISKSTOPS[k];const u=(s-v0)/((v1-v0)||1);
+      return [c0[0]+(c1[0]-c0[0])*u,c0[1]+(c1[1]-c0[1])*u,c0[2]+(c1[2]-c0[2])*u];}
+  }
+  return RISKSTOPS[RISKSTOPS.length-1][1];
+}
+function renderBase(){
+  const {W,H}=G; off.width=W; off.height=H; offCtx=off.getContext('2d');
+  const img=offCtx.createImageData(W,H), d=img.data;
+  const atesRGB=ATES.map(a=>a.c?hex2rgb(a.c):null);
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++){
+    const i=y*W+x, o=i*4;
+    const h=G.hill[i]/255;
+    let L=150+h*95;
+    // 100 m contours, 500 m index contours
+    const z=G.elev[i];
+    if(x<W-1&&y<H-1){
+      const zr=G.elev[i+1], zd=G.elev[i+W];
+      if(Math.floor(z/100)!==Math.floor(zr/100)||Math.floor(z/100)!==Math.floor(zd/100)) L-= (Math.floor(z/500)!==Math.floor(zr/500)||Math.floor(z/500)!==Math.floor(zd/500))?38:18;
+    }
+    let r=L*0.94,g=L*0.965,b=L;
+    let col=null, al=0;
+    if(S.layer==='risk'){
+      const s=SCORE[i];
+      if(s>=2){col=riskRGB(s); al=0.22+0.5*Math.min(1,s/45);}
+    } else {
+      const k=G.ates[i]; if(atesRGB[k]){col=atesRGB[k]; al=k===3?0.55:0.5;}
+    }
+    if(col){r=r*(1-al)+col[0]*al; g=g*(1-al)+col[1]*al; b=b*(1-al)+col[2]*al;}
+    d[o]=r; d[o+1]=g; d[o+2]=b; d[o+3]=255;
+  }
+  offCtx.putImageData(img,0,0);
+}
+
+/* ---------------- map view ---------------- */
+const cv=document.getElementById('map'), ctx=cv.getContext('2d');
+const V={scale:1,ox:0,oy:0};
+let dpr=1;
+function resize(){
+  const r=cv.getBoundingClientRect(); dpr=window.devicePixelRatio||1;
+  cv.width=Math.round(r.width*dpr); cv.height=Math.round(r.height*dpr);
+  draw();
+}
+function fit(){
+  const r=cv.getBoundingClientRect();
+  V.scale=Math.min(r.width/G.W, r.height/G.H)*0.98;
+  V.ox=(r.width-G.W*V.scale)/2; V.oy=(r.height-G.H*V.scale)/2; draw();
+}
+const g2s=(x,y)=>[x*V.scale+V.ox, y*V.scale+V.oy];
+const s2g=(sx,sy)=>[(sx-V.ox)/V.scale,(sy-V.oy)/V.scale];
+function zoomAt(sx,sy,k){
+  const ns=Math.max(0.4,Math.min(40,V.scale*k)); const [gx,gy]=s2g(sx,sy);
+  V.scale=ns; V.ox=sx-gx*ns; V.oy=sy-gy*ns; draw();
+}
+let hoverPt=null;
+function polyline(pts,color,width,casing,dash){
+  if(pts.length<2)return;
+  ctx.lineJoin='round'; ctx.lineCap='round';
+  const path=()=>{ctx.beginPath(); pts.forEach((p,k)=>{const [sx,sy]=g2s(p[0],p[1]); k?ctx.lineTo(sx,sy):ctx.moveTo(sx,sy);});};
+  if(casing){ctx.setLineDash([]); path(); ctx.strokeStyle=casing; ctx.lineWidth=width+3; ctx.stroke();}
+  ctx.setLineDash(dash||[]); path(); ctx.strokeStyle=color; ctx.lineWidth=width; ctx.stroke(); ctx.setLineDash([]);
+}
+function dotAt(gx,gy,fill,r,stroke){const [sx,sy]=g2s(gx,gy);ctx.beginPath();ctx.arc(sx,sy,r,0,7);ctx.fillStyle=fill;ctx.fill();if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=2;ctx.stroke();}}
+function draw(){
+  if(!G)return;
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  const r=cv.getBoundingClientRect();
+  ctx.fillStyle='#e9edf2'; ctx.fillRect(0,0,r.width,r.height);
+  ctx.imageSmoothingEnabled = V.scale<3;
+  ctx.drawImage(off, V.ox, V.oy, G.W*V.scale, G.H*V.scale);
+  // landmarks
+  ctx.font='600 11px Inter, sans-serif';
+  for(const l of ROUTEDATA.landmarks){
+    const [gx,gy]=toGrid(l.lat,l.lon); const [sx,sy]=g2s(gx,gy);
+    ctx.fillStyle='#0B1F3A'; ctx.beginPath(); ctx.moveTo(sx,sy-5); ctx.lineTo(sx+4,sy+2); ctx.lineTo(sx-4,sy+2); ctx.closePath(); ctx.fill();
+    if(V.scale>0.9){ctx.lineWidth=3; ctx.strokeStyle='rgba(255,255,255,.85)'; ctx.strokeText(l.name,sx+6,sy+3); ctx.fillText(l.name,sx+6,sy+3);}
+  }
+  // routes
+  const all=[...ROUTES,...S.userRoutes];
+  for(const R of all){ if(R===S.selected) continue; polyline(R.g,'#0B1F3A',2.2,'rgba(255,255,255,.9)'); }
+  if(S.safe && S.safe!==S.selected) polyline(S.safe.g,'#0E8FA3',3,'rgba(255,255,255,.95)',[7,5]);
+  if(S.selected) polyline(S.selected.g, S.selected===S.safe?'#0E8FA3':'#C9A227',4,'#0B1F3A');
+  // drawing
+  if(S.mode==='draw'||S.draw.length){ polyline(S.draw,'#7B2CBF',3,'#fff'); S.draw.forEach(p=>dotAt(p[0],p[1],'#7B2CBF',4,'#fff')); }
+  if(S.start) dotAt(S.start[0],S.start[1],'#2bb673',7,'#fff');
+  if(S.end) dotAt(S.end[0],S.end[1],'#C9A227',7,'#0B1F3A');
+  if(hoverPt) dotAt(hoverPt[0],hoverPt[1],'#fff',6,'#0B1F3A');
+}
+
+/* pointer interaction */
+const ptrs=new Map(); let pinch0=null, dragged=false, downAt=null;
+cv.addEventListener('pointerdown',e=>{cv.setPointerCapture(e.pointerId); ptrs.set(e.pointerId,{x:e.offsetX,y:e.offsetY}); dragged=false; downAt={x:e.offsetX,y:e.offsetY,t:Date.now()};
+  if(ptrs.size===2){const [a,b]=[...ptrs.values()]; pinch0={d:Math.hypot(a.x-b.x,a.y-b.y),s:V.scale};}});
+cv.addEventListener('pointermove',e=>{
+  if(!ptrs.has(e.pointerId)){ if(e.pointerType==='mouse') showProbe(e.offsetX,e.offsetY,true); return; }
+  const prev=ptrs.get(e.pointerId); const cur={x:e.offsetX,y:e.offsetY}; ptrs.set(e.pointerId,cur);
+  if(ptrs.size===2&&pinch0){const [a,b]=[...ptrs.values()]; const d=Math.hypot(a.x-b.x,a.y-b.y); const mx=(a.x+b.x)/2,my=(a.y+b.y)/2; zoomAt(mx,my,(pinch0.s*d/pinch0.d)/V.scale); dragged=true; return;}
+  if(Math.hypot(cur.x-downAt.x,cur.y-downAt.y)>5) dragged=true;
+  if(dragged){V.ox+=cur.x-prev.x; V.oy+=cur.y-prev.y; probe.style.display='none'; draw();}
+});
+function endPtr(e){
+  const wasTap=ptrs.size===1&&!dragged&&downAt&&Date.now()-downAt.t<600;
+  ptrs.delete(e.pointerId); if(ptrs.size<2) pinch0=null;
+  if(wasTap) onTap(e.offsetX,e.offsetY);
+}
+cv.addEventListener('pointerup',endPtr); cv.addEventListener('pointercancel',e=>{ptrs.delete(e.pointerId);pinch0=null;});
+cv.addEventListener('pointerleave',()=>{if(!ptrs.size)probe.style.display='none';});
+cv.addEventListener('wheel',e=>{e.preventDefault(); zoomAt(e.offsetX,e.offsetY,Math.exp(-e.deltaY*0.0015));},{passive:false});
+document.getElementById('zin').onclick=()=>{const r=cv.getBoundingClientRect();zoomAt(r.width/2,r.height/2,1.5);};
+document.getElementById('zout').onclick=()=>{const r=cv.getBoundingClientRect();zoomAt(r.width/2,r.height/2,1/1.5);};
+document.getElementById('zfit').onclick=fit;
+
+const probe=document.getElementById('probe');
+function describeCell(i){
+  const F=factorsAt(i);
+  return `<b>${CLS[clsOf(F.score)].n}</b> · index ${F.score.toFixed(0)}<br>`+
+    `${F.z} m · ${F.s}° · ${ASP[F.sec]} aspect · ${F.band.toUpperCase()}<br>`+
+    `ATES: ${ATES[G.ates[i]].n}<br>`+
+    `<span class="muted">Release ${(F.p*100|0)}% · Runout ${(F.r*100|0)}% · Trap ${(F.t*100|0)}%</span>`;
+}
+function showProbe(sx,sy,hover){
+  const [gx,gy]=s2g(sx,sy);
+  if(!inGrid(gx,gy)||S.mode!=='inspect'){probe.style.display='none';return;}
+  probe.innerHTML=describeCell(cellIdx(gx,gy));
+  probe.style.display='block';
+  const r=cv.getBoundingClientRect(); const w=probe.offsetWidth,h=probe.offsetHeight;
+  probe.style.left=Math.min(r.width-w-8,sx+14)+'px'; probe.style.top=Math.min(r.height-h-8,Math.max(8,sy-h-10))+'px';
+}
+function onTap(sx,sy){
+  const [gx,gy]=s2g(sx,sy);
+  if(!inGrid(gx,gy)) return;
+  if(S.mode==='draw'){S.draw.push([gx,gy]); updDraw(); draw(); return;}
+  if(S.mode==='start'){S.start=[gx,gy]; setMode('inspect'); updSE(); draw(); return;}
+  if(S.mode==='end'){S.end=[gx,gy]; setMode('inspect'); updSE(); draw(); return;}
+  showProbe(sx,sy,false);
+}
+function setMode(m){
+  S.mode=m; cv.classList.toggle('drawing',m!=='inspect');
+  const hint=document.getElementById('modehint');
+  const msg={draw:'Tap to add route points',start:'Tap the map to set the start',end:'Tap the map to set the end'}[m];
+  hint.style.display=msg?'block':'none'; hint.textContent=msg||'';
+  probe.style.display='none';
+  document.getElementById('drawCtl').style.display = m==='draw'?'flex':'none';
+  document.getElementById('drawBtn').textContent = m==='draw'?'Cancel drawing':'Draw on map';
+}
+
+/* ---------------- legend ---------------- */
+function renderLegend(){
+  const el=document.getElementById('legend');
+  if(S.layer==='risk'){
+    el.innerHTML=`<div class="t">Risk index (relative)</div><div class="row">${CLS.map((c,k)=>`<span class="k"><span class="sw" style="background:${c.c}"></span>${c.n}</span>`).join('')}</div>`;
+  } else {
+    el.innerHTML=`<div class="t">ATES terrain class</div><div class="row">${ATES.slice(1).map(c=>`<span class="k"><span class="sw" style="background:${c.c}"></span>${c.n}</span>`).join('')}</div>`;
+  }
+}
+document.querySelectorAll('#layerSeg button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('#layerSeg button').forEach(x=>x.classList.toggle('on',x===b));
+  S.layer=b.dataset.l; renderBase(); renderLegend(); draw();});
+
+/* ---------------- tabs ---------------- */
+document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('.tabs button').forEach(x=>x.classList.toggle('on',x===b));
+  document.querySelectorAll('.pane').forEach(p=>p.classList.toggle('on',p.id==='pane-'+b.dataset.t));
+  if(b.dataset.t==='routes' && S.selected && S.selected.A) drawProfile(S.selected.A);
+});
+
+/* ---------------- conditions UI ---------------- */
+function dangerUI(){
+  const host=document.getElementById('dangerRows'); host.innerHTML='';
+  for(const [k,label] of BANDS){
+    const row=document.createElement('div'); row.className='danger-row';
+    row.innerHTML=`<div class="small">${label}</div><div class="dsel">${DANGER.map((d,j)=>`<button data-v="${j+1}" title="${d}">${j+1}</button>`).join('')}</div>`;
+    row.querySelectorAll('button').forEach(b=>{
+      const v=+b.dataset.v; const on=S.danger[k]===v; b.classList.toggle('on',on);
+      if(on){b.style.background=CLS[v-1].c; b.style.color=v===5?'#fff':'#111';}
+      b.onclick=()=>{S.danger[k]=v; markManual(); dangerUI(); recompute();};
+    });
+    const nm=document.createElement('div'); nm.className='small muted'; nm.style.gridColumn='2'; nm.style.marginTop='-3px'; nm.textContent=DANGER[S.danger[k]-1];
+    host.appendChild(row); host.appendChild(nm);
+  }
+}
+function roseSVG(asp){
+  let s='<svg class="rose" viewBox="-50 -50 100 100">';
+  for(let k=0;k<8;k++){
+    const a0=(k*45-22.5-90)*Math.PI/180, a1=(k*45+22.5-90)*Math.PI/180, R=44, r=10;
+    const p=`M${r*Math.cos(a0)} ${r*Math.sin(a0)} L${R*Math.cos(a0)} ${R*Math.sin(a0)} A${R} ${R} 0 0 1 ${R*Math.cos(a1)} ${R*Math.sin(a1)} L${r*Math.cos(a1)} ${r*Math.sin(a1)} A${r} ${r} 0 0 0 ${r*Math.cos(a0)} ${r*Math.sin(a0)}Z`;
+    s+=`<path data-k="${k}" d="${p}" fill="${asp[k]?'#C9A227':'#0B1F3A'}"><title>${ASP[k]}</title></path>`;
+    const am=(k*45-90)*Math.PI/180; s+=`<text x="${30*Math.cos(am)}" y="${30*Math.sin(am)+3}" text-anchor="middle" font-size="9" font-weight="700" fill="${asp[k]?'#0B1F3A':'#7F90AA'}" pointer-events="none">${ASP[k]}</text>`;
+  }
+  return s+'</svg>';
+}
+function probsUI(){
+  const host=document.getElementById('probs'); host.innerHTML='';
+  if(!S.problems.length) host.innerHTML='<div class="muted small" style="margin-bottom:8px">No problems listed. Hazard follows the danger ratings evenly across aspects.</div>';
+  S.problems.forEach((P,idx)=>{
+    const d=document.createElement('div'); d.className='prob';
+    d.innerHTML=`<div class="top"><select class="ptype">${PTYPES.map(([v,l])=>`<option value="${v}" ${v===P.type?'selected':''}>${l}</option>`).join('')}</select><button class="x" title="Remove">✕</button></div>
+      <div class="rowf" style="margin-top:8px;align-items:flex-start;flex-wrap:nowrap">${roseSVG(P.asp)}
+        <div style="flex:1;min-width:0">
+          <div class="field"><label>Elevation bands</label><div class="chips">${BANDS.map(([k,l])=>`<span class="chip ${P.bands[k]?'on':''}" data-b="${k}">${k.toUpperCase()}</span>`).join('')}</div></div>
+          <div class="field" style="margin-top:6px"><label>Likelihood</label><select class="plike">${LIKE.map((l,j)=>`<option value="${j+1}" ${P.like===j+1?'selected':''}>${l}</option>`).join('')}</select></div>
+          <div class="field" style="margin-top:6px"><label>Expected size</label><select class="psize">${SIZES.map(z=>`<option ${P.size===z?'selected':''}>${z}</option>`).join('')}</select></div>
+        </div></div>`;
+    d.querySelector('.ptype').onchange=e=>{P.type=e.target.value; markManual(); recompute();};
+    d.querySelector('.plike').onchange=e=>{P.like=+e.target.value; markManual(); recompute();};
+    d.querySelector('.psize').onchange=e=>{P.size=+e.target.value; markManual(); recompute();};
+    d.querySelector('.x').onclick=()=>{S.problems.splice(idx,1); markManual(); probsUI(); recompute();};
+    d.querySelectorAll('.chip').forEach(c=>c.onclick=()=>{P.bands[c.dataset.b]=P.bands[c.dataset.b]?0:1; markManual(); probsUI(); recompute();});
+    d.querySelectorAll('path').forEach(p=>p.onclick=()=>{const k=+p.dataset.k; P.asp[k]=P.asp[k]?0:1; markManual(); probsUI(); recompute();});
+    host.appendChild(d);
+  });
+  document.getElementById('addProb').style.display=S.problems.length>=3?'none':'inline-block';
+}
+document.getElementById('addProb').onclick=()=>{S.problems.push({type:'persistent',bands:{alp:1,tl:1,btl:0},asp:[1,1,0,0,0,0,0,1],like:2,size:2}); markManual(); probsUI(); recompute();};
+const wxIds=['hn24','hn72','wind','temp','fl'];
+function wxUI(){
+  wxIds.forEach(k=>document.getElementById(k).value=S.wx[k]);
+  const sel=document.getElementById('windDir'); sel.innerHTML=ASP.map((a,k)=>`<option value="${k}" ${S.wx.windDir===k?'selected':''}>${a}</option>`).join('');
+}
+wxIds.forEach(k=>document.getElementById(k).addEventListener('input',e=>{const v=parseFloat(e.target.value); if(!isNaN(v)){S.wx[k]=v; markManual(); recompute();}}));
+document.getElementById('windDir').onchange=e=>{S.wx.windDir=+e.target.value; markManual(); recompute();};
+
+/* ---------------- live data (hybrid) ---------------- */
+const LIVE={wx:{st:'wait',msg:'Checking Open-Meteo…'},av:{st:'wait',msg:'Checking Avalanche Canada…'}};
+function srcLabel(){
+  const l=document.getElementById('srcLabel');
+  l.textContent = S.source==='example'?'Showing example conditions, not today’s forecast':S.source==='live'?'Using live data':S.source==='mixed'?'Live data with manual edits':'Manual entry';
+}
+function markManual(){ if(S.source==='live') S.source='mixed'; else if(S.source==='example') S.source='manual'; srcLabel(); }
+function liveUI(){
+  const el=document.getElementById('liveStatus');
+  const row=(o,name)=>`<div class="s"><span class="dot ${o.st}"></span><div><b>${name}</b> <span class="muted">${o.msg}</span></div></div>`;
+  el.innerHTML=row(LIVE.av,'Avalanche Canada')+row(LIVE.wx,'Open-Meteo weather')+
+    ((LIVE.av.st==='bad'||LIVE.wx.st==='bad')?`<div class="muted small" style="margin-top:4px">Enter the current <a href="https://avalanche.ca/forecasts" target="_blank" rel="noopener">Sea-to-Sky forecast</a> below. Live loading works when this page is hosted on your own site or opened as a file.</div>`:'');
+  srcLabel();
+}
+async function fetchJSON(url,ms=7000){
+  const c=new AbortController(); const t=setTimeout(()=>c.abort(),ms);
+  try{const r=await fetch(url,{signal:c.signal}); if(!r.ok) throw new Error('HTTP '+r.status); return await r.json();}
+  finally{clearTimeout(t);}
+}
+async function liveWeather(){
+  const url='https://api.open-meteo.com/v1/forecast?latitude=50.06&longitude=-122.95&elevation=2000&hourly=snowfall,temperature_2m,wind_speed_10m,wind_direction_10m,freezing_level_height&past_days=3&forecast_days=1&timezone=America%2FVancouver';
+  const j=await fetchJSON(url); const h=j.hourly; const now=Date.now();
+  const tms=h.time.map(t=>new Date(t).getTime()); let n=tms.findIndex(t=>t>now); if(n<0)n=tms.length; n=Math.max(1,n);
+  const sum=(arr,hrs)=>arr.slice(Math.max(0,n-hrs),n).reduce((a,b)=>a+(b||0),0);
+  const last=(arr,hrs)=>arr.slice(Math.max(0,n-hrs),n).filter(v=>v!=null);
+  const ws=last(h.wind_speed_10m,12), wd=last(h.wind_direction_10m,12);
+  const sx=wd.reduce((a,d,k)=>a+Math.sin(d*Math.PI/180)*(ws[k]||1),0), sy=wd.reduce((a,d,k)=>a+Math.cos(d*Math.PI/180)*(ws[k]||1),0);
+  const dir=((Math.atan2(sx,sy)*180/Math.PI)+360)%360;
+  S.wx={hn24:Math.round(sum(h.snowfall,24)), hn72:Math.round(sum(h.snowfall,72)),
+    wind:Math.round(ws.reduce((a,b)=>a+b,0)/Math.max(1,ws.length)), windDir:Math.round(dir/45)%8,
+    temp:Math.round(h.temperature_2m[n-1]), fl:Math.round((h.freezing_level_height[n-1]||0)/50)*50};
+  return new Date(tms[n-1]).toLocaleString([], {month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+}
+const AVMAP={low:1,moderate:2,considerable:3,high:4,extreme:5};
+const PTMAP={'storm-slab':'storm','wind-slab':'wind','persistent-slab':'persistent','deep-persistent-slab':'deep','wet-slab':'wetslab','loose-wet':'wetloose','loose-dry':'dryloose','cornice':'cornice','cornices':'cornice'};
+const LKMAP={'unlikely':1,'possible':2,'likely':3,'very-likely':4,'certain':5,'almost-certain':5};
+function val(x){return (x&&typeof x==='object')?(x.value??x.display??''):x;}
+async function liveAvalanche(){
+  const urls=['https://api.avalanche.ca/forecasts/en/products/point?lat=50.06&long=-122.95',
+              'https://api.avalanche.ca/forecasts/en/products/point?lat=50.06&lng=-122.95'];
+  let j=null, err;
+  for(const u of urls){try{j=await fetchJSON(u); break;}catch(e){err=e;}}
+  if(!j) throw err||new Error('no response');
+  const rep=j.report||j.product?.report||j;
+  const dr=(rep.dangerRatings||[])[0]; if(!dr) throw new Error('No danger ratings in response');
+  const rt=dr.ratings||dr;
+  const pick=k=>AVMAP[String(val(rt[k]?.rating)||'').toLowerCase()];
+  const d={alp:pick('alp'), tl:pick('tln')||pick('tl'), btl:pick('btl')};
+  if(!d.alp||!d.tl||!d.btl) throw new Error('No rating issued (off-season or unrated)');
+  const probs=[];
+  for(const p of (rep.problems||[]).slice(0,3)){
+    const type=PTMAP[String(val(p.type)).toLowerCase()]; if(!type) continue;
+    const data=p.data||p;
+    const bands={alp:0,tl:0,btl:0}; (data.elevations||[]).forEach(e=>{const v=String(val(e)).toLowerCase(); if(v==='alp')bands.alp=1; if(v==='tln'||v==='tl')bands.tl=1; if(v==='btl')bands.btl=1;});
+    const asp=[0,0,0,0,0,0,0,0]; (data.aspects||[]).forEach(a=>{const k=ASP.indexOf(String(val(a)).toUpperCase()); if(k>=0)asp[k]=1;});
+    const like=LKMAP[String(val(data.likelihood)).toLowerCase()]||2;
+    const es=data.expectedSize||{}; const sz=parseFloat(es.max||es.min||2);
+    probs.push({type,bands,asp,like,size:SIZES.reduce((a,b)=>Math.abs(b-sz)<Math.abs(a-sz)?b:a,2)});
+  }
+  S.danger=d; S.problems=probs;
+  return (rep.title||'Sea-to-Sky')+(rep.dateIssued?' · issued '+new Date(rep.dateIssued).toLocaleDateString():'');
+}
+async function tryLive(){
+  LIVE.wx={st:'wait',msg:'Checking…'}; LIVE.av={st:'wait',msg:'Checking…'}; liveUI();
+  let got=0;
+  try{const t=await liveWeather(); LIVE.wx={st:'ok',msg:'Loaded ('+t+')'}; got++;}
+  catch(e){LIVE.wx={st:'bad',msg:'Not reachable from this page'};}
+  try{const t=await liveAvalanche(); LIVE.av={st:'ok',msg:'Loaded: '+t}; got++;}
+  catch(e){LIVE.av={st:'bad',msg: /rating|ratings/.test(e.message)?e.message:'Not reachable from this page'};}
+  if(got){ S.source = got===2?'live':'mixed'; dangerUI(); probsUI(); wxUI(); recompute(); }
+  liveUI();
+}
+document.getElementById('liveBtn').onclick=tryLive;
+
+/* ---------------- routes ---------------- */
+let ROUTES=[];
+function routeFromLL(name,kind,note,ll){
+  const g=ll.map(([a,b])=>toGrid(a,b)); return {id:Math.random().toString(36).slice(2),name,kind,note,ll,g};
+}
+function resample(g,stepCells=0.5){
+  const out=[g[0]];
+  for(let k=1;k<g.length;k++){
+    const [x0,y0]=g[k-1],[x1,y1]=g[k]; const L=Math.hypot(x1-x0,y1-y0); const n=Math.max(1,Math.ceil(L/stepCells));
+    for(let j=1;j<=n;j++) out.push([x0+(x1-x0)*j/n, y0+(y1-y0)*j/n]);
+  }
+  return out;
+}
+function assessRoute(R){
+  const pts=resample(R.g).filter(p=>inGrid(p[0],p[1]));
+  if(pts.length<2) return null;
+  const sm=[]; let dist=0, gain=0, loss=0, maxS=0, maxA=0, maxScore=0, maxIdx=0;
+  const lenByCls=[0,0,0,0,0];
+  for(let k=0;k<pts.length;k++){
+    const i=cellIdx(pts[k][0],pts[k][1]);
+    const z=G.elev[i], sc=SCORE[i];
+    if(k){const dd=Math.hypot(pts[k][0]-pts[k-1][0],pts[k][1]-pts[k-1][1])*G.res; dist+=dd; const dz=z-sm[k-1].z; if(dz>0)gain+=dz; else loss-=dz; lenByCls[clsOf(sc)]+=dd;}
+    sm.push({d:dist,z,sc,i,g:pts[k]});
+    if(sc>maxScore){maxScore=sc;maxIdx=k;}
+    maxS=Math.max(maxS,G.slope[i]);
+  }
+  // highest ATES held for >= 60 m
+  let run=0, prevA=-1;
+  for(let k=0;k<sm.length;k++){const a=G.ates[sm[k].i]; run = a===prevA?run+1:1; prevA=a; if(run>=4) maxA=Math.max(maxA,a);}
+  const sorted=sm.map(s=>s.sc).sort((a,b)=>a-b); const p90=sorted[Math.floor(0.9*(sorted.length-1))];
+  const routeScore=0.55*p90+0.45*maxScore;
+  // cruxes: contiguous >= Considerable
+  const cr=[]; let cur=null;
+  sm.forEach((s,k)=>{
+    if(clsOf(s.sc)>=2){ if(!cur) cur={a:k,b:k,max:s.sc,mk:k}; cur.b=k; if(s.sc>cur.max){cur.max=s.sc;cur.mk=k;} }
+    else if(cur && k-cur.b>4){cr.push(cur);cur=null;}
+  });
+  if(cur)cr.push(cur);
+  cr.forEach(c=>c.len=sm[c.b].d-sm[c.a].d);
+  const cruxes=cr.filter(c=>c.len>=30||c.max>=CUT[2]).sort((a,b)=>b.max-a.max).slice(0,4);
+  return {sm,dist,gain,loss,maxS,maxA,maxScore,p90,routeScore,lenByCls,cruxes};
+}
+function reason(i){
+  const F=factorsAt(i); const parts=[];
+  if(F.p>=0.45) parts.push(`start zone, ${F.s}° ${ASP[F.sec]} slope`);
+  else if(F.r>=0.3) parts.push(`runout below steep start zones`);
+  else parts.push(`${F.s}° ${ASP[F.sec]} slope`);
+  if(F.t>=0.45) parts.push('terrain trap');
+  if(F.windLoad>0.25) parts.push('wind-loaded lee slope');
+  if(F.warm>0.3) parts.push('warming on sunny aspect');
+  if(F.matched) parts.push(`matches ${PTYPES.find(p=>p[0]===F.matched.type)[1].toLowerCase()} problem`);
+  return parts.join(' · ');
+}
+const fmtKm=m=>(m/1000).toFixed(m<10000?2:1)+' km';
+function badge(s){const k=clsOf(s);return `<span class="badge" style="background:${CLS[k].c};color:${k===4?'#fff':'#111'}">${CLS[k].n}</span>`;}
+function renderAssess(){
+  const host=document.getElementById('assess');
+  const R=S.selected; if(!R){host.innerHTML='';return;}
+  const A=assessRoute(R); R.A=A;
+  if(!A){host.innerHTML='<div class="err">Route is outside the mapped area.</div>';return;}
+  const tot=A.lenByCls.reduce((a,b)=>a+b,0)||1;
+  host.innerHTML=`<h2>Assessment</h2>
+  <div class="card">
+    <div class="rowf" style="justify-content:space-between"><b>${R.name}</b><span class="tag muted small">${R.kind==='gps'?'GPS track':R.kind==='approx'?'Approximate':R.kind==='safe'?'Computed':'User route'}</span></div>
+    ${R.note?`<div class="muted small" style="margin-top:4px">${R.note}</div>`:''}
+    <div class="score" style="margin-top:10px"><div class="big">${A.routeScore.toFixed(0)}</div><div>${badge(A.routeScore)}<div class="muted small" style="margin-top:4px">Route score (0–100)</div></div></div>
+    <div class="stats">
+      <div class="stat"><div class="v">${fmtKm(A.dist)}</div><div class="l">Distance</div></div>
+      <div class="stat"><div class="v">+${Math.round(A.gain)} / −${Math.round(A.loss)}</div><div class="l">Gain / loss m</div></div>
+      <div class="stat"><div class="v">${A.maxS}°</div><div class="l">Steepest</div></div>
+      <div class="stat"><div class="v">${A.maxScore.toFixed(0)}</div><div class="l">Peak index</div></div>
+      <div class="stat"><div class="v">${A.p90.toFixed(0)}</div><div class="l">90th pct</div></div>
+      <div class="stat"><div class="v">${ATES[A.maxA].n}</div><div class="l">Max ATES</div></div>
+    </div>
+    <div class="small muted" style="margin-top:10px">Distance by risk class</div>
+    <div class="bar">${A.lenByCls.map((l,k)=>l>0?`<div title="${CLS[k].n}: ${fmtKm(l)}" style="width:${l/tot*100}%;background:${CLS[k].c}"></div>`:'').join('')}</div>
+    <div class="small">${A.lenByCls.map((l,k)=>l>0?`<span style="margin-right:10px"><span class="sw" style="background:${CLS[k].c};width:9px;height:9px"></span> ${CLS[k].n} ${Math.round(l/tot*100)}%</span>`:'').join('')}</div>
+  </div>
+  <div class="card"><div class="small muted">Elevation and risk along the route</div>
+    <canvas id="profile"></canvas><div class="ptip" id="ptip">Hover or drag across the profile</div></div>
+  <div class="card"><div class="small muted">Cruxes (Considerable or higher)</div>
+    ${A.cruxes.length?A.cruxes.map((c,k)=>`<div class="crux" data-k="${k}">${badge(c.max)} <b>km ${(A.sm[c.a].d/1000).toFixed(2)}–${(A.sm[c.b].d/1000).toFixed(2)}</b> · ${Math.round(c.len)} m · peak ${c.max.toFixed(0)}<br><span class="muted">${reason(A.sm[c.mk].i)}</span></div>`).join(''):'<div class="small" style="margin-top:6px">No sustained sections at Considerable or above under these conditions.</div>'}
+  </div>`;
+  host.querySelectorAll('.crux').forEach(el=>el.onclick=()=>{
+    const c=A.cruxes[+el.dataset.k]; const g=A.sm[c.mk].g; const r=cv.getBoundingClientRect();
+    V.scale=Math.max(V.scale,4); V.ox=r.width/2-g[0]*V.scale; V.oy=r.height/2-g[1]*V.scale; hoverPt=g; draw();
+    if(window.innerWidth<=860) document.getElementById('mapwrap').scrollIntoView({behavior:'smooth'});
+  });
+  drawProfile(A);
+}
+function drawProfile(A){
+  const c=document.getElementById('profile'); if(!c)return;
+  const r=c.getBoundingClientRect(); if(r.width<10) return; const pr=window.devicePixelRatio||1;
+  c.width=r.width*pr; c.height=r.height*pr; const x=c.getContext('2d'); x.setTransform(pr,0,0,pr,0,0);
+  const P={l:44,r:10,t:10,b:24}; const w=r.width-P.l-P.r, h=r.height-P.t-P.b;
+  const zs=A.sm.map(s=>s.z); let z0=Math.min(...zs), z1=Math.max(...zs); const pad=Math.max(20,(z1-z0)*0.08); z0=Math.floor((z0-pad)/100)*100; z1=Math.ceil((z1+pad)/100)*100;
+  const X=d=>P.l+d/A.dist*w, Y=z=>P.t+h-(z-z0)/(z1-z0)*h;
+  // grid
+  x.strokeStyle='rgba(184,196,214,.12)'; x.lineWidth=1; x.fillStyle='#7F90AA'; x.font='10px Inter, sans-serif';
+  const zstep=(z1-z0)>1200?500:(z1-z0)>500?200:100;
+  for(let z=Math.ceil(z0/zstep)*zstep; z<=z1; z+=zstep){x.beginPath();x.moveTo(P.l,Y(z));x.lineTo(P.l+w,Y(z));x.stroke(); x.textAlign='right'; x.fillText(z+' m',P.l-5,Y(z)+3);}
+  const kstep=A.dist>20000?5000:A.dist>8000?2000:A.dist>3000?1000:500;
+  x.textAlign='center'; for(let d=0; d<=A.dist; d+=kstep) x.fillText((d/1000)+' km',X(d),P.t+h+15);
+  // risk-coloured fill segments
+  for(let k=1;k<A.sm.length;k++){
+    const a=A.sm[k-1], b=A.sm[k];
+    x.fillStyle=CLS[clsOf(b.sc)].c; x.globalAlpha=0.85;
+    x.beginPath(); x.moveTo(X(a.d),Y(a.z)); x.lineTo(X(b.d)+0.5,Y(b.z)); x.lineTo(X(b.d)+0.5,P.t+h); x.lineTo(X(a.d),P.t+h); x.closePath(); x.fill();
+  }
+  x.globalAlpha=1;
+  x.beginPath(); A.sm.forEach((s,k)=>k?x.lineTo(X(s.d),Y(s.z)):x.moveTo(X(s.d),Y(s.z))); x.strokeStyle='#EEF2F7'; x.lineWidth=2; x.stroke();
+  const tip=document.getElementById('ptip');
+  const move=e=>{
+    const rr=c.getBoundingClientRect(); const px=(e.clientX-rr.left); const d=Math.max(0,Math.min(A.dist,(px-P.l)/w*A.dist));
+    let k=0; while(k<A.sm.length-1&&A.sm[k].d<d)k++;
+    const s=A.sm[k];
+    // redraw crosshair
+    drawProfileStatic();
+    x.strokeStyle='#C9A227'; x.lineWidth=1.5; x.beginPath(); x.moveTo(X(s.d),P.t); x.lineTo(X(s.d),P.t+h); x.stroke();
+    x.beginPath(); x.arc(X(s.d),Y(s.z),4.5,0,7); x.fillStyle='#C9A227'; x.fill(); x.strokeStyle='#0B1F3A'; x.lineWidth=2; x.stroke();
+    tip.innerHTML=`km ${(s.d/1000).toFixed(2)} · ${s.z} m · ${G.slope[s.i]}° ${ASP[Math.round(G.aspect[s.i]*360/256/45)%8]} · ${badge(s.sc)} ${s.sc.toFixed(0)}`;
+    hoverPt=s.g; draw();
+  };
+  const snap=x.getImageData(0,0,c.width,c.height);
+  function drawProfileStatic(){x.setTransform(1,0,0,1,0,0); x.putImageData(snap,0,0); x.setTransform(pr,0,0,pr,0,0);}
+  c.onpointermove=move; c.onpointerdown=e=>{c.setPointerCapture(e.pointerId);move(e);};
+  c.onpointerleave=()=>{drawProfileStatic(); hoverPt=null; draw(); tip.textContent='Hover or drag across the profile';};
+  c.style.touchAction='none';
+}
+function routeListUI(){
+  const host=document.getElementById('routeList'); host.innerHTML='';
+  const items=[...ROUTES,...S.userRoutes,...(S.safe?[S.safe]:[])];
+  for(const R of items){
+    const A=assessRoute(R); R.A=A;
+    const d=document.createElement('div'); d.className='ritem'+(R===S.selected?' on':'');
+    d.innerHTML=`<div style="flex:1;min-width:0"><div class="nm">${R.name}</div><div class="tag">${R.kind==='gps'?'GPS track':R.kind==='approx'?'Approximate':R.kind==='safe'?'Safest route':'Your route'}${A?' · '+fmtKm(A.dist):''}</div></div>${A?badge(A.routeScore):''}${(R.kind==='user'||R.kind==='safe')?'<button class="x" title="Remove">✕</button>':''}`;
+    d.onclick=e=>{ if(e.target.classList.contains('x')){ if(R===S.safe)S.safe=null; else S.userRoutes=S.userRoutes.filter(u=>u!==R); if(S.selected===R)S.selected=null; routeListUI(); renderAssess(); draw(); return;}
+      S.selected=R; routeListUI(); renderAssess(); focusRoute(R); };
+    host.appendChild(d);
+  }
+}
+function focusRoute(R){
+  const xs=R.g.map(p=>p[0]), ys=R.g.map(p=>p[1]); const r=cv.getBoundingClientRect();
+  const bx0=Math.min(...xs),bx1=Math.max(...xs),by0=Math.min(...ys),by1=Math.max(...ys);
+  V.scale=Math.min(30,Math.min(r.width/(bx1-bx0+30),r.height/(by1-by0+30)));
+  V.ox=r.width/2-(bx0+bx1)/2*V.scale; V.oy=r.height/2-(by0+by1)/2*V.scale; draw();
+}
+
+/* drawing */
+function updDraw(){document.getElementById('drawCount').textContent=S.draw.length+' point'+(S.draw.length===1?'':'s');}
+document.getElementById('drawBtn').onclick=()=>{ if(S.mode==='draw'){S.draw=[];setMode('inspect');draw();return;} S.draw=[]; updDraw(); setMode('draw'); document.getElementById('routeErr').textContent=''; };
+document.getElementById('drawUndo').onclick=()=>{S.draw.pop();updDraw();draw();};
+document.getElementById('drawClear').onclick=()=>{S.draw=[];updDraw();draw();};
+document.getElementById('drawDone').onclick=()=>{
+  if(S.draw.length<2){document.getElementById('routeErr').textContent='Add at least two points.';return;}
+  const n=S.userRoutes.filter(r=>r.kind==='user').length+1;
+  const R={id:'u'+Date.now(),name:'New route '+n,kind:'user',note:'Drawn on the map.',g:S.draw.slice()};
+  S.userRoutes.push(R); S.selected=R; S.draw=[]; setMode('inspect'); routeListUI(); renderAssess(); draw();
+};
+document.getElementById('gpxIn').onchange=async e=>{
+  const f=e.target.files[0]; e.target.value=''; if(!f)return;
+  const err=document.getElementById('routeErr'); err.textContent='';
+  try{
+    const txt=await f.text(); const doc=new DOMParser().parseFromString(txt,'application/xml');
+    if(doc.querySelector('parsererror')) throw new Error('Could not read that file as GPX.');
+    let nodes=[...doc.getElementsByTagName('trkpt')]; if(!nodes.length) nodes=[...doc.getElementsByTagName('rtept')]; if(!nodes.length) nodes=[...doc.getElementsByTagName('wpt')];
+    const ll=nodes.map(n=>[parseFloat(n.getAttribute('lat')),parseFloat(n.getAttribute('lon'))]).filter(p=>!isNaN(p[0])&&!isNaN(p[1]));
+    if(ll.length<2) throw new Error('No track points found in that GPX.');
+    const R=routeFromLL((doc.querySelector('trk > name, rte > name, metadata > name')?.textContent||f.name.replace(/\.gpx$/i,'')).slice(0,40),'user','Imported from GPX.',ll);
+    const inside=R.g.filter(p=>inGrid(p[0],p[1])).length;
+    if(!inside) throw new Error('That track is outside the mapped Whistler area.');
+    if(inside<R.g.length) err.textContent=`${R.g.length-inside} of ${R.g.length} points fall outside the mapped area and were skipped.`;
+    S.userRoutes.push(R); S.selected=R; routeListUI(); renderAssess(); focusRoute(R);
+  }catch(ex){err.textContent=ex.message;}
+};
+
+/* safest route */
+function updSE(){
+  document.getElementById('findBtn').disabled=!(S.start&&S.end);
+  document.getElementById('seLabel').textContent = S.start&&S.end?'Start and end set':S.start?'Start set':S.end?'End set':'Tap the map after each button';
+}
+document.getElementById('setStart').onclick=()=>setMode('start');
+document.getElementById('setEnd').onclick=()=>setMode('end');
+const wSl=document.getElementById('wSlider'); const wLbl=()=>document.getElementById('wVal').textContent=wSl.value+'% safety weight'; wSl.oninput=wLbl;
+const workerSrc=`
+onmessage=e=>{
+  const {W,H,res,slope,elev,score,s,t,a}=e.data;
+  const N=W*H, dist=new Float64Array(N).fill(Infinity), prev=new Int32Array(N).fill(-1), done=new Uint8Array(N);
+  const hk=[], hv=[];
+  const push=(k,v)=>{hk.push(k);hv.push(v);let i=hk.length-1;while(i>0){const p=(i-1)>>1;if(hk[p]<=hk[i])break;[hk[p],hk[i]]=[hk[i],hk[p]];[hv[p],hv[i]]=[hv[i],hv[p]];i=p;}};
+  const pop=()=>{const v=hv[0];const lk=hk.pop(),lv=hv.pop();if(hk.length){hk[0]=lk;hv[0]=lv;let i=0;for(;;){const l=2*i+1,r=l+1;let m=i;if(l<hk.length&&hk[l]<hk[m])m=l;if(r<hk.length&&hk[r]<hk[m])m=r;if(m===i)break;[hk[m],hk[i]]=[hk[i],hk[m]];[hv[m],hv[i]]=[hv[i],hv[m]];i=m;}}return v;};
+  const tx=t%W, ty=(t/W)|0, K=a*250;
+  dist[s]=0; push(Math.hypot(s%W-tx,((s/W)|0)-ty)*res,s);
+  const NB=[[-1,-1],[0,-1],[1,-1],[-1,0],[1,0],[-1,1],[0,1],[1,1]];
+  let found=false;
+  while(hk.length){
+    const u=pop(); if(done[u])continue; done[u]=1; if(u===t){found=true;break;}
+    const ux=u%W, uy=(u/W)|0;
+    for(const [dx,dy] of NB){
+      const vx=ux+dx, vy=uy+dy; if(vx<0||vy<0||vx>=W||vy>=H)continue;
+      const v=vy*W+vx; if(done[v])continue;
+      const sl=slope[v]; if(sl>48&&v!==t)continue;
+      const d=(dx&&dy?1.41421356:1)*res;
+      const dz=elev[v]-elev[u];
+      const sc=score[v]/100;
+      const c=d*(1+Math.max(0,sl-25)/10)+Math.max(0,dz)*6+Math.max(0,-dz)*0.3+K*d*sc*sc;
+      const nd=dist[u]+c;
+      if(nd<dist[v]){dist[v]=nd;prev[v]=u;push(nd+Math.hypot(vx-tx,vy-ty)*res,v);}
+    }
+  }
+  if(!found){postMessage({path:null});return;}
+  const path=[];for(let v=t;v!==-1;v=prev[v])path.push(v);path.reverse();
+  postMessage({path});
+};`;
+let worker=null;
+document.getElementById('findBtn').onclick=()=>{
+  const msg=document.getElementById('findMsg'); msg.textContent='Searching…';
+  document.getElementById('findBtn').disabled=true;
+  try{ if(!worker) worker=new Worker(URL.createObjectURL(new Blob([workerSrc],{type:'text/javascript'}))); }
+  catch(e){ msg.textContent='Background search unavailable in this browser.'; return; }
+  const s=cellIdx(...S.start), t=cellIdx(...S.end); const a=wSl.value/100;
+  worker.onmessage=ev=>{
+    document.getElementById('findBtn').disabled=false;
+    const p=ev.data.path; if(!p){msg.textContent='No passable route found between those points.';return;}
+    let g=p.map(v=>[v%G.W+0.5,Math.floor(v/G.W)+0.5]);
+    // light smoothing for display
+    g=g.map((q,k)=>{if(k<2||k>g.length-3)return q; let sx=0,sy=0; for(let j=-2;j<=2;j++){sx+=g[k+j][0];sy+=g[k+j][1];} return [sx/5,sy/5];});
+    S.safe={id:'safe',name:`Safest route (${wSl.value}% safety)`,kind:'safe',note:'Computed by A* search on the current risk map. Check it against real terrain, cornices and crevasses before trusting it.',g};
+    S.selected=S.safe; msg.textContent=''; routeListUI(); renderAssess(); draw();
+  };
+  worker.postMessage({W:G.W,H:G.H,res:G.res,slope:G.slope,elev:G.elev,score:SCORE,s,t,a});
+};
+
+/* ---------------- recompute ---------------- */
+let rq=null;
+function recompute(){ clearTimeout(rq); rq=setTimeout(()=>{ computeScores(); renderBase(); draw(); routeListUI(); renderAssess(); },60); }
+
+/* ---------------- init ---------------- */
+(async function init(){
+  try{
+    G=await loadTerrain();
+    ROUTES=ROUTEDATA.routes.map(r=>routeFromLL(r.name,r.kind,r.note,r.pts));
+    dangerUI(); probsUI(); wxUI(); liveUI(); renderLegend(); wLbl();
+    computeScores(); renderBase();
+    document.getElementById('loading').remove();
+    resize(); fit(); routeListUI();
+    new ResizeObserver(()=>{resize();}).observe(document.getElementById('mapwrap'));
+    tryLive();
+  }catch(e){
+    document.getElementById('loading').textContent='Could not load terrain: '+e.message;
+  }
+})();
+</script>
+</body>
+</html>
