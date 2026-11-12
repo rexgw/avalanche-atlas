@@ -144,7 +144,7 @@ a{color:var(--gold2)}
     <div class="legend" id="legend"></div>
   </div>
   <aside>
-    <div class="tabs"><button data-t="cond" class="on">Conditions</button><button data-t="routes">Routes</button><button data-t="method">Method</button></div>
+    <div class="tabs"><button data-t="cond" class="on">Conditions</button><button data-t="routes">Routes</button><button data-t="print">3D print</button><button data-t="method">Method</button></div>
 
     <div class="pane on" id="pane-cond">
       <h2>Data source</h2>
@@ -215,6 +215,22 @@ a{color:var(--gold2)}
       <div id="assess"></div>
     </div>
 
+    <div class="pane" id="pane-print">
+      <h2>Tactile 3D print</h2>
+      <p class="small">Download an STL of the mountain to print and explore by touch. Routes stand up as smooth, rounded ridges. The surface gets rougher as avalanche risk rises: Low terrain is smooth, Moderate has fine bumps, and High and Extreme add larger, taller bumps. The texture follows the conditions set in the Conditions tab at the moment you download.</p>
+      <div class="card">
+        <div class="rowf"><label class="small" for="printW">Width</label>
+          <select id="printW"><option value="100">100 mm</option><option value="150" selected>150 mm</option><option value="200">200 mm</option></select></div>
+        <div class="muted small" id="printDims" style="margin-top:6px"></div>
+        <div class="muted small" style="margin-top:6px">Heights are exaggerated 1.5 times on a 3 mm base. Route ridges are 2 mm wide and 1.6 mm tall. Print with a 0.4 mm nozzle at 0.12 to 0.16 mm layers so the texture survives.</div>
+        <div class="small" style="margin-top:10px;color:var(--gold2)">Raised routes</div>
+        <div id="printList" style="margin-top:4px"></div>
+        <div class="muted small" style="margin-top:6px">Select a ski run in the Routes tab to add it. Your drawn routes and the safest route are included when they exist.</div>
+        <div style="margin-top:12px"><button class="btn" id="printBtn">Download STL</button></div>
+        <div class="small" id="printMsg" style="margin-top:8px"></div>
+      </div>
+    </div>
+
     <div class="pane method" id="pane-method">
       <h2>What the map shows</h2>
       <p>Each 30 m cell gets a relative <b>risk index from 0 to 100</b>. It combines how likely an avalanche is to start there or reach there (terrain), how unstable the snowpack is (conditions), and how bad the outcome would be (consequence). It is a comparison tool, not a probability.</p>
@@ -236,6 +252,8 @@ a{color:var(--gold2)}
       <h2>Formula</h2>
       <p><code>terrain = 1 − (1 − release) × (1 − 0.85 × runout)</code><br><code>raw = terrain × danger × problem × weather × (1 + 0.6 × trap)</code><br><code>index = 100 × (1 − e^(−1.4 × raw))</code></p>
       <p>Classes: Low &lt; 14, Moderate 14–31, Considerable 31–55, High 55–78, Extreme ≥ 78.</p>
+      <h2>3D print</h2>
+      <p>The STL is built in the browser from the same elevation data at about 0.4 mm spacing, with heights exaggerated 1.5 times. The risk index, lightly smoothed, sets the surface texture: fine bumps 0.35 mm tall come in from Moderate, and coarser bumps up to 0.7 mm tall are added from Considerable up. Routes are rounded ridges 1.6 mm tall and smooth, so a finger can follow them through the rough ground. The model is watertight with a flat base.</p>
       <h2>Route scoring</h2>
       <p>Routes and ski runs are sampled every 15 m. Ski areas drawn as shapes (bowls, glades) are scored over every cell inside the shape. <b>Route score = 0.55 × 90th percentile + 0.45 × maximum</b>, so one serious crux can't be averaged away by long safe sections. Cruxes are continuous stretches at Considerable or above.</p>
       <h2>Safest route</h2>
@@ -5429,7 +5447,135 @@ document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{
   document.querySelectorAll('.tabs button').forEach(x=>x.classList.toggle('on',x===b));
   document.querySelectorAll('.pane').forEach(p=>p.classList.toggle('on',p.id==='pane-'+b.dataset.t));
   if(b.dataset.t==='routes' && S.selected && S.selected.A && !S.selected.A.area) drawProfile(S.selected.A);
+  if(b.dataset.t==='print') printUI();
 });
+/* ---------------- 3D print (STL) ---------------- */
+const PRINT={vex:1.5, base:3, ridgeH:1.6, ridgeR:1.0, fade:0.8, fineL:1.6, coarseL:3.2, fineA:0.35, coarseA:0.7};
+function printRoutes(){
+  const list=[...ROUTES,...S.userRoutes,...(S.safe?[S.safe]:[])];
+  if(S.selected&&S.selected.kind==='run') list.push(S.selected);
+  return list;
+}
+function printUI(){
+  const host=document.getElementById('printList'); if(!host) return;
+  host.innerHTML=printRoutes().map(R=>`<div class="small">· ${R.name}${R.kind==='run'?' (selected run)':''}</div>`).join('');
+  const w=+document.getElementById('printW').value;
+  if(!G.zr){let lo=1e9,hi=-1e9; for(const e of G.elev){if(e<lo)lo=e; if(e>hi)hi=e;} G.zr=hi-lo;}
+  document.getElementById('printDims').textContent=`${w} × ${Math.round(w*G.H/G.W)} mm footprint, up to about ${Math.round(PRINT.base+G.zr*w/(G.W*G.res)*PRINT.vex+PRINT.ridgeH)} mm tall`;
+}
+function blurScore(){
+  const W=G.W,H=G.H,out=new Float32Array(W*H),tmp=new Float32Array(W*H);
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++){let s=0,n=0;for(let d=-1;d<=1;d++){const xx=x+d;if(xx>=0&&xx<W){s+=SCORE[y*W+xx];n++;}}tmp[y*W+x]=s/n;}
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++){let s=0,n=0;for(let d=-1;d<=1;d++){const yy=y+d;if(yy>=0&&yy<H){s+=tmp[yy*W+x];n++;}}out[y*W+x]=s/n;}
+  return out;
+}
+function buildSTL(widthMM){
+  const P=PRINT, Wmm=widthMM, Dmm=widthMM*G.H/G.W;
+  const sp=Math.max(0.4,Math.sqrt(Wmm*Dmm/260000));
+  const nx=Math.round(Wmm/sp)+1, ny=Math.round(Dmm/sp)+1;
+  const mmPerM=Wmm/(G.W*G.res), SC=blurScore();
+  const Z=new Float32Array(nx*ny), TX=new Float32Array(nx*ny), D=new Float32Array(nx*ny).fill(1e9);
+  let zmin=1e9;
+  for(let k=0;k<G.elev.length;k++) zmin=Math.min(zmin,G.elev[k]);
+  const TAU=Math.PI*2;
+  for(let j=0;j<ny;j++)for(let i=0;i<nx;i++){
+    const k=j*nx+i, gx=i/(nx-1)*G.W, gy=j/(ny-1)*G.H, px=i*Wmm/(nx-1), py=j*Dmm/(ny-1);
+    Z[k]=P.base+(bil(G.elev,gx,gy)-zmin)*mmPerM*P.vex;
+    const t=clamp((bil(SC,gx,gy)-14)/64,0,1);
+    const fine=(0.5+0.5*Math.sin(TAU*px/P.fineL))*(0.5+0.5*Math.sin(TAU*py/P.fineL));
+    const coarse=(0.5+0.5*Math.sin(TAU*px/P.coarseL+1))*(0.5+0.5*Math.sin(TAU*py/P.coarseL+2));
+    TX[k]=P.fineA*Math.min(1,t*2)*fine + P.coarseA*Math.max(0,(t-0.4)/0.6)*coarse;
+  }
+  // distance from each vertex to the nearest route, in mm
+  const reach=P.ridgeR+P.fade, gxmm=Wmm/G.W, gymm=Dmm/G.H;
+  for(const R of printRoutes()) for(const g of (R.parts||[R.g])) for(let s=1;s<g.length;s++){
+    const ax=g[s-1][0]*gxmm, ay=g[s-1][1]*gymm, bx=g[s][0]*gxmm, by=g[s][1]*gymm;
+    const i0=Math.max(0,Math.floor((Math.min(ax,bx)-reach)/Wmm*(nx-1))), i1=Math.min(nx-1,Math.ceil((Math.max(ax,bx)+reach)/Wmm*(nx-1)));
+    const j0=Math.max(0,Math.floor((Math.min(ay,by)-reach)/Dmm*(ny-1))), j1=Math.min(ny-1,Math.ceil((Math.max(ay,by)+reach)/Dmm*(ny-1)));
+    for(let j=j0;j<=j1;j++)for(let i=i0;i<=i1;i++){
+      const d=segDist(i*Wmm/(nx-1),j*Dmm/(ny-1),[ax,ay],[bx,by]), k=j*nx+i; if(d<D[k]) D[k]=d;
+    }
+  }
+  for(let k=0;k<Z.length;k++){
+    const d=D[k], w=clamp((P.ridgeR+P.fade-d)/P.fade,0,1), q=d/P.ridgeR;
+    Z[k]+=TX[k]*(1-w)+(q<1?P.ridgeH*Math.sqrt(1-q*q):0);
+  }
+  // binary STL: top surface, side walls, bottom fan
+  const per=[]; for(let i=0;i<nx;i++)per.push([i,0]); for(let j=1;j<ny;j++)per.push([nx-1,j]);
+  for(let i=nx-2;i>=0;i--)per.push([i,ny-1]); for(let j=ny-2;j>=1;j--)per.push([0,j]);
+  const nTop=2*(nx-1)*(ny-1), nPer=per.length, nTri=nTop+2*nPer+nPer;
+  const buf=new ArrayBuffer(84+50*nTri), dv=new DataView(buf);
+  const hdr='Avalanche Risk Atlas Whistler tactile model'; for(let c=0;c<hdr.length;c++) dv.setUint8(c,hdr.charCodeAt(c));
+  dv.setUint32(80,nTri,true);
+  let o=84;
+  const X=i=>i*Wmm/(nx-1), Y=j=>Dmm-j*Dmm/(ny-1);
+  function tri(a,b,c){
+    const ux=b[0]-a[0],uy=b[1]-a[1],uz=b[2]-a[2],vx=c[0]-a[0],vy=c[1]-a[1],vz=c[2]-a[2];
+    let nx_=uy*vz-uz*vy, ny_=uz*vx-ux*vz, nz_=ux*vy-uy*vx; const L=Math.hypot(nx_,ny_,nz_)||1;
+    for(const v of [nx_/L,ny_/L,nz_/L,...a,...b,...c]){dv.setFloat32(o,v,true); o+=4;}
+    dv.setUint16(o,0,true); o+=2;
+  }
+  const V=(i,j)=>[X(i),Y(j),Z[j*nx+i]];
+  for(let j=0;j<ny-1;j++)for(let i=0;i<nx-1;i++){
+    const a=V(i,j),b=V(i+1,j),c=V(i,j+1),d=V(i+1,j+1);
+    tri(a,c,b); tri(b,c,d);
+  }
+  for(let k=0;k<nPer;k++){
+    const [ia,ja]=per[k],[ib,jb]=per[(k+1)%nPer];
+    const A=V(ia,ja),B=V(ib,jb),A0=[A[0],A[1],0],B0=[B[0],B[1],0];
+    tri(A,B,A0); tri(B,B0,A0);
+  }
+  const C=[Wmm/2,Dmm/2,0];
+  for(let k=0;k<nPer;k++){
+    const [ia,ja]=per[k],[ib,jb]=per[(k+1)%nPer];
+    tri(C,[X(ia),Y(ja),0],[X(ib),Y(jb),0]);
+  }
+  let hmax=0; for(let k=0;k<Z.length;k++) if(Z[k]>hmax) hmax=Z[k];
+  return {buf,nTri,Wmm,Dmm,hmax};
+}
+/* zip with one deflated (or stored) entry, for viewers that only accept .zip */
+const CRCT=(()=>{const t=new Uint32Array(256);for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0;}return t;})();
+function crc32(u8){let c=0xFFFFFFFF;for(let i=0;i<u8.length;i++)c=CRCT[(c^u8[i])&255]^(c>>>8);return (c^0xFFFFFFFF)>>>0;}
+async function zipOne(name,u8){
+  let data=u8, method=0;
+  if(typeof CompressionStream!=='undefined'){
+    try{ data=new Uint8Array(await new Response(new Blob([u8]).stream().pipeThrough(new CompressionStream('deflate-raw'))).arrayBuffer()); method=8; }catch(e){ data=u8; method=0; }
+  }
+  const nm=new TextEncoder().encode(name), crc=crc32(u8);
+  const lh=new DataView(new ArrayBuffer(30)); lh.setUint32(0,0x04034b50,true); lh.setUint16(4,20,true); lh.setUint16(8,method,true);
+  lh.setUint32(14,crc,true); lh.setUint32(18,data.length,true); lh.setUint32(22,u8.length,true); lh.setUint16(26,nm.length,true);
+  const ch=new DataView(new ArrayBuffer(46)); ch.setUint32(0,0x02014b50,true); ch.setUint16(4,20,true); ch.setUint16(6,20,true); ch.setUint16(10,method,true);
+  ch.setUint32(16,crc,true); ch.setUint32(20,data.length,true); ch.setUint32(24,u8.length,true); ch.setUint16(28,nm.length,true);
+  const cdOff=30+nm.length+data.length, cdLen=46+nm.length;
+  const eo=new DataView(new ArrayBuffer(22)); eo.setUint32(0,0x06054b50,true); eo.setUint16(8,1,true); eo.setUint16(10,1,true);
+  eo.setUint32(12,cdLen,true); eo.setUint32(16,cdOff,true);
+  return new Blob([lh,nm,data,ch,nm,eo],{type:'application/zip'});
+}
+let dlCap=null;
+if(window.claude&&typeof window.claude.use==='function'){ window.claude.use('downloads').then(d=>{dlCap=d;}).catch(()=>{}); }
+document.getElementById('printW').onchange=printUI;
+document.getElementById('printBtn').onclick=async()=>{
+  const msg=document.getElementById('printMsg'), btn=document.getElementById('printBtn'), w=+document.getElementById('printW').value;
+  btn.disabled=true; msg.textContent='Building the model…';
+  await new Promise(r=>setTimeout(r,30));
+  try{
+    const M=buildSTL(w), base=`whistler-avalanche-model-${w}mm`;
+    const info=`${(M.nTri/1000).toFixed(0)}k triangles, ${M.Wmm.toFixed(0)} × ${M.Dmm.toFixed(0)} × ${M.hmax.toFixed(0)} mm`;
+    if(dlCap){
+      msg.textContent='Compressing…';
+      const z=await zipOne(base+'.stl',new Uint8Array(M.buf));
+      try{ await dlCap.save({filename:base+'.zip',data:z}); msg.textContent=`Saved ${base}.zip (${info}). Unzip it to get the STL.`; }
+      catch(e){ msg.textContent=e&&e.code==='declined'?'Download cancelled.':'Downloads are not available in this view. Open the GitHub Pages site to get the STL.'; }
+    } else {
+      const url=URL.createObjectURL(new Blob([M.buf],{type:'model/stl'}));
+      const a=document.createElement('a'); a.href=url; a.download=base+'.stl'; document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(()=>URL.revokeObjectURL(url),60000);
+      msg.textContent=`Downloaded ${base}.stl (${info}, ${(M.buf.byteLength/1048576).toFixed(0)} MB).`;
+    }
+  }catch(e){ console.error(e); msg.textContent='Could not build the model: '+e.message; }
+  btn.disabled=false;
+};
+
 
 /* ---------------- conditions UI ---------------- */
 function dangerUI(){
@@ -5752,6 +5898,7 @@ function routeListUI(){
   runListUI();
 }
 function runListUI(){
+  printUI();
   const q=S.runQ.trim().toLowerCase();
   let list=RUNS.filter(R=>R.A&&(S.mtn==='all'||R.mtn===S.mtn)&&(!q||R.name.toLowerCase().includes(q))&&(R.name!=='Unnamed run'||q));
   list.sort(S.runSort==='risk'?(a,b)=>b.A.routeScore-a.A.routeScore:(a,b)=>a.name.localeCompare(b.name));
