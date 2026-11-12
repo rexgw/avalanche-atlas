@@ -221,13 +221,13 @@ a{color:var(--gold2)}
 
     <div class="pane" id="pane-print">
       <h2>Tactile 3D print</h2>
-      <p class="small">Download an STL of the mountain to print and explore by touch. Routes stand up as smooth, rounded ridges. The surface gets rougher as avalanche risk rises: Low terrain is smooth, Moderate has fine bumps, and High and Extreme add larger, taller bumps. The texture follows the conditions set in the Conditions tab at the moment you download. Preview print shows the exact model on the map before you download it.</p>
+      <p class="small">Download an STL of the mountain to print and explore by touch. Routes stand up as smooth, rounded ridges. Each risk class has its own sharp-edged pattern so it never feels like the natural terrain: Low is smooth, Moderate has diagonal ribs, Considerable has round flat-topped studs, High has square pyramids and Extreme has tall, tightly packed spikes. The texture follows the conditions set in the Conditions tab at the moment you download. Preview print shows the exact model on the map before you download it.</p>
       <p class="small">A touch legend runs along the south edge. From west to east it has five texture patches from Low to Extreme, marked with one to five raised dots, then a smooth ridge showing how a route feels.</p>
       <div class="card">
         <div class="rowf"><label class="small" for="printW">Width</label>
           <select id="printW"><option value="100">100 mm</option><option value="150" selected>150 mm</option><option value="200">200 mm</option></select></div>
         <div class="muted small" id="printDims" style="margin-top:6px"></div>
-        <div class="muted small" style="margin-top:6px">Heights are exaggerated 1.5 times on a 3 mm base. Route ridges are 2 mm wide and 1.6 mm tall. Print with a 0.4 mm nozzle at 0.12 to 0.16 mm layers so the texture survives.</div>
+        <div class="muted small" style="margin-top:6px">Heights are exaggerated 1.5 times on a 3 mm base. Route ridges are 2.2 mm wide and 2.2 mm tall, above the tallest texture. Print with a 0.4 mm nozzle at 0.12 to 0.16 mm layers so the texture survives.</div>
         <div class="small" style="margin-top:10px;color:var(--gold2)">Raised routes</div>
         <div id="printList" style="margin-top:4px"></div>
         <div class="muted small" style="margin-top:6px">Select a ski run in the Routes tab to add it. Your drawn routes and the safest route are included when they exist.</div>
@@ -258,7 +258,7 @@ a{color:var(--gold2)}
       <p><code>terrain = 1 − (1 − release) × (1 − 0.85 × runout)</code><br><code>raw = terrain × danger × problem × weather × (1 + 0.6 × trap)</code><br><code>index = 100 × (1 − e^(−1.4 × raw))</code></p>
       <p>Classes: Low &lt; 14, Moderate 14–31, Considerable 31–55, High 55–78, Extreme ≥ 78.</p>
       <h2>3D print</h2>
-      <p>The STL is built in the browser from the same elevation data at about 0.4 mm spacing, with heights exaggerated 1.5 times. The risk index, lightly smoothed, sets the surface texture: fine bumps 0.35 mm tall come in from Moderate, and coarser bumps up to 0.7 mm tall are added from Considerable up. Routes are rounded ridges 1.6 mm tall and smooth, so a finger can follow them through the rough ground. The model is watertight with a flat base. A legend strip along the south edge holds one patch for each risk class, textured at a typical index for that class (7, 22, 43, 66 and 90) and marked with one to five dots, plus a sample route ridge.</p>
+      <p>The STL is built in the browser from the same elevation data at about 0.4 mm spacing, with heights exaggerated 1.5 times. The risk class, from the index smoothed over 150 m, sets a geometric texture with hard edges: diagonal ribs 0.6 mm tall for Moderate, flat-topped studs 0.9 mm tall on a 3.2 mm grid for Considerable, square pyramids 1.2 mm tall for High and staggered spikes 1.5 mm tall on a 2.4 mm grid for Extreme. Low is left smooth. Routes are smooth rounded ridges 2.2 mm tall, so a finger can follow them through the textured ground. The model is watertight with a flat base. A legend strip along the south edge holds one patch for each risk class, textured with that class's pattern and marked with one to five dots, plus a sample route ridge.</p>
       <h2>Route scoring</h2>
       <p>Routes and ski runs are sampled every 15 m. Ski areas drawn as shapes (bowls, glades) are scored over every cell inside the shape. <b>Route score = 0.55 × 90th percentile + 0.45 × maximum</b>, so one serious crux can't be averaged away by long safe sections. Cruxes are continuous stretches at Considerable or above.</p>
       <h2>Safest route</h2>
@@ -824,7 +824,7 @@ document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{
   if(b.dataset.t==='print') printUI();
 });
 /* ---------------- 3D print (STL) ---------------- */
-const PRINT={vex:1.5, base:3, ridgeH:1.6, ridgeR:1.0, fade:0.8, fineL:1.6, coarseL:3.2, fineA:0.35, coarseA:0.7};
+const PRINT={vex:1.5, base:3, ridgeH:2.2, ridgeR:1.1, fade:1.0};
 function printRoutes(){
   const list=[...ROUTES,...S.userRoutes,...(S.safe?[S.safe]:[])];
   if(S.selected&&S.selected.kind==='run') list.push(S.selected);
@@ -841,8 +841,8 @@ function printUI(){
 function legendDepth(w){ return Math.max(13,Math.round(w*0.1)); }
 function blurScore(){
   const W=G.W,H=G.H,out=new Float32Array(W*H),tmp=new Float32Array(W*H);
-  for(let y=0;y<H;y++)for(let x=0;x<W;x++){let s=0,n=0;for(let d=-1;d<=1;d++){const xx=x+d;if(xx>=0&&xx<W){s+=SCORE[y*W+xx];n++;}}tmp[y*W+x]=s/n;}
-  for(let y=0;y<H;y++)for(let x=0;x<W;x++){let s=0,n=0;for(let d=-1;d<=1;d++){const yy=y+d;if(yy>=0&&yy<H){s+=tmp[yy*W+x];n++;}}out[y*W+x]=s/n;}
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++){let s=0,n=0;for(let d=-2;d<=2;d++){const xx=x+d;if(xx>=0&&xx<W){s+=SCORE[y*W+xx];n++;}}tmp[y*W+x]=s/n;}
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++){let s=0,n=0;for(let d=-2;d<=2;d++){const yy=y+d;if(yy>=0&&yy<H){s+=tmp[yy*W+x];n++;}}out[y*W+x]=s/n;}
   return out;
 }
 function buildPrintGrid(widthMM){
@@ -855,18 +855,26 @@ function buildPrintGrid(widthMM){
   let zmin=1e9;
   for(let k=0;k<G.elev.length;k++) zmin=Math.min(zmin,G.elev[k]);
   const TAU=Math.PI*2;
-  const texAt=(px,py,t)=>{
-    const fine=(0.5+0.5*Math.sin(TAU*px/P.fineL))*(0.5+0.5*Math.sin(TAU*py/P.fineL));
-    const coarse=(0.5+0.5*Math.sin(TAU*px/P.coarseL+1))*(0.5+0.5*Math.sin(TAU*py/P.coarseL+2));
-    return P.fineA*Math.min(1,t*2)*fine + P.coarseA*Math.max(0,(t-0.4)/0.6)*coarse;
+  // one geometric pattern per risk class, with hard edges so it never reads as terrain
+  const md=(v,p)=>((v%p)+p)%p;
+  const texAt=(px,py,c)=>{
+    if(c<=0) return 0;                                   // Low: smooth
+    if(c===1){ const u=md((px+py)/Math.SQRT2,2.2)/2.2;   // Moderate: diagonal ribs
+      return 0.6*Math.max(0,1-Math.abs(2*u-1)*1.25); }
+    if(c===2){ const u=md(px,3.2)-1.6, v=md(py,3.2)-1.6, r=Math.hypot(u,v); // Considerable: flat-topped studs
+      return r<0.75?0.9:r<1.05?0.9*(1.05-r)/0.3:0; }
+    if(c===3){ const u=Math.abs(md(px,3.2)-1.6)/1.6, v=Math.abs(md(py,3.2)-1.6)/1.6; // High: square pyramids
+      return 1.2*Math.max(0,1-Math.max(u,v)*1.1); }
+    const q=2.4, sx=md(px,q)-q/2, sy=md(py+(Math.floor(px/q)%2?q/2:0),q)-q/2;    // Extreme: tall staggered spikes
+    return 1.5*Math.max(0,1-Math.hypot(sx,sy)/(q*0.48));
   };
+  const clsP=s=>s<14?0:s<31?1:s<55?2:s<78?3:4;
   for(let j=0;j<nyT;j++)for(let i=0;i<nx;i++){
     const k=j*nx+i, gx=i/(nx-1)*G.W, gy=j/(nyT-1)*G.H, px=i*Wmm/(nx-1), py=j*syp;
     Z[k]=P.base+(bil(G.elev,gx,gy)-zmin)*mmPerM*P.vex;
-    TX[k]=texAt(px,py,clamp((bil(SC,gx,gy)-14)/64,0,1));
+    TX[k]=texAt(px,py,clsP(bil(SC,gx,gy)));
   }
   // touch legend along the south edge: 5 risk patches (1 to 5 dots) and a route sample
-  const LT=[7,22,43,66,90].map(s=>clamp((s-14)/64,0,1));
   const mX=3, gapX=1.2, cellW=(Wmm-2*mX-5*gapX)/6, groove=1.2, plate=P.base+1.0;
   const patchTop=groove+1.0, dotRow=Lmm-2.4, patchBot=dotRow-1.8;
   for(let j=nyT;j<ny;j++)for(let i=0;i<nx;i++){
@@ -878,7 +886,7 @@ function buildPrintGrid(widthMM){
       const inCell=c>=0&&c<6&&cx<=cellW;
       if(!inCell&&ly>=patchTop&&ly<=patchBot&&px>mX&&px<Wmm-mX) z=P.base+0.3; // groove between patches
       if(inCell&&ly>=patchTop&&ly<=patchBot){
-        if(c<5) z=plate+0.3+texAt(px,ly,LT[c]);
+        if(c<5) z=plate+0.3+texAt(px,ly,c);
         else { const q=Math.abs(ly-(patchTop+patchBot)/2)/P.ridgeR; z=plate+0.3+(q<1?P.ridgeH*Math.sqrt(1-q*q):0); }
       }
       if(inCell&&c<5){
@@ -976,7 +984,7 @@ function buildPreview(){
   const idx=new Uint32Array((nx-1)*(ny-1)*6); let n=0;
   for(let j=0;j<ny-1;j++)for(let i=0;i<nx-1;i++){const a=j*nx+i,b=a+1,c=a+nx,d=c+1; idx[n++]=a;idx[n++]=c;idx[n++]=b; idx[n++]=b;idx[n++]=c;idx[n++]=d;}
   const geo=new T3.BufferGeometry(); geo.setAttribute('position',new T3.BufferAttribute(pos,3)); geo.setIndex(new T3.BufferAttribute(idx,1)); geo.computeVertexNormals();
-  const mat=new T3.MeshStandardMaterial({color:0xE9E3D3, roughness:0.82, metalness:0, side:T3.DoubleSide});
+  const mat=new T3.MeshStandardMaterial({color:0xE9E3D3, roughness:0.8, metalness:0, side:T3.DoubleSide, flatShading:false});
   const group=new T3.Group(); group.add(new T3.Mesh(geo,mat));
   const wp=[]; const per=printPerimeter(nx,ny);
   for(let k=0;k<per.length;k++){
@@ -987,8 +995,8 @@ function buildPreview(){
   wp.push(0,0,0, X,0,0, 0,0,Zd, X,0,0, X,0,Zd, 0,0,Zd);
   const wg=new T3.BufferGeometry(); wg.setAttribute('position',new T3.BufferAttribute(new Float32Array(wp),3)); wg.computeVertexNormals();
   group.add(new T3.Mesh(wg,mat));
-  group.add(new T3.HemisphereLight(0xffffff,0x4a5a70,1.1));
-  const sun=new T3.DirectionalLight(0xffffff,2.2); sun.position.set(X/2-14,16,Zd/2-10); sun.target.position.set(X/2,0,Zd/2);
+  group.add(new T3.HemisphereLight(0xffffff,0x4a5a70,0.9));
+  const sun=new T3.DirectionalLight(0xffffff,2.4); sun.position.set(X/2-16,11,Zd/2-11); sun.target.position.set(X/2,0,Zd/2);
   group.add(sun); group.add(sun.target);
   group.visible=S.preview; R3.scene.add(group);
   PV={group,X,Zd,H:M.hmax*s,w,M};
