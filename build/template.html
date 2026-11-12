@@ -36,6 +36,9 @@ header .sub{color:var(--ink3);font-size:12px}
 .diff{display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;flex:none}
 .searchin{flex:1;min-width:120px;background:var(--navy);border:1px solid var(--line);border-radius:6px;padding:5px 8px}
 .probe.act{pointer-events:auto}
+.pvbar{position:absolute;top:10px;left:10px;display:none;align-items:center;gap:10px;background:rgba(11,31,58,.92);border:1px solid var(--line);border-radius:10px;padding:6px 6px 6px 12px;font-size:12px;font-weight:600;color:var(--gold2);max-width:calc(100% - 70px)}
+#mapwrap.pv .pvbar{display:flex}
+#mapwrap.pv .maptools,#mapwrap.pv .legend,#mapwrap.pv .help,#mapwrap.pv .modehint{display:none}
 .help .hm{display:none}
 .maptools{position:absolute;top:10px;left:10px;display:flex;gap:6px;flex-wrap:wrap}
 .seg{display:inline-flex;background:var(--navy);border:1px solid var(--line);border-radius:8px;overflow:hidden}
@@ -142,6 +145,7 @@ a{color:var(--gold2)}
     <div class="modehint" id="modehint"></div>
     <div class="probe" id="probe"></div>
     <div class="legend" id="legend"></div>
+    <div class="pvbar" id="pvbar"><span id="pvInfo">Print preview</span><button class="btn sm" id="pvExit">Exit preview</button></div>
   </div>
   <aside>
     <div class="tabs"><button data-t="cond" class="on">Conditions</button><button data-t="routes">Routes</button><button data-t="print">3D print</button><button data-t="method">Method</button></div>
@@ -217,7 +221,7 @@ a{color:var(--gold2)}
 
     <div class="pane" id="pane-print">
       <h2>Tactile 3D print</h2>
-      <p class="small">Download an STL of the mountain to print and explore by touch. Routes stand up as smooth, rounded ridges. The surface gets rougher as avalanche risk rises: Low terrain is smooth, Moderate has fine bumps, and High and Extreme add larger, taller bumps. The texture follows the conditions set in the Conditions tab at the moment you download.</p>
+      <p class="small">Download an STL of the mountain to print and explore by touch. Routes stand up as smooth, rounded ridges. The surface gets rougher as avalanche risk rises: Low terrain is smooth, Moderate has fine bumps, and High and Extreme add larger, taller bumps. The texture follows the conditions set in the Conditions tab at the moment you download. Preview print shows the exact model on the map before you download it.</p>
       <p class="small">A touch legend runs along the south edge. From west to east it has five texture patches from Low to Extreme, marked with one to five raised dots, then a smooth ridge showing how a route feels.</p>
       <div class="card">
         <div class="rowf"><label class="small" for="printW">Width</label>
@@ -227,7 +231,7 @@ a{color:var(--gold2)}
         <div class="small" style="margin-top:10px;color:var(--gold2)">Raised routes</div>
         <div id="printList" style="margin-top:4px"></div>
         <div class="muted small" style="margin-top:6px">Select a ski run in the Routes tab to add it. Your drawn routes and the safest route are included when they exist.</div>
-        <div style="margin-top:12px"><button class="btn" id="printBtn">Download STL</button></div>
+        <div class="rowf" style="margin-top:12px"><button class="btn" id="printBtn">Download STL</button><button class="btn ghost" id="pvBtn">Preview print</button></div>
         <div class="small" id="printMsg" style="margin-top:8px"></div>
       </div>
     </div>
@@ -319,7 +323,7 @@ const S = {
     {type:'wind', bands:{alp:1,tl:1,btl:0}, asp:[1,1,1,0,0,0,0,0], like:2, size:2}],
   wx:{hn24:15, hn72:35, wind:35, windDir:5, temp:-6, fl:900},
   source:'example', layer:'risk', mode:'inspect',
-  draw:[], start:null, end:null, selected:null, userRoutes:[], safe:null, showRuns:true, mtn:'all', runQ:'', runSort:'risk', runShown:25
+  draw:[], start:null, end:null, selected:null, userRoutes:[], safe:null, showRuns:true, preview:false, mtn:'all', runQ:'', runSort:'risk', runShown:25
 };
 
 /* ---------------- data decode ---------------- */
@@ -500,10 +504,11 @@ function buildTerrain(){
     wpos.push(ax,ay,az, ax,base,az, bx,by,bz,  bx,by,bz, ax,base,az, bx,base,bz);
   }
   const wg=new T3.BufferGeometry(); wg.setAttribute('position',new T3.BufferAttribute(new Float32Array(wpos),3));
-  R3.scene.add(new T3.Mesh(wg,new T3.MeshBasicMaterial({color:0x173663, side:T3.DoubleSide})));
+  const wallM=new T3.Mesh(wg,new T3.MeshBasicMaterial({color:0x173663, side:T3.DoubleSide})); R3.scene.add(wallM);
   const bg=new T3.BufferGeometry(); const X=wx(G.W), Z=wz(G.H);
   bg.setAttribute('position',new T3.BufferAttribute(new Float32Array([0,base,0, X,base,0, 0,base,Z, X,base,0, X,base,Z, 0,base,Z]),3));
-  R3.scene.add(new T3.Mesh(bg,new T3.MeshBasicMaterial({color:0x0B1F3A, side:T3.DoubleSide})));
+  const baseM=new T3.Mesh(bg,new T3.MeshBasicMaterial({color:0x0B1F3A, side:T3.DoubleSide})); R3.scene.add(baseM);
+  R3.terrainParts=[R3.terrain,wallM,baseM];
   R3.zmin=zmin; R3.zmax=zmax;
 }
 function initGL(){
@@ -532,7 +537,7 @@ function initGL(){
   loop();
 }
 function clampTarget(){
-  const t=R3.controls.target, X=wx(G.W), Z=wz(G.H);
+  const t=R3.controls.target, X=wx(G.W), Z=wz(G.H)*1.15;
   const cx=clamp(t.x,0,X), cz=clamp(t.z,0,Z);
   if(cx!==t.x||cz!==t.z){const dx=cx-t.x, dz=cz-t.z; t.x=cx; t.z=cz; R3.camera.position.x+=dx; R3.camera.position.z+=dz;}
 }
@@ -583,7 +588,7 @@ function lookAtGrid(gx,gy,dist){
 }
 document.getElementById('zin').onclick=()=>zoomBy(1/1.6);
 document.getElementById('zout').onclick=()=>zoomBy(1.6);
-document.getElementById('zfit').onclick=()=>fit(true);
+document.getElementById('zfit').onclick=()=>S.preview&&PV?fitPreview():fit(true);
 document.getElementById('znorth').onclick=()=>{const t=R3.controls.target; animateTo(viewFor(t,R3.camera.position.distanceTo(t),curPolar(),0),450);};
 
 /* ---------------- lines draped on the terrain ---------------- */
@@ -615,7 +620,7 @@ function disposeGroup(name){
   g.traverse(o=>{ if(o.geometry) o.geometry.dispose(); if(o.material){ const i=LMATS.indexOf(o.material); if(i>=0) LMATS.splice(i,1); o.material.dispose(); } });
   R3.scene.remove(g); delete R3.groups[name];
 }
-function setGroup(name,objs){ disposeGroup(name); const g=new T3.Group(); objs.forEach(o=>g.add(o)); R3.groups[name]=g; R3.scene.add(g); dirty=true; return g; }
+function setGroup(name,objs){ disposeGroup(name); const g=new T3.Group(); objs.forEach(o=>g.add(o)); R3.groups[name]=g; g.visible=!S.preview; R3.scene.add(g); dirty=true; return g; }
 function segsOf(pos){ const s=[]; for(let k=3;k<pos.length;k+=3) s.push(pos[k-3],pos[k-2],pos[k-1],pos[k],pos[k+1],pos[k+2]); return s; }
 function buildRunLayer(){
   const runSeg=[], liftSeg=[];
@@ -653,6 +658,8 @@ const gridScreen=(gx,gy,lift=6)=>toScreen(wx(gx),(meshH(gx,gy)+lift)*KM,wz(gy));
 function drawOverlay(){
   const r=mapwrap.getBoundingClientRect();
   octx.setTransform(dpr,0,0,dpr,0,0); octx.clearRect(0,0,r.width,r.height);
+  if(S.preview){ const t=R3.controls.target, a=toScreen(t.x,t.y,t.z), b=toScreen(t.x,t.y,t.z-1);
+    if(a&&b) document.getElementById('needle').style.transform=`rotate(${Math.atan2(b[0]-a[0],a[1]-b[1])}rad)`; return; }
   const dist=R3.camera.position.distanceTo(R3.controls.target);
   octx.font='600 11px Inter, sans-serif';
   const placed=[];
@@ -737,7 +744,7 @@ const ptrUp=e=>{
 };
 cv.addEventListener('pointerup',ptrUp); cv.addEventListener('pointercancel',ptrUp);
 cv.addEventListener('pointermove',e=>{
-  if(e.pointerType!=='mouse'||nPtr||S.mode!=='inspect') return;
+  if(e.pointerType!=='mouse'||nPtr||S.mode!=='inspect'||S.preview) return;
   const x=e.offsetX,y=e.offsetY; if(hoverReq) return;
   hoverReq=requestAnimationFrame(()=>{hoverReq=null; const g=pickTerrain(x,y); if(g) showProbe(x,y,describeCell(cellIdx(g[0],g[1])),false); else hideProbe();});
 });
@@ -759,7 +766,7 @@ function showProbe(sx,sy,html,active){
 }
 function hideProbe(){probe.style.display='none'; probe.classList.remove('act');}
 function onTap(sx,sy,ptype){
-  if(!R3) return;
+  if(!R3||S.preview) return;
   if(S.mode!=='inspect'){
     const g=pickTerrain(sx,sy); if(!g) return;
     if(S.mode==='draw'){S.draw.push(g); updDraw(); drawRoutes(); return;}
@@ -807,7 +814,7 @@ document.querySelectorAll('#layerSeg button').forEach(b=>b.onclick=()=>{
   S.layer=b.dataset.l; renderBase(); renderLegend();});
 document.getElementById('runsTog').onclick=e=>{
   S.showRuns=!S.showRuns; e.currentTarget.classList.toggle('on',S.showRuns);
-  if(R3&&R3.groups.runs){R3.groups.runs.visible=S.showRuns; dirty=true;} renderLegend();};
+  if(R3&&R3.groups.runs){R3.groups.runs.visible=S.showRuns&&!S.preview; dirty=true;} renderLegend();};
 
 /* ---------------- tabs ---------------- */
 document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{
@@ -825,6 +832,7 @@ function printRoutes(){
 }
 function printUI(){
   const host=document.getElementById('printList'); if(!host) return;
+  schedulePreview();
   host.innerHTML=printRoutes().map(R=>`<div class="small">· ${R.name}${R.kind==='run'?' (selected run)':''}</div>`).join('');
   const w=+document.getElementById('printW').value;
   if(!G.zr){let lo=1e9,hi=-1e9; for(const e of G.elev){if(e<lo)lo=e; if(e>hi)hi=e;} G.zr=hi-lo;}
@@ -837,7 +845,7 @@ function blurScore(){
   for(let y=0;y<H;y++)for(let x=0;x<W;x++){let s=0,n=0;for(let d=-1;d<=1;d++){const yy=y+d;if(yy>=0&&yy<H){s+=tmp[yy*W+x];n++;}}out[y*W+x]=s/n;}
   return out;
 }
-function buildSTL(widthMM){
+function buildPrintGrid(widthMM){
   const P=PRINT, Wmm=widthMM, Dmm=widthMM*G.H/G.W;
   const sp=Math.max(0.4,Math.sqrt(Wmm*Dmm/260000));
   const nx=Math.round(Wmm/sp)+1, nyT=Math.round(Dmm/sp)+1, syp=Dmm/(nyT-1);
@@ -894,6 +902,16 @@ function buildSTL(widthMM){
     const d=D[k], w=clamp((P.ridgeR+P.fade-d)/P.fade,0,1), q=d/P.ridgeR;
     Z[k]+=TX[k]*(1-w)+(q<1?P.ridgeH*Math.sqrt(1-q*q):0);
   }
+  let hmax=0; for(let k=0;k<Z.length;k++) if(Z[k]>hmax) hmax=Z[k];
+  return {Z,nx,ny,syp,Wmm,Dmm:Dtot,hmax};
+}
+function printPerimeter(nx,ny){
+  const per=[]; for(let i=0;i<nx;i++)per.push([i,0]); for(let j=1;j<ny;j++)per.push([nx-1,j]);
+  for(let i=nx-2;i>=0;i--)per.push([i,ny-1]); for(let j=ny-2;j>=1;j--)per.push([0,j]);
+  return per;
+}
+function buildSTL(widthMM){
+  const M=buildPrintGrid(widthMM), {Z,nx,ny,syp,Wmm}=M, Dtot=M.Dmm;
   // binary STL: top surface, side walls, bottom fan
   const per=[]; for(let i=0;i<nx;i++)per.push([i,0]); for(let j=1;j<ny;j++)per.push([nx-1,j]);
   for(let i=nx-2;i>=0;i--)per.push([i,ny-1]); for(let j=ny-2;j>=1;j--)per.push([0,j]);
@@ -924,8 +942,7 @@ function buildSTL(widthMM){
     const [ia,ja]=per[k],[ib,jb]=per[(k+1)%nPer];
     tri(C,[X(ia),Y(ja),0],[X(ib),Y(jb),0]);
   }
-  let hmax=0; for(let k=0;k<Z.length;k++) if(Z[k]>hmax) hmax=Z[k];
-  return {buf,nTri,Wmm,Dmm:Dtot,hmax};
+  return {buf,nTri,Wmm,Dmm:Dtot,hmax:M.hmax};
 }
 /* zip with one deflated (or stored) entry, for viewers that only accept .zip */
 const CRCT=(()=>{const t=new Uint32Array(256);for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0;}return t;})();
@@ -948,6 +965,61 @@ async function zipOne(name,u8){
 let dlCap=null;
 if(window.claude&&typeof window.claude.use==='function'){ window.claude.use('downloads').then(d=>{dlCap=d;}).catch(()=>{}); }
 document.getElementById('printW').onchange=printUI;
+/* print preview: the STL surface shown in the 3D view, lit so texture and ridges read */
+let PV=null, pvT=null;
+function buildPreview(){
+  const w=+document.getElementById('printW').value;
+  const M=buildPrintGrid(w), {Z,nx,ny,syp,Wmm}=M, D=M.Dmm, s=wx(G.W)/Wmm;
+  if(PV){ PV.group.traverse(o=>{if(o.geometry)o.geometry.dispose(); if(o.material)o.material.dispose();}); R3.scene.remove(PV.group); }
+  const pos=new Float32Array(nx*ny*3);
+  for(let j=0;j<ny;j++)for(let i=0;i<nx;i++){const k=j*nx+i; pos[k*3]=i*Wmm/(nx-1)*s; pos[k*3+1]=Z[k]*s; pos[k*3+2]=j*syp*s;}
+  const idx=new Uint32Array((nx-1)*(ny-1)*6); let n=0;
+  for(let j=0;j<ny-1;j++)for(let i=0;i<nx-1;i++){const a=j*nx+i,b=a+1,c=a+nx,d=c+1; idx[n++]=a;idx[n++]=c;idx[n++]=b; idx[n++]=b;idx[n++]=c;idx[n++]=d;}
+  const geo=new T3.BufferGeometry(); geo.setAttribute('position',new T3.BufferAttribute(pos,3)); geo.setIndex(new T3.BufferAttribute(idx,1)); geo.computeVertexNormals();
+  const mat=new T3.MeshStandardMaterial({color:0xE9E3D3, roughness:0.82, metalness:0, side:T3.DoubleSide});
+  const group=new T3.Group(); group.add(new T3.Mesh(geo,mat));
+  const wp=[]; const per=printPerimeter(nx,ny);
+  for(let k=0;k<per.length;k++){
+    const [ia,ja]=per[k],[ib,jb]=per[(k+1)%per.length], a=(ja*nx+ia)*3, b=(jb*nx+ib)*3;
+    wp.push(pos[a],pos[a+1],pos[a+2], pos[b],pos[b+1],pos[b+2], pos[a],0,pos[a+2],  pos[b],pos[b+1],pos[b+2], pos[b],0,pos[b+2], pos[a],0,pos[a+2]);
+  }
+  const X=Wmm*s, Zd=D*s;
+  wp.push(0,0,0, X,0,0, 0,0,Zd, X,0,0, X,0,Zd, 0,0,Zd);
+  const wg=new T3.BufferGeometry(); wg.setAttribute('position',new T3.BufferAttribute(new Float32Array(wp),3)); wg.computeVertexNormals();
+  group.add(new T3.Mesh(wg,mat));
+  group.add(new T3.HemisphereLight(0xffffff,0x4a5a70,1.1));
+  const sun=new T3.DirectionalLight(0xffffff,2.2); sun.position.set(X/2-14,16,Zd/2-10); sun.target.position.set(X/2,0,Zd/2);
+  group.add(sun); group.add(sun.target);
+  group.visible=S.preview; R3.scene.add(group);
+  PV={group,X,Zd,H:M.hmax*s,w,M};
+  document.getElementById('pvInfo').textContent=`Print preview · ${Wmm} × ${D.toFixed(0)} × ${M.hmax.toFixed(0)} mm`;
+  dirty=true;
+}
+function schedulePreview(){ if(!S.preview) return; clearTimeout(pvT); pvT=setTimeout(buildPreview,200); }
+function fitPreview(){
+  const t=new T3.Vector3(PV.X/2,PV.H*0.35,PV.Zd/2);
+  animateTo(viewFor(t,fitBox(t,0,PV.X,0,PV.Zd,0,PV.H,0.95,0.5,0.98),0.95,0.5),600);
+}
+function setPreview(on){
+  if(!R3) return;
+  S.preview=on;
+  if(on) buildPreview();
+  R3.terrainParts.forEach(m=>m.visible=!on);
+  if(R3.groups.runs) R3.groups.runs.visible=!on&&S.showRuns;
+  if(R3.groups.routes) R3.groups.routes.visible=!on;
+  if(PV) PV.group.visible=on;
+  R3.renderer.setClearColor(on?0xd5dbe3:0xdfe5ec,1);
+  mapwrap.classList.toggle('pv',on); hideProbe(); hoverPt=null;
+  document.getElementById('pvBtn').textContent=on?'Exit preview':'Preview print';
+  if(on){
+    fitPreview();
+    if(window.innerWidth<=860) mapwrap.scrollIntoView({behavior:'smooth'});
+  } else fit(true);
+  dirty=true;
+}
+document.getElementById('pvBtn').onclick=()=>setPreview(!S.preview);
+document.getElementById('pvExit').onclick=()=>setPreview(false);
+
 document.getElementById('printBtn').onclick=async()=>{
   const msg=document.getElementById('printMsg'), btn=document.getElementById('printBtn'), w=+document.getElementById('printW').value;
   btn.disabled=true; msg.textContent='Building the model…';

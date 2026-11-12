@@ -14,7 +14,7 @@ An interactive avalanche risk heat map and route assessment tool, using Whistler
 - Ski and snowboard runs on Whistler and Blackcomb with lifts, searchable and scored for avalanche risk
 - Designated uphill routes: Singing Pass Trail, and the Blackcomb Bench Climb with the South Route
 - New routes: tap points on the 3D map or upload a GPX file
-- Tactile 3D print: download an STL where routes are raised ridges and the surface gets rougher as avalanche risk rises, so the model can be read by touch. A legend strip on the south edge has one patch per risk class, marked with one to five raised dots, and a sample route ridge
+- Tactile 3D print: download an STL where routes are raised ridges and the surface gets rougher as avalanche risk rises, so the model can be read by touch. A legend strip on the south edge has one patch per risk class, marked with one to five raised dots, and a sample route ridge. Preview print shows the exact model, lit and rotatable, before downloading
 - Route assessment: overall score, distance by risk class, elevation and risk profile, crux sections
 - Ideal safest route: A* search with a slider that trades shortest against safest
 
