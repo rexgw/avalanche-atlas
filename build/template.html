@@ -24,8 +24,19 @@ header .sub{color:var(--ink3);font-size:12px}
 .disclaimer{background:#2a1d05;color:#f3dfa4;border-bottom:1px solid #5b4510;padding:6px 16px;font-size:12px;line-height:1.4}
 .app{display:grid;grid-template-columns:1fr 410px;height:calc(100vh - 86px);min-height:520px}
 .mapwrap{position:relative;background:var(--map);overflow:hidden;touch-action:none}
-#map{position:absolute;inset:0;width:100%;height:100%;display:block;cursor:grab}
+#map{position:absolute;inset:0;width:100%;height:100%;display:block;cursor:grab;touch-action:none}
 #map.drawing{cursor:crosshair}
+#ov{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.compass svg{transition:none}
+.help{position:absolute;right:10px;bottom:10px;transition:opacity .4s;background:rgba(11,31,58,.85);color:var(--ink2);border:1px solid var(--line);border-radius:8px;padding:5px 8px;font-size:11px;pointer-events:none}
+.lsw{width:18px;height:0;display:inline-block;border-top:3px solid #fff;box-shadow:0 0 0 1px rgba(11,31,58,.5)}
+.lsw.lift{border-top:2px dashed #0B1F3A;box-shadow:none}
+.lsw.route{border-top-color:#0B1F3A;box-shadow:0 0 0 1px #fff}
+.seg.toggle button.on{background:var(--navy3);color:var(--gold2)}
+.diff{display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;flex:none}
+.searchin{flex:1;min-width:120px;background:var(--navy);border:1px solid var(--line);border-radius:6px;padding:5px 8px}
+.probe.act{pointer-events:auto}
+.help .hm{display:none}
 .maptools{position:absolute;top:10px;left:10px;display:flex;gap:6px;flex-wrap:wrap}
 .seg{display:inline-flex;background:var(--navy);border:1px solid var(--line);border-radius:8px;overflow:hidden}
 .seg button{background:none;border:0;padding:6px 10px;cursor:pointer;color:var(--ink2);font-size:12px;font-weight:600}
@@ -105,6 +116,8 @@ a{color:var(--gold2)}
   .mapwrap{height:62vh;min-height:380px}
   aside{border-left:0;border-top:1px solid var(--line)}
   .pane{overflow:visible}
+  .help{bottom:auto;top:52px;left:10px;right:auto;max-width:calc(100% - 64px)}
+  .help .hd{display:none} .help .hm{display:inline}
   header .sub{display:none}
 }
 </style>
@@ -118,11 +131,14 @@ a{color:var(--gold2)}
 <div class="app">
   <div class="mapwrap" id="mapwrap">
     <canvas id="map"></canvas>
+    <canvas id="ov"></canvas>
     <div class="loading" id="loading">Loading terrain…</div>
     <div class="maptools">
       <div class="seg" id="layerSeg"><button data-l="risk" class="on">Risk heat map</button><button data-l="ates">ATES terrain</button></div>
+      <div class="seg toggle"><button id="runsTog" class="on">Ski runs</button></div>
     </div>
-    <div class="zoom"><button id="zin" aria-label="Zoom in">+</button><button id="zout" aria-label="Zoom out">−</button><button id="zfit" aria-label="Fit" style="font-size:12px">⤢</button></div>
+    <div class="zoom"><button id="zin" aria-label="Zoom in">+</button><button id="zout" aria-label="Zoom out">−</button><button id="zfit" aria-label="Reset view" style="font-size:12px">⤢</button><button id="znorth" class="compass" aria-label="Face north"><svg id="needle" viewBox="-10 -10 20 20" width="18" height="18"><path d="M0 -8 L4 3 L0 1 L-4 3 Z" fill="#C9A227"/><path d="M0 8 L4 3 L0 1 L-4 3 Z" fill="#7F90AA"/></svg></button></div>
+    <div class="help" id="help"><span class="hd">Drag to rotate · scroll to zoom · right-drag to pan</span><span class="hm">Drag to rotate · pinch to zoom · two fingers to pan</span></div>
     <div class="modehint" id="modehint"></div>
     <div class="probe" id="probe"></div>
     <div class="legend" id="legend"></div>
@@ -156,8 +172,22 @@ a{color:var(--gold2)}
     </div>
 
     <div class="pane" id="pane-routes">
-      <h2>Existing routes</h2>
+      <h2>Backcountry routes</h2>
       <div class="rlist" id="routeList"></div>
+
+      <h2>Designated uphill routes</h2>
+      <div class="rlist" id="upList"></div>
+      <div class="muted small" style="margin-top:6px">Whistler Blackcomb only allows uphill travel inside the ski area boundary on signed routes. The North Route, Oboe Traverse and East Col are not in the map data yet.</div>
+
+      <h2>Ski and snowboard runs</h2>
+      <div class="card">
+        <div class="rowf"><div class="seg" id="mtnSeg"><button data-m="all" class="on">Both</button><button data-m="Whistler">Whistler</button><button data-m="Blackcomb">Blackcomb</button></div>
+          <select id="runSort"><option value="risk">Highest risk first</option><option value="name">A to Z</option></select></div>
+        <div class="rowf" style="margin-top:8px"><input type="search" class="searchin" id="runQ" placeholder="Search runs"><span class="muted small" id="runCount"></span></div>
+        <div class="muted small" style="margin-top:8px">Tap a run on the map or in the list to score it. Ski patrol does avalanche control on open runs, so the score shows the slope as if it were uncontrolled.</div>
+      </div>
+      <div class="rlist" id="runList"></div>
+      <button class="btn ghost sm" id="runMore" style="margin-top:8px">Show more</button>
 
       <h2>New route</h2>
       <div class="card">
@@ -188,6 +218,7 @@ a{color:var(--gold2)}
     <div class="pane method" id="pane-method">
       <h2>What the map shows</h2>
       <p>Each 30 m cell gets a relative <b>risk index from 0 to 100</b>. It combines how likely an avalanche is to start there or reach there (terrain), how unstable the snowpack is (conditions), and how bad the outcome would be (consequence). It is a comparison tool, not a probability.</p>
+      <p>The map is a 3D model of the elevation data, drawn as a 60 m mesh with no vertical exaggeration. The risk or ATES layer, 100 m contours and hillshade are draped over it at 15 m detail.</p>
       <h2>Terrain layers (pre-computed)</h2>
       <ul>
         <li><b>Elevation:</b> USGS 3DEP 1 arc-second DEM, resampled to a 30 m grid.</li>
@@ -206,13 +237,14 @@ a{color:var(--gold2)}
       <p><code>terrain = 1 − (1 − release) × (1 − 0.85 × runout)</code><br><code>raw = terrain × danger × problem × weather × (1 + 0.6 × trap)</code><br><code>index = 100 × (1 − e^(−1.4 × raw))</code></p>
       <p>Classes: Low &lt; 14, Moderate 14–31, Considerable 31–55, High 55–78, Extreme ≥ 78.</p>
       <h2>Route scoring</h2>
-      <p>Routes are sampled every 15 m. <b>Route score = 0.55 × 90th percentile + 0.45 × maximum</b>, so one serious crux can't be averaged away by long safe sections. Cruxes are continuous stretches at Considerable or above.</p>
+      <p>Routes and ski runs are sampled every 15 m. Ski areas drawn as shapes (bowls, glades) are scored over every cell inside the shape. <b>Route score = 0.55 × 90th percentile + 0.45 × maximum</b>, so one serious crux can't be averaged away by long safe sections. Cruxes are continuous stretches at Considerable or above.</p>
       <h2>Safest route</h2>
       <p>A* search over the 30 m grid. Step cost = distance × slope effort + uphill gain + slider weight × distance × (index/100)². Slopes over 48° are treated as impassable. The search finds the path with the lowest total cost.</p>
       <h2>Limitations</h2>
       <ul>
         <li>No forest-cover data: treeline effects come from elevation bands only, so cleared ski runs and open avalanche paths below treeline are under-weighted.</li>
-        <li>The ski area is not modelled as controlled terrain.</li>
+        <li>The ski area is not modelled as controlled terrain. Ski runs are scored as if uncontrolled, and patrol work, closures and grooming are not included.</li>
+        <li>Ski runs, lifts and uphill routes come from OpenStreetMap. Some runs are split or slightly off their real line, and about 900 m of the Blackcomb uphill route is filled with a least-effort path where the trace has a gap.</li>
         <li>Spearhead and Musical Bumps lines are approximate (real waypoints joined by a least-effort terrain path). The Wedgemount line is a real GPS track (Peakbagger, Seán Caulfield) of the summer trail.</li>
         <li>30 m cells miss small features like rolls, cornice edges and short gullies.</li>
         <li>Live data only loads when the page runs outside this viewer (self-hosted or opened as a file).</li>
@@ -222,15 +254,26 @@ a{color:var(--gold2)}
         <li>USGS 3D Elevation Program, 1 arc-second DEM tile n51w123 (public domain)</li>
         <li>Avalanche Canada public forecast API and danger scale</li>
         <li>Open-Meteo forecast API (snowfall, wind, temperature, freezing level)</li>
+        <li>Ski runs, lifts and uphill routes: © OpenStreetMap contributors (ODbL), via OpenSkiMap</li>
+        <li>3D rendering: three.js (MIT licence)</li>
         <li>Statham et al. (2018) Conceptual Model of Avalanche Hazard; Larsen et al. (2020) AutoATES; Veitinger et al. (2016) PRA fuzzy model</li>
       </ul>
     </div>
   </aside>
 </div>
 
+<script>/*__THREE__*/</script>
 <script>
 const TERRAIN = /*__TERRAIN__*/null;
 const ROUTEDATA = /*__ROUTES__*/null;
+const RUNDATA = /*__RUNS__*/null;
+const DIFFS=[
+  {n:'Easy', i:'<svg class="diff" viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="#2E9E48"/></svg>'},
+  {n:'Intermediate', i:'<svg class="diff" viewBox="0 0 14 14"><rect x="2" y="2" width="10" height="10" fill="#2F6FD8"/></svg>'},
+  {n:'Advanced', i:'<svg class="diff" viewBox="0 0 14 14"><path d="M7 1 L13 7 L7 13 L1 7Z" fill="#111" stroke="#EEF2F7" stroke-width=".8"/></svg>'},
+  {n:'Expert', i:'<svg class="diff" viewBox="0 0 20 14" style="width:20px"><path d="M5.5 1.5 L10 7 L5.5 12.5 L1 7Z M14.5 1.5 L19 7 L14.5 12.5 L10 7Z" fill="#111" stroke="#EEF2F7" stroke-width=".8"/></svg>'},
+  {n:'Freeride', i:'<svg class="diff" viewBox="0 0 14 14"><path d="M7 1.5 L12.5 7 L7 12.5 L1.5 7Z" fill="none" stroke="#F79218" stroke-width="1.6"/></svg>'},
+  {n:'Unrated', i:'<svg class="diff" viewBox="0 0 14 14"><circle cx="7" cy="7" r="3" fill="#7F90AA"/></svg>'}];
 
 /* ---------------- constants ---------------- */
 const CLS = [
@@ -257,7 +300,7 @@ const S = {
     {type:'wind', bands:{alp:1,tl:1,btl:0}, asp:[1,1,1,0,0,0,0,0], like:2, size:2}],
   wx:{hn24:15, hn72:35, wind:35, windDir:5, temp:-6, fl:900},
   source:'example', layer:'risk', mode:'inspect',
-  draw:[], start:null, end:null, selected:null, userRoutes:[], safe:null
+  draw:[], start:null, end:null, selected:null, userRoutes:[], safe:null, showRuns:true, mtn:'all', runQ:'', runSort:'risk', runShown:25
 };
 
 /* ---------------- data decode ---------------- */
@@ -334,8 +377,10 @@ function computeScores(){
   for(let i=0;i<N;i++){const sc=factorsAt(i).score; SCORE[i]=sc; CLASS[i]=clsOf(sc);}
 }
 
-/* ---------------- base image ---------------- */
-const off=document.createElement('canvas'); let offCtx;
+/* ---------------- base texture ---------------- */
+const SS=2;           // texture pixels per 30 m cell
+const STEP=2;         // mesh vertex spacing in cells (60 m)
+const KM=0.001;       // scene units are km
 const hex2rgb=h=>[parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)];
 const RISKSTOPS=[[0,'#52BA4A'],[14,'#52BA4A'],[24,'#FFF300'],[40,'#F79218'],[62,'#EF1C29'],[82,'#1A1A1A'],[100,'#1A1A1A']].map(([v,h])=>[v,hex2rgb(h)]);
 function riskRGB(s){
@@ -345,111 +390,340 @@ function riskRGB(s){
   }
   return RISKSTOPS[RISKSTOPS.length-1][1];
 }
+const clamp=(v,a,b)=>v<a?a:v>b?b:v;
+function bil(arr,gx,gy){
+  const x=clamp(gx-0.5,0,G.W-1.001), y=clamp(gy-0.5,0,G.H-1.001);
+  const x0=x|0,y0=y|0,u=x-x0,v=y-y0,i=y0*G.W+x0;
+  return arr[i]*(1-u)*(1-v)+arr[i+1]*u*(1-v)+arr[i+G.W]*(1-u)*v+arr[i+G.W+1]*u*v;
+}
+const texCv=document.createElement('canvas'); let texCtx, texImg, baseL;
+function prepTexture(){
+  const TW=G.W*SS, TH=G.H*SS; texCv.width=TW; texCv.height=TH;
+  texCtx=texCv.getContext('2d'); texImg=texCtx.createImageData(TW,TH);
+  const z=new Float32Array(TW*TH), L=new Float32Array(TW*TH);
+  for(let py=0;py<TH;py++)for(let px=0;px<TW;px++){
+    const gx=(px+0.5)/SS, gy=(py+0.5)/SS, o=py*TW+px;
+    z[o]=bil(G.elev,gx,gy); L[o]=150+bil(G.hill,gx,gy)/255*95;
+  }
+  baseL=new Uint8ClampedArray(TW*TH);
+  for(let py=0;py<TH;py++)for(let px=0;px<TW;px++){
+    const o=py*TW+px; let l=L[o];
+    if(px<TW-1&&py<TH-1){
+      const a=z[o], r=z[o+1], d=z[o+TW];
+      const c100=Math.floor(a/100)!==Math.floor(r/100)||Math.floor(a/100)!==Math.floor(d/100);
+      if(c100) l-= (Math.floor(a/500)!==Math.floor(r/500)||Math.floor(a/500)!==Math.floor(d/500))?42:20;
+    }
+    baseL[o]=l;
+  }
+}
 function renderBase(){
-  const {W,H}=G; off.width=W; off.height=H; offCtx=off.getContext('2d');
-  const img=offCtx.createImageData(W,H), d=img.data;
+  const TW=texCv.width, TH=texCv.height, d=texImg.data;
   const atesRGB=ATES.map(a=>a.c?hex2rgb(a.c):null);
-  for(let y=0;y<H;y++)for(let x=0;x<W;x++){
-    const i=y*W+x, o=i*4;
-    const h=G.hill[i]/255;
-    let L=150+h*95;
-    // 100 m contours, 500 m index contours
-    const z=G.elev[i];
-    if(x<W-1&&y<H-1){
-      const zr=G.elev[i+1], zd=G.elev[i+W];
-      if(Math.floor(z/100)!==Math.floor(zr/100)||Math.floor(z/100)!==Math.floor(zd/100)) L-= (Math.floor(z/500)!==Math.floor(zr/500)||Math.floor(z/500)!==Math.floor(zd/500))?38:18;
+  for(let py=0;py<TH;py++){
+    const gy=(py+0.5)/SS, cy=Math.min(G.H-1,gy|0);
+    for(let px=0;px<TW;px++){
+      const o=py*TW+px, q=o*4, gx=(px+0.5)/SS;
+      const L=baseL[o]; let r=L*0.94,g=L*0.965,b=L, col=null, al=0;
+      if(S.layer==='risk'){
+        const s=bil(SCORE,gx,gy);
+        if(s>=2){col=riskRGB(s); al=0.22+0.5*Math.min(1,s/45);}
+      } else {
+        const k=G.ates[cy*G.W+Math.min(G.W-1,gx|0)]; if(atesRGB[k]){col=atesRGB[k]; al=k===3?0.55:0.5;}
+      }
+      if(col){r=r*(1-al)+col[0]*al; g=g*(1-al)+col[1]*al; b=b*(1-al)+col[2]*al;}
+      d[q]=r; d[q+1]=g; d[q+2]=b; d[q+3]=255;
     }
-    let r=L*0.94,g=L*0.965,b=L;
-    let col=null, al=0;
-    if(S.layer==='risk'){
-      const s=SCORE[i];
-      if(s>=2){col=riskRGB(s); al=0.22+0.5*Math.min(1,s/45);}
-    } else {
-      const k=G.ates[i]; if(atesRGB[k]){col=atesRGB[k]; al=k===3?0.55:0.5;}
-    }
-    if(col){r=r*(1-al)+col[0]*al; g=g*(1-al)+col[1]*al; b=b*(1-al)+col[2]*al;}
-    d[o]=r; d[o+1]=g; d[o+2]=b; d[o+3]=255;
   }
-  offCtx.putImageData(img,0,0);
+  texCtx.putImageData(texImg,0,0);
+  if(R3){R3.tex.needsUpdate=true; dirty=true;}
 }
 
-/* ---------------- map view ---------------- */
-const cv=document.getElementById('map'), ctx=cv.getContext('2d');
-const V={scale:1,ox:0,oy:0};
-let dpr=1;
+/* ---------------- 3D map ---------------- */
+const mapwrap=document.getElementById('mapwrap');
+const cv=document.getElementById('map'), ov=document.getElementById('ov'), octx=ov.getContext('2d');
+let R3=null, dirty=true, dpr=1, NX, NY, HV, hoverPt=null;
+const LMATS=[];
+const wx=gx=>gx*G.res*KM, wz=gy=>gy*G.res*KM;
+// height of the rendered mesh surface at grid coords (matches the triangles exactly)
+function meshH(gx,gy){
+  const fx=clamp(gx/G.W*(NX-1),0,NX-1.0001), fy=clamp(gy/G.H*(NY-1),0,NY-1.0001);
+  const i=fx|0, j=fy|0, u=fx-i, v=fy-j, a=j*NX+i;
+  const ha=HV[a], hb=HV[a+1], hc=HV[a+NX], hd=HV[a+NX+1];
+  return (u+v<=1) ? ha+u*(hb-ha)+v*(hc-ha) : hd+(1-u)*(hc-hd)+(1-v)*(hb-hd);
+}
+function buildTerrain(){
+  NX=Math.round(G.W/STEP)+1; NY=Math.round(G.H/STEP)+1; HV=new Float32Array(NX*NY);
+  const pos=new Float32Array(NX*NY*3), uv=new Float32Array(NX*NY*2);
+  let zmin=1e9, zmax=-1e9;
+  for(let j=0;j<NY;j++)for(let i=0;i<NX;i++){
+    const gx=i*G.W/(NX-1), gy=j*G.H/(NY-1), k=j*NX+i, h=bil(G.elev,gx,gy);
+    HV[k]=h; zmin=Math.min(zmin,h); zmax=Math.max(zmax,h);
+    pos[k*3]=wx(gx); pos[k*3+1]=h*KM; pos[k*3+2]=wz(gy);
+    uv[k*2]=gx/G.W; uv[k*2+1]=1-gy/G.H;
+  }
+  const idx=new Uint32Array((NX-1)*(NY-1)*6); let n=0;
+  for(let j=0;j<NY-1;j++)for(let i=0;i<NX-1;i++){
+    const a=j*NX+i,b=a+1,c=a+NX,d=c+1;
+    idx[n++]=a;idx[n++]=c;idx[n++]=b; idx[n++]=b;idx[n++]=c;idx[n++]=d;
+  }
+  const geo=new T3.BufferGeometry();
+  geo.setAttribute('position',new T3.BufferAttribute(pos,3)); geo.setAttribute('uv',new T3.BufferAttribute(uv,2));
+  geo.setIndex(new T3.BufferAttribute(idx,1)); geo.computeBoundingSphere();
+  const mat=new T3.MeshBasicMaterial({map:R3.tex, polygonOffset:true, polygonOffsetFactor:1, polygonOffsetUnits:1});
+  R3.terrain=new T3.Mesh(geo,mat); R3.scene.add(R3.terrain);
+  // side walls so the model reads as a block
+  const base=(zmin-350)*KM, wpos=[], wcol=[];
+  const edge=[]; for(let i=0;i<NX;i++)edge.push(i); for(let j=1;j<NY;j++)edge.push(j*NX+NX-1);
+  for(let i=NX-2;i>=0;i--)edge.push((NY-1)*NX+i); for(let j=NY-2;j>=0;j--)edge.push(j*NX);
+  for(let k=0;k<edge.length-1;k++){
+    const a=edge[k], b=edge[k+1];
+    const ax=pos[a*3],ay=pos[a*3+1],az=pos[a*3+2],bx=pos[b*3],by=pos[b*3+1],bz=pos[b*3+2];
+    wpos.push(ax,ay,az, ax,base,az, bx,by,bz,  bx,by,bz, ax,base,az, bx,base,bz);
+  }
+  const wg=new T3.BufferGeometry(); wg.setAttribute('position',new T3.BufferAttribute(new Float32Array(wpos),3));
+  R3.scene.add(new T3.Mesh(wg,new T3.MeshBasicMaterial({color:0x173663, side:T3.DoubleSide})));
+  const bg=new T3.BufferGeometry(); const X=wx(G.W), Z=wz(G.H);
+  bg.setAttribute('position',new T3.BufferAttribute(new Float32Array([0,base,0, X,base,0, 0,base,Z, X,base,0, X,base,Z, 0,base,Z]),3));
+  R3.scene.add(new T3.Mesh(bg,new T3.MeshBasicMaterial({color:0x0B1F3A, side:T3.DoubleSide})));
+  R3.zmin=zmin; R3.zmax=zmax;
+}
+function initGL(){
+  let renderer;
+  try{ renderer=new T3.WebGLRenderer({canvas:cv, antialias:true, alpha:false}); }
+  catch(e){ throw new Error('This browser cannot show the 3D map (WebGL is unavailable).'); }
+  renderer.setClearColor(0xdfe5ec,1);
+  const scene=new T3.Scene();
+  const camera=new T3.PerspectiveCamera(42,1,0.03,400);
+  const tex=new T3.CanvasTexture(texCv); tex.colorSpace=T3.SRGBColorSpace;
+  tex.anisotropy=Math.min(8,renderer.capabilities.getMaxAnisotropy()); tex.minFilter=T3.LinearMipmapLinearFilter; tex.magFilter=T3.LinearFilter;
+  const controls=new T3.OrbitControls(camera,cv);
+  controls.enableDamping=true; controls.dampingFactor=0.14; controls.screenSpacePanning=false;
+  controls.minDistance=0.35; controls.maxDistance=60; controls.maxPolarAngle=1.38; controls.zoomToCursor=true;
+  controls.touches={ONE:T3.TOUCH.ROTATE, TWO:T3.TOUCH.DOLLY_PAN};
+  controls.mouseButtons={LEFT:T3.MOUSE.ROTATE, MIDDLE:T3.MOUSE.DOLLY, RIGHT:T3.MOUSE.PAN};
+  controls.addEventListener('change',()=>{dirty=true;});
+  R3={renderer,scene,camera,controls,tex,groups:{}};
+  buildTerrain();
+  const loop=()=>{
+    requestAnimationFrame(loop);
+    if(R3.anim) stepAnim();
+    const moved=controls.update();
+    if(moved||dirty){ clampTarget(); renderer.render(scene,camera); drawOverlay(); dirty=false; }
+  };
+  loop();
+}
+function clampTarget(){
+  const t=R3.controls.target, X=wx(G.W), Z=wz(G.H);
+  const cx=clamp(t.x,0,X), cz=clamp(t.z,0,Z);
+  if(cx!==t.x||cz!==t.z){const dx=cx-t.x, dz=cz-t.z; t.x=cx; t.z=cz; R3.camera.position.x+=dx; R3.camera.position.z+=dz;}
+}
 function resize(){
-  const r=cv.getBoundingClientRect(); dpr=window.devicePixelRatio||1;
-  cv.width=Math.round(r.width*dpr); cv.height=Math.round(r.height*dpr);
-  draw();
+  if(!R3) return;
+  const r=mapwrap.getBoundingClientRect(); dpr=Math.min(2,window.devicePixelRatio||1);
+  R3.renderer.setPixelRatio(dpr); R3.renderer.setSize(r.width,r.height,false);
+  R3.camera.aspect=r.width/Math.max(1,r.height); R3.camera.updateProjectionMatrix();
+  ov.width=Math.round(r.width*dpr); ov.height=Math.round(r.height*dpr);
+  LMATS.forEach(m=>m.resolution.set(r.width,r.height));
+  dirty=true;
 }
-function fit(){
-  const r=cv.getBoundingClientRect();
-  V.scale=Math.min(r.width/G.W, r.height/G.H)*0.98;
-  V.ox=(r.width-G.W*V.scale)/2; V.oy=(r.height-G.H*V.scale)/2; draw();
+/* camera moves */
+function viewFor(target,dist,polar,az){
+  const s=Math.sin(polar);
+  return {t:target.clone(), p:new T3.Vector3(target.x+dist*s*Math.sin(az), target.y+dist*Math.cos(polar), target.z+dist*s*Math.cos(az))};
 }
-const g2s=(x,y)=>[x*V.scale+V.ox, y*V.scale+V.oy];
-const s2g=(sx,sy)=>[(sx-V.ox)/V.scale,(sy-V.oy)/V.scale];
-function zoomAt(sx,sy,k){
-  const ns=Math.max(0.4,Math.min(40,V.scale*k)); const [gx,gy]=s2g(sx,sy);
-  V.scale=ns; V.ox=sx-gx*ns; V.oy=sy-gy*ns; draw();
+function animateTo(v,ms=550){ R3.anim={t0:performance.now(),ms,ft:R3.controls.target.clone(),fp:R3.camera.position.clone(),tt:v.t,tp:v.p}; dirty=true; }
+function stepAnim(){
+  const A=R3.anim, u=Math.min(1,(performance.now()-A.t0)/A.ms), e=u<.5?2*u*u:1-Math.pow(-2*u+2,2)/2;
+  R3.controls.target.lerpVectors(A.ft,A.tt,e); R3.camera.position.lerpVectors(A.fp,A.tp,e);
+  if(u>=1) R3.anim=null; dirty=true;
 }
-let hoverPt=null;
-function polyline(pts,color,width,casing,dash){
-  if(pts.length<2)return;
-  ctx.lineJoin='round'; ctx.lineCap='round';
-  const path=()=>{ctx.beginPath(); pts.forEach((p,k)=>{const [sx,sy]=g2s(p[0],p[1]); k?ctx.lineTo(sx,sy):ctx.moveTo(sx,sy);});};
-  if(casing){ctx.setLineDash([]); path(); ctx.strokeStyle=casing; ctx.lineWidth=width+3; ctx.stroke();}
-  ctx.setLineDash(dash||[]); path(); ctx.strokeStyle=color; ctx.lineWidth=width; ctx.stroke(); ctx.setLineDash([]);
-}
-function dotAt(gx,gy,fill,r,stroke){const [sx,sy]=g2s(gx,gy);ctx.beginPath();ctx.arc(sx,sy,r,0,7);ctx.fillStyle=fill;ctx.fill();if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=2;ctx.stroke();}}
-function draw(){
-  if(!G)return;
-  ctx.setTransform(dpr,0,0,dpr,0,0);
-  const r=cv.getBoundingClientRect();
-  ctx.fillStyle='#e9edf2'; ctx.fillRect(0,0,r.width,r.height);
-  ctx.imageSmoothingEnabled = V.scale<3;
-  ctx.drawImage(off, V.ox, V.oy, G.W*V.scale, G.H*V.scale);
-  // landmarks
-  ctx.font='600 11px Inter, sans-serif';
-  for(const l of ROUTEDATA.landmarks){
-    const [gx,gy]=toGrid(l.lat,l.lon); const [sx,sy]=g2s(gx,gy);
-    ctx.fillStyle='#0B1F3A'; ctx.beginPath(); ctx.moveTo(sx,sy-5); ctx.lineTo(sx+4,sy+2); ctx.lineTo(sx-4,sy+2); ctx.closePath(); ctx.fill();
-    if(V.scale>0.9){ctx.lineWidth=3; ctx.strokeStyle='rgba(255,255,255,.85)'; ctx.strokeText(l.name,sx+6,sy+3); ctx.fillText(l.name,sx+6,sy+3);}
+function fitBox(t,x0,x1,z0,z1,y0,y1,polar,az,margin){
+  // distance at which the box just fills the view
+  const cam=R3.camera.clone(), pts=[];
+  for(const x of [x0,x1])for(const y of [y0,y1])for(const z of [z0,z1]) pts.push(new T3.Vector3(x,y,z));
+  let lo=0.3, hi=80;
+  for(let k=0;k<18;k++){
+    const m=(lo+hi)/2, v=viewFor(t,m,polar,az); cam.position.copy(v.p); cam.lookAt(t); cam.updateMatrixWorld(); cam.updateProjectionMatrix();
+    const ok=pts.every(p=>{const q=p.clone().project(cam); return q.z<1&&Math.abs(q.x)<=margin&&Math.abs(q.y)<=margin;});
+    if(ok) hi=m; else lo=m;
   }
-  // routes
-  const all=[...ROUTES,...S.userRoutes];
-  for(const R of all){ if(R===S.selected) continue; polyline(R.g,'#0B1F3A',2.2,'rgba(255,255,255,.9)'); }
-  if(S.safe && S.safe!==S.selected) polyline(S.safe.g,'#0E8FA3',3,'rgba(255,255,255,.95)',[7,5]);
-  if(S.selected) polyline(S.selected.g, S.selected===S.safe?'#0E8FA3':'#C9A227',4,'#0B1F3A');
-  // drawing
-  if(S.mode==='draw'||S.draw.length){ polyline(S.draw,'#7B2CBF',3,'#fff'); S.draw.forEach(p=>dotAt(p[0],p[1],'#7B2CBF',4,'#fff')); }
-  if(S.start) dotAt(S.start[0],S.start[1],'#2bb673',7,'#fff');
-  if(S.end) dotAt(S.end[0],S.end[1],'#C9A227',7,'#0B1F3A');
-  if(hoverPt) dotAt(hoverPt[0],hoverPt[1],'#fff',6,'#0B1F3A');
+  return hi;
+}
+function fit(animate){
+  const X=wx(G.W), Z=wz(G.H), t=new T3.Vector3(X/2,1.2,Z/2);
+  const v=viewFor(t,fitBox(t,0,X,0,Z,(R3.zmin-350)*KM,R3.zmax*KM,0.85,0,0.94),0.85,0);
+  if(animate) animateTo(v); else {R3.controls.target.copy(v.t); R3.camera.position.copy(v.p); dirty=true;}
+}
+function curAz(){ const o=R3.camera.position.clone().sub(R3.controls.target); return Math.atan2(o.x,o.z); }
+function curPolar(){ const o=R3.camera.position.clone().sub(R3.controls.target); return Math.acos(clamp(o.y/o.length(),-1,1)); }
+function zoomBy(k){ const t=R3.controls.target, o=R3.camera.position.clone().sub(t); const d=clamp(o.length()*k,R3.controls.minDistance,R3.controls.maxDistance); animateTo({t:t.clone(),p:t.clone().add(o.setLength(d))},300); }
+function lookAtGrid(gx,gy,dist){
+  const t=new T3.Vector3(wx(gx),meshH(gx,gy)*KM,wz(gy));
+  const d=dist||Math.min(R3.camera.position.distanceTo(R3.controls.target),3);
+  animateTo(viewFor(t,d,Math.min(curPolar(),1.0),curAz()));
+}
+document.getElementById('zin').onclick=()=>zoomBy(1/1.6);
+document.getElementById('zout').onclick=()=>zoomBy(1.6);
+document.getElementById('zfit').onclick=()=>fit(true);
+document.getElementById('znorth').onclick=()=>{const t=R3.controls.target; animateTo(viewFor(t,R3.camera.position.distanceTo(t),curPolar(),0),450);};
+
+/* ---------------- lines draped on the terrain ---------------- */
+function drape(g,lift){
+  const out=[];
+  for(let k=0;k<g.length;k++){
+    if(k){
+      const [x0,y0]=g[k-1],[x1,y1]=g[k]; const n=Math.max(1,Math.ceil(Math.hypot(x1-x0,y1-y0)/(STEP*0.5)));
+      for(let j=1;j<=n;j++){const x=x0+(x1-x0)*j/n, y=y0+(y1-y0)*j/n; out.push(wx(x),(meshH(x,y)+lift)*KM,wz(y));}
+    } else out.push(wx(g[0][0]),(meshH(g[0][0],g[0][1])+lift)*KM,wz(g[0][1]));
+  }
+  return out;
+}
+function lineMat(color,width,o={}){
+  const m=new T3.LineMaterial({color,linewidth:width,worldUnits:false,transparent:o.opacity!==undefined,opacity:o.opacity??1,
+    dashed:!!o.dash,dashSize:o.dash||0,gapSize:o.gap||0,dashScale:1,depthTest:true,depthWrite:o.depthWrite??true});
+  const r=mapwrap.getBoundingClientRect(); m.resolution.set(r.width,r.height); LMATS.push(m); return m;
+}
+function mkLine(pos,mat,order){
+  const geo=new T3.LineGeometry(); geo.setPositions(pos);
+  const l=new T3.Line2(geo,mat); if(mat.dashed) l.computeLineDistances(); l.renderOrder=order||0; return l;
+}
+function mkSegs(segs,mat,order){
+  const geo=new T3.LineSegmentsGeometry(); geo.setPositions(segs);
+  const l=new T3.LineSegments2(geo,mat); if(mat.dashed) l.computeLineDistances(); l.renderOrder=order||0; return l;
+}
+function disposeGroup(name){
+  const g=R3.groups[name]; if(!g) return;
+  g.traverse(o=>{ if(o.geometry) o.geometry.dispose(); if(o.material){ const i=LMATS.indexOf(o.material); if(i>=0) LMATS.splice(i,1); o.material.dispose(); } });
+  R3.scene.remove(g); delete R3.groups[name];
+}
+function setGroup(name,objs){ disposeGroup(name); const g=new T3.Group(); objs.forEach(o=>g.add(o)); R3.groups[name]=g; R3.scene.add(g); dirty=true; return g; }
+function segsOf(pos){ const s=[]; for(let k=3;k<pos.length;k+=3) s.push(pos[k-3],pos[k-2],pos[k-1],pos[k],pos[k+1],pos[k+2]); return s; }
+function buildRunLayer(){
+  const runSeg=[], liftSeg=[];
+  for(const R of RUNS){ R.w=R.parts.map(p=>drape(R.area?[...p,p[0]]:p,4)); R.w.forEach(w=>runSeg.push(...segsOf(w))); }
+  for(const L of LIFTS){ L.w=drape(L.g,9); liftSeg.push(...segsOf(L.w)); }
+  setGroup('runs',[
+    mkSegs(runSeg,lineMat(0xffffff,1.6,{opacity:0.9}),1),
+    mkSegs(liftSeg,lineMat(0x0B1F3A,1.6,{dash:0.05,gap:0.035}),1)]);
+  R3.groups.runs.visible=S.showRuns;
+}
+function routeWorld(R){ if(!R.w) R.w=(R.parts||[R.g]).map(p=>drape(R.area?[...p,p[0]]:p,R.kind==='run'?4:6)); return R.w; }
+function drawRoutes(){
+  const objs=[];
+  const add=(R,color,width,casing,cw,order,dash)=>{
+    for(const w of routeWorld(R)){
+      if(casing) objs.push(mkLine(w,lineMat(casing,width+cw,{depthWrite:false}),order));
+      objs.push(mkLine(w,lineMat(color,width,dash?{dash:0.08,gap:0.05}:{}),order+1));
+    }
+  };
+  for(const R of [...ROUTES,...S.userRoutes]) if(R!==S.selected) add(R,0x0B1F3A,2.4,0xffffff,2.6,2);
+  if(S.safe&&S.safe!==S.selected) add(S.safe,0x0E8FA3,3,0xffffff,2.6,2,true);
+  if(S.selected) add(S.selected,S.selected===S.safe?0x0E8FA3:0xC9A227,4.2,0x0B1F3A,3,4);
+  if(S.draw.length>1) objs.push(mkLine(drape(S.draw,6),lineMat(0x7B2CBF,3),6));
+  setGroup('routes',objs);
 }
 
-/* pointer interaction */
-const ptrs=new Map(); let pinch0=null, dragged=false, downAt=null;
-cv.addEventListener('pointerdown',e=>{cv.setPointerCapture(e.pointerId); ptrs.set(e.pointerId,{x:e.offsetX,y:e.offsetY}); dragged=false; downAt={x:e.offsetX,y:e.offsetY,t:Date.now()};
-  if(ptrs.size===2){const [a,b]=[...ptrs.values()]; pinch0={d:Math.hypot(a.x-b.x,a.y-b.y),s:V.scale};}});
-cv.addEventListener('pointermove',e=>{
-  if(!ptrs.has(e.pointerId)){ if(e.pointerType==='mouse') showProbe(e.offsetX,e.offsetY,true); return; }
-  const prev=ptrs.get(e.pointerId); const cur={x:e.offsetX,y:e.offsetY}; ptrs.set(e.pointerId,cur);
-  if(ptrs.size===2&&pinch0){const [a,b]=[...ptrs.values()]; const d=Math.hypot(a.x-b.x,a.y-b.y); const mx=(a.x+b.x)/2,my=(a.y+b.y)/2; zoomAt(mx,my,(pinch0.s*d/pinch0.d)/V.scale); dragged=true; return;}
-  if(Math.hypot(cur.x-downAt.x,cur.y-downAt.y)>5) dragged=true;
-  if(dragged){V.ox+=cur.x-prev.x; V.oy+=cur.y-prev.y; probe.style.display='none'; draw();}
-});
-function endPtr(e){
-  const wasTap=ptrs.size===1&&!dragged&&downAt&&Date.now()-downAt.t<600;
-  ptrs.delete(e.pointerId); if(ptrs.size<2) pinch0=null;
-  if(wasTap) onTap(e.offsetX,e.offsetY);
+/* ---------------- overlay: labels and markers ---------------- */
+const _v=new T3.Vector3();
+function toScreen(x,y,z){
+  _v.set(x,y,z).project(R3.camera);
+  if(_v.z>1||_v.z<-1) return null;
+  const r=mapwrap.getBoundingClientRect(); return [(_v.x+1)/2*r.width,(1-_v.y)/2*r.height];
 }
-cv.addEventListener('pointerup',endPtr); cv.addEventListener('pointercancel',e=>{ptrs.delete(e.pointerId);pinch0=null;});
-cv.addEventListener('pointerleave',()=>{if(!ptrs.size)probe.style.display='none';});
-cv.addEventListener('wheel',e=>{e.preventDefault(); zoomAt(e.offsetX,e.offsetY,Math.exp(-e.deltaY*0.0015));},{passive:false});
-document.getElementById('zin').onclick=()=>{const r=cv.getBoundingClientRect();zoomAt(r.width/2,r.height/2,1.5);};
-document.getElementById('zout').onclick=()=>{const r=cv.getBoundingClientRect();zoomAt(r.width/2,r.height/2,1/1.5);};
-document.getElementById('zfit').onclick=fit;
+const gridScreen=(gx,gy,lift=6)=>toScreen(wx(gx),(meshH(gx,gy)+lift)*KM,wz(gy));
+function drawOverlay(){
+  const r=mapwrap.getBoundingClientRect();
+  octx.setTransform(dpr,0,0,dpr,0,0); octx.clearRect(0,0,r.width,r.height);
+  const dist=R3.camera.position.distanceTo(R3.controls.target);
+  octx.font='600 11px Inter, sans-serif';
+  const placed=[];
+  for(const l of ROUTEDATA.landmarks){
+    const [gx,gy]=toGrid(l.lat,l.lon); const s=gridScreen(gx,gy,0); if(!s) continue;
+    const [sx,sy]=s; if(sx<-50||sy<-20||sx>r.width+50||sy>r.height+20) continue;
+    octx.fillStyle='#0B1F3A'; octx.beginPath(); octx.moveTo(sx,sy-6); octx.lineTo(sx+4.5,sy+1.5); octx.lineTo(sx-4.5,sy+1.5); octx.closePath(); octx.fill();
+    const tw=octx.measureText(l.name).width, box=[sx+5,sy-9,sx+8+tw,sy+5];
+    const clash=placed.some(b=>!(box[2]<b[0]||box[0]>b[2]||box[3]<b[1]||box[1]>b[3]));
+    if(!clash&&dist<48){placed.push(box); octx.lineWidth=3; octx.strokeStyle='rgba(255,255,255,.88)'; octx.strokeText(l.name,sx+6,sy+2); octx.fillText(l.name,sx+6,sy+2);}
+  }
+  const dot=(g,fill,rad,stroke)=>{const s=gridScreen(g[0],g[1]); if(!s)return; octx.beginPath(); octx.arc(s[0],s[1],rad,0,7); octx.fillStyle=fill; octx.fill(); if(stroke){octx.strokeStyle=stroke; octx.lineWidth=2; octx.stroke();}};
+  if(S.mode==='draw'||S.draw.length) S.draw.forEach(p=>dot(p,'#7B2CBF',4.5,'#fff'));
+  if(S.start) dot(S.start,'#2bb673',7,'#fff');
+  if(S.end) dot(S.end,'#C9A227',7,'#0B1F3A');
+  if(hoverPt) dot(hoverPt,'#fff',6,'#0B1F3A');
+  // compass needle points to north on screen
+  const t=R3.controls.target, a=toScreen(t.x,t.y,t.z), b=toScreen(t.x,t.y,t.z-1);
+  if(a&&b) document.getElementById('needle').style.transform=`rotate(${Math.atan2(b[0]-a[0],a[1]-b[1])}rad)`;
+}
+
+/* ---------------- picking ---------------- */
+function rayFrom(sx,sy){
+  const r=mapwrap.getBoundingClientRect();
+  const v=new T3.Vector3(sx/r.width*2-1, -(sy/r.height)*2+1, 0.5).unproject(R3.camera);
+  const o=R3.camera.position.clone(); return {o, d:v.sub(o).normalize()};
+}
+function terrainHit(o,d,maxT=200){
+  const X=wx(G.W), Z=wz(G.H), y0=R3.zmin*KM-0.01, y1=R3.zmax*KM+0.01;
+  let t0=0, t1=maxT;
+  for(const [oo,dd,lo,hi] of [[o.x,d.x,0,X],[o.y,d.y,y0,y1],[o.z,d.z,0,Z]]){
+    if(Math.abs(dd)<1e-9){ if(oo<lo||oo>hi) return null; continue; }
+    let a=(lo-oo)/dd, b=(hi-oo)/dd; if(a>b){const s=a;a=b;b=s;}
+    t0=Math.max(t0,a); t1=Math.min(t1,b); if(t0>t1) return null;
+  }
+  const gap=t=>{const x=(o.x+d.x*t)/(G.res*KM), y=(o.z+d.z*t)/(G.res*KM); return (o.y+d.y*t)-meshH(x,y)*KM;};
+  let t=t0, prev=t0;
+  for(let n=0;n<6000&&t<=t1;n++){
+    const g=gap(t);
+    if(g<=0){
+      let a=prev,b=t; for(let k=0;k<16;k++){const m=(a+b)/2; if(gap(m)>0)a=m; else b=m;}
+      return {gx:(o.x+d.x*b)/(G.res*KM), gy:(o.z+d.z*b)/(G.res*KM), t:b};
+    }
+    prev=t; t+=Math.max(0.003,Math.min(0.3,g*0.45));
+  }
+  return null;
+}
+function pickTerrain(sx,sy){ const {o,d}=rayFrom(sx,sy); const h=terrainHit(o,d); return h&&inGrid(h.gx,h.gy)?[h.gx,h.gy]:null; }
+function segDist(px,py,a,b){const dx=b[0]-a[0],dy=b[1]-a[1],L=dx*dx+dy*dy; let u=L?((px-a[0])*dx+(py-a[1])*dy)/L:0; u=clamp(u,0,1); return Math.hypot(px-a[0]-u*dx,py-a[1]-u*dy);}
+function pickLine(sx,sy,tol){
+  const cands=[...ROUTES,...S.userRoutes,...(S.safe?[S.safe]:[]),...(S.showRuns?RUNS:[])];
+  const hits=[];
+  for(const R of cands){
+    let best=1e9, bw=null;
+    for(const w of routeWorld(R)){
+      let prev=null;
+      for(let k=0;k<w.length;k+=3){
+        const s=toScreen(w[k],w[k+1],w[k+2]);
+        if(s&&prev){const dd=segDist(sx,sy,prev,s); if(dd<best){best=dd; bw=[w[k],w[k+1],w[k+2]];}}
+        prev=s;
+      }
+    }
+    if(best<tol) hits.push({R,d:best+(R.kind==='run'?3:0),p:bw});
+  }
+  hits.sort((a,b)=>a.d-b.d);
+  for(const h of hits.slice(0,4)){
+    const o=R3.camera.position, p=new T3.Vector3(...h.p), d=p.clone().sub(o), L=d.length(); d.normalize();
+    const th=terrainHit(o,d,L); if(th&&th.t<L-0.06) continue; // hidden behind terrain
+    return h.R;
+  }
+  return null;
+}
+
+/* pointer interaction: taps on the canvas (rotation, zoom and pan come from OrbitControls) */
+let downAt=null, nPtr=0, multi=false, hoverReq=null;
+const helpEl=document.getElementById('help'); let helpT=setTimeout(()=>helpEl.style.opacity=0,9000);
+cv.addEventListener('pointerdown',e=>{helpEl.style.opacity=0; nPtr++; if(nPtr>1) multi=true; if(nPtr===1){multi=false; downAt={x:e.offsetX,y:e.offsetY,t:Date.now()};} R3&&(R3.anim=null); hideProbe();});
+const ptrUp=e=>{
+  nPtr=Math.max(0,nPtr-1);
+  if(e.type==='pointerup'&&!multi&&downAt&&Math.hypot(e.offsetX-downAt.x,e.offsetY-downAt.y)<7&&Date.now()-downAt.t<600&&e.button<=0) onTap(e.offsetX,e.offsetY,e.pointerType);
+  if(!nPtr) downAt=null;
+};
+cv.addEventListener('pointerup',ptrUp); cv.addEventListener('pointercancel',ptrUp);
+cv.addEventListener('pointermove',e=>{
+  if(e.pointerType!=='mouse'||nPtr||S.mode!=='inspect') return;
+  const x=e.offsetX,y=e.offsetY; if(hoverReq) return;
+  hoverReq=requestAnimationFrame(()=>{hoverReq=null; const g=pickTerrain(x,y); if(g) showProbe(x,y,describeCell(cellIdx(g[0],g[1])),false); else hideProbe();});
+});
+cv.addEventListener('pointerleave',e=>{if(e.pointerType==='mouse'&&!nPtr&&!probe.classList.contains('act'))hideProbe();});
+cv.addEventListener('contextmenu',e=>e.preventDefault());
 
 const probe=document.getElementById('probe');
 function describeCell(i){
@@ -459,31 +733,45 @@ function describeCell(i){
     `ATES: ${ATES[G.ates[i]].n}<br>`+
     `<span class="muted">Release ${(F.p*100|0)}% · Runout ${(F.r*100|0)}% · Trap ${(F.t*100|0)}%</span>`;
 }
-function showProbe(sx,sy,hover){
-  const [gx,gy]=s2g(sx,sy);
-  if(!inGrid(gx,gy)||S.mode!=='inspect'){probe.style.display='none';return;}
-  probe.innerHTML=describeCell(cellIdx(gx,gy));
-  probe.style.display='block';
-  const r=cv.getBoundingClientRect(); const w=probe.offsetWidth,h=probe.offsetHeight;
-  probe.style.left=Math.min(r.width-w-8,sx+14)+'px'; probe.style.top=Math.min(r.height-h-8,Math.max(8,sy-h-10))+'px';
+function showProbe(sx,sy,html,active){
+  probe.innerHTML=html; probe.style.display='block'; probe.classList.toggle('act',!!active);
+  const r=mapwrap.getBoundingClientRect(); const w=probe.offsetWidth,h=probe.offsetHeight;
+  probe.style.left=clamp(sx+14,8,r.width-w-8)+'px'; probe.style.top=clamp(sy-h-10,8,r.height-h-8)+'px';
 }
-function onTap(sx,sy){
-  const [gx,gy]=s2g(sx,sy);
-  if(!inGrid(gx,gy)) return;
-  if(S.mode==='draw'){S.draw.push([gx,gy]); updDraw(); draw(); return;}
-  if(S.mode==='start'){S.start=[gx,gy]; setMode('inspect'); updSE(); draw(); return;}
-  if(S.mode==='end'){S.end=[gx,gy]; setMode('inspect'); updSE(); draw(); return;}
-  showProbe(sx,sy,false);
+function hideProbe(){probe.style.display='none'; probe.classList.remove('act');}
+function onTap(sx,sy,ptype){
+  if(!R3) return;
+  if(S.mode!=='inspect'){
+    const g=pickTerrain(sx,sy); if(!g) return;
+    if(S.mode==='draw'){S.draw.push(g); updDraw(); drawRoutes(); return;}
+    if(S.mode==='start'){S.start=g; setMode('inspect'); updSE(); dirty=true; return;}
+    if(S.mode==='end'){S.end=g; setMode('inspect'); updSE(); dirty=true; return;}
+  }
+  const R=pickLine(sx,sy,ptype==='mouse'?8:16);
+  if(R){
+    S.selected=R; drawRoutes(); routeListUI(); renderAssess();
+    const A=R.A;
+    showProbe(sx,sy,`<b>${R.name}</b><br><span class="muted">${routeTag(R)}</span><br>${A?badge(A.routeScore)+' score '+A.routeScore.toFixed(0):''}${R.kind==='run'?'<br><span class="muted small">Scored as uncontrolled terrain</span>':''}<div style="margin-top:6px"><button class="btn sm" id="probeOpen">Full assessment</button></div>`,true);
+    document.getElementById('probeOpen').onclick=()=>{hideProbe(); openAssess();};
+    return;
+  }
+  const g=pickTerrain(sx,sy); if(g) showProbe(sx,sy,describeCell(cellIdx(g[0],g[1])),false); else hideProbe();
+}
+function openAssess(){
+  document.querySelector('.tabs button[data-t="routes"]').click();
+  const el=document.getElementById('assess'); if(el) el.scrollIntoView({behavior:'smooth',block:'start'});
 }
 function setMode(m){
   S.mode=m; cv.classList.toggle('drawing',m!=='inspect');
   const hint=document.getElementById('modehint');
-  const msg={draw:'Tap to add route points',start:'Tap the map to set the start',end:'Tap the map to set the end'}[m];
+  const msg={draw:'Tap the terrain to add route points',start:'Tap the terrain to set the start',end:'Tap the terrain to set the end'}[m];
   hint.style.display=msg?'block':'none'; hint.textContent=msg||'';
-  probe.style.display='none';
+  hideProbe();
   document.getElementById('drawCtl').style.display = m==='draw'?'flex':'none';
   document.getElementById('drawBtn').textContent = m==='draw'?'Cancel drawing':'Draw on map';
+  dirty=true;
 }
+function draw(){ if(R3){ drawRoutes(); } }
 
 /* ---------------- legend ---------------- */
 function renderLegend(){
@@ -493,16 +781,20 @@ function renderLegend(){
   } else {
     el.innerHTML=`<div class="t">ATES terrain class</div><div class="row">${ATES.slice(1).map(c=>`<span class="k"><span class="sw" style="background:${c.c}"></span>${c.n}</span>`).join('')}</div>`;
   }
+  el.innerHTML+=`<div class="row" style="margin-top:6px">${S.showRuns?'<span class="k"><span class="lsw"></span>Ski run</span><span class="k"><span class="lsw lift"></span>Lift</span>':''}<span class="k"><span class="lsw route"></span>Route</span></div>`;
 }
 document.querySelectorAll('#layerSeg button').forEach(b=>b.onclick=()=>{
   document.querySelectorAll('#layerSeg button').forEach(x=>x.classList.toggle('on',x===b));
-  S.layer=b.dataset.l; renderBase(); renderLegend(); draw();});
+  S.layer=b.dataset.l; renderBase(); renderLegend();});
+document.getElementById('runsTog').onclick=e=>{
+  S.showRuns=!S.showRuns; e.currentTarget.classList.toggle('on',S.showRuns);
+  if(R3&&R3.groups.runs){R3.groups.runs.visible=S.showRuns; dirty=true;} renderLegend();};
 
 /* ---------------- tabs ---------------- */
 document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{
   document.querySelectorAll('.tabs button').forEach(x=>x.classList.toggle('on',x===b));
   document.querySelectorAll('.pane').forEach(p=>p.classList.toggle('on',p.id==='pane-'+b.dataset.t));
-  if(b.dataset.t==='routes' && S.selected && S.selected.A) drawProfile(S.selected.A);
+  if(b.dataset.t==='routes' && S.selected && S.selected.A && !S.selected.A.area) drawProfile(S.selected.A);
 });
 
 /* ---------------- conditions UI ---------------- */
@@ -648,18 +940,37 @@ function resample(g,stepCells=0.5){
   }
   return out;
 }
+function assessArea(R){
+  const ring=R.g; const xs=ring.map(p=>p[0]), ys=ring.map(p=>p[1]);
+  const cells=[];
+  for(let y=Math.max(0,Math.floor(Math.min(...ys)));y<=Math.min(G.H-1,Math.ceil(Math.max(...ys)));y++)
+    for(let x=Math.max(0,Math.floor(Math.min(...xs)));x<=Math.min(G.W-1,Math.ceil(Math.max(...xs)));x++){
+      const px=x+0.5, py=y+0.5; let inside=false;
+      for(let i=0,j=ring.length-1;i<ring.length;j=i++){const [xi,yi]=ring[i],[xj,yj]=ring[j]; if((yi>py)!==(yj>py)&&px<(xj-xi)*(py-yi)/(yj-yi)+xi) inside=!inside;}
+      if(inside) cells.push(y*G.W+x);
+    }
+  if(!cells.length) resample(ring).forEach(p=>{if(inGrid(p[0],p[1]))cells.push(cellIdx(p[0],p[1]));});
+  if(!cells.length) return null;
+  const lenByCls=[0,0,0,0,0]; let maxScore=0,maxS=0,maxA=0,zmin=1e9,zmax=-1e9,mi=cells[0];
+  const sc=cells.map(i=>{const s=SCORE[i]; lenByCls[clsOf(s)]+=G.res*G.res/1e4; if(s>maxScore){maxScore=s;mi=i;} maxS=Math.max(maxS,G.slope[i]); maxA=Math.max(maxA,G.ates[i]); zmin=Math.min(zmin,G.elev[i]); zmax=Math.max(zmax,G.elev[i]); return s;}).sort((a,b)=>a-b);
+  const p90=sc[Math.floor(0.9*(sc.length-1))];
+  return {area:true, ha:cells.length*G.res*G.res/1e4, zmin, zmax, maxS, maxA, maxScore, p90, routeScore:0.55*p90+0.45*maxScore, lenByCls, mi, dist:0};
+}
 function assessRoute(R){
-  const pts=resample(R.g).filter(p=>inGrid(p[0],p[1]));
-  if(pts.length<2) return null;
+  if(R.area) return assessArea(R);
+  const parts=(R.parts||[R.g]).map(p=>resample(p).filter(q=>inGrid(q[0],q[1]))).filter(p=>p.length);
+  if(!parts.length||parts.reduce((a,p)=>a+p.length,0)<2) return null;
   const sm=[]; let dist=0, gain=0, loss=0, maxS=0, maxA=0, maxScore=0, maxIdx=0;
   const lenByCls=[0,0,0,0,0];
-  for(let k=0;k<pts.length;k++){
-    const i=cellIdx(pts[k][0],pts[k][1]);
-    const z=G.elev[i], sc=SCORE[i];
-    if(k){const dd=Math.hypot(pts[k][0]-pts[k-1][0],pts[k][1]-pts[k-1][1])*G.res; dist+=dd; const dz=z-sm[k-1].z; if(dz>0)gain+=dz; else loss-=dz; lenByCls[clsOf(sc)]+=dd;}
-    sm.push({d:dist,z,sc,i,g:pts[k]});
-    if(sc>maxScore){maxScore=sc;maxIdx=k;}
-    maxS=Math.max(maxS,G.slope[i]);
+  for(const pts of parts){
+    for(let k=0;k<pts.length;k++){
+      const i=cellIdx(pts[k][0],pts[k][1]);
+      const z=G.elev[i], sc=SCORE[i];
+      if(k){const dd=Math.hypot(pts[k][0]-pts[k-1][0],pts[k][1]-pts[k-1][1])*G.res; dist+=dd; const dz=z-sm[sm.length-1].z; if(dz>0)gain+=dz; else loss-=dz; lenByCls[clsOf(sc)]+=dd;}
+      sm.push({d:dist,z,sc,i,g:pts[k]});
+      if(sc>maxScore){maxScore=sc;maxIdx=sm.length-1;}
+      maxS=Math.max(maxS,G.slope[i]);
+    }
   }
   // highest ATES held for >= 60 m
   let run=0, prevA=-1;
@@ -696,10 +1007,32 @@ function renderAssess(){
   const A=assessRoute(R); R.A=A;
   if(!A){host.innerHTML='<div class="err">Route is outside the mapped area.</div>';return;}
   const tot=A.lenByCls.reduce((a,b)=>a+b,0)||1;
+  const runNote=R.kind==='run'?`<div class="small" style="margin-top:8px;padding:6px 8px;border-radius:6px;background:var(--navy)">In-bounds run. Whistler Blackcomb ski patrol does avalanche control here, so an open run carries much less risk than this score. The score shows the slope as if it were uncontrolled, which is close to how it behaves when closed or before control work.</div>`:'';
+  if(A.area){
+    host.innerHTML=`<h2>Assessment</h2>
+    <div class="card">
+      <div class="rowf" style="justify-content:space-between"><b>${R.name}</b><span class="tag muted small">${routeTag(R)}</span></div>
+      ${runNote}
+      <div class="score" style="margin-top:10px"><div class="big">${A.routeScore.toFixed(0)}</div><div>${badge(A.routeScore)}<div class="muted small" style="margin-top:4px">Area score (0–100)</div></div></div>
+      <div class="stats">
+        <div class="stat"><div class="v">${A.ha.toFixed(1)} ha</div><div class="l">Area</div></div>
+        <div class="stat"><div class="v">${A.zmin}–${A.zmax}</div><div class="l">Elevation m</div></div>
+        <div class="stat"><div class="v">${A.maxS}°</div><div class="l">Steepest</div></div>
+        <div class="stat"><div class="v">${A.maxScore.toFixed(0)}</div><div class="l">Peak index</div></div>
+        <div class="stat"><div class="v">${A.p90.toFixed(0)}</div><div class="l">90th pct</div></div>
+        <div class="stat"><div class="v">${ATES[A.maxA].n}</div><div class="l">Max ATES</div></div>
+      </div>
+      <div class="small muted" style="margin-top:10px">Area by risk class</div>
+      <div class="bar">${A.lenByCls.map((l,k)=>l>0?`<div style="width:${l/tot*100}%;background:${CLS[k].c}"></div>`:'').join('')}</div>
+      <div class="small">${A.lenByCls.map((l,k)=>l>0?`<span style="margin-right:10px"><span class="sw" style="background:${CLS[k].c};width:9px;height:9px"></span> ${CLS[k].n} ${Math.round(l/tot*100)}%</span>`:'').join('')}</div>
+      <div class="small muted" style="margin-top:8px">Highest cell: ${reason(A.mi)}</div>
+    </div>`;
+    return;
+  }
   host.innerHTML=`<h2>Assessment</h2>
   <div class="card">
-    <div class="rowf" style="justify-content:space-between"><b>${R.name}</b><span class="tag muted small">${R.kind==='gps'?'GPS track':R.kind==='approx'?'Approximate':R.kind==='safe'?'Computed':'User route'}</span></div>
-    ${R.note?`<div class="muted small" style="margin-top:4px">${R.note}</div>`:''}
+    <div class="rowf" style="justify-content:space-between"><b>${R.name}</b><span class="tag muted small">${routeTag(R)}</span></div>
+    ${R.note?`<div class="muted small" style="margin-top:4px">${R.note}</div>`:''}${runNote}
     <div class="score" style="margin-top:10px"><div class="big">${A.routeScore.toFixed(0)}</div><div>${badge(A.routeScore)}<div class="muted small" style="margin-top:4px">Route score (0–100)</div></div></div>
     <div class="stats">
       <div class="stat"><div class="v">${fmtKm(A.dist)}</div><div class="l">Distance</div></div>
@@ -719,14 +1052,14 @@ function renderAssess(){
     ${A.cruxes.length?A.cruxes.map((c,k)=>`<div class="crux" data-k="${k}">${badge(c.max)} <b>km ${(A.sm[c.a].d/1000).toFixed(2)}–${(A.sm[c.b].d/1000).toFixed(2)}</b> · ${Math.round(c.len)} m · peak ${c.max.toFixed(0)}<br><span class="muted">${reason(A.sm[c.mk].i)}</span></div>`).join(''):'<div class="small" style="margin-top:6px">No sustained sections at Considerable or above under these conditions.</div>'}
   </div>`;
   host.querySelectorAll('.crux').forEach(el=>el.onclick=()=>{
-    const c=A.cruxes[+el.dataset.k]; const g=A.sm[c.mk].g; const r=cv.getBoundingClientRect();
-    V.scale=Math.max(V.scale,4); V.ox=r.width/2-g[0]*V.scale; V.oy=r.height/2-g[1]*V.scale; hoverPt=g; draw();
+    const c=A.cruxes[+el.dataset.k]; const g=A.sm[c.mk].g;
+    hoverPt=g; lookAtGrid(g[0],g[1],2.2);
     if(window.innerWidth<=860) document.getElementById('mapwrap').scrollIntoView({behavior:'smooth'});
   });
   drawProfile(A);
 }
 function drawProfile(A){
-  const c=document.getElementById('profile'); if(!c)return;
+  const c=document.getElementById('profile'); if(!c||A.area)return;
   const r=c.getBoundingClientRect(); if(r.width<10) return; const pr=window.devicePixelRatio||1;
   c.width=r.width*pr; c.height=r.height*pr; const x=c.getContext('2d'); x.setTransform(pr,0,0,pr,0,0);
   const P={l:44,r:10,t:10,b:24}; const w=r.width-P.l-P.r, h=r.height-P.t-P.b;
@@ -756,31 +1089,56 @@ function drawProfile(A){
     x.strokeStyle='#C9A227'; x.lineWidth=1.5; x.beginPath(); x.moveTo(X(s.d),P.t); x.lineTo(X(s.d),P.t+h); x.stroke();
     x.beginPath(); x.arc(X(s.d),Y(s.z),4.5,0,7); x.fillStyle='#C9A227'; x.fill(); x.strokeStyle='#0B1F3A'; x.lineWidth=2; x.stroke();
     tip.innerHTML=`km ${(s.d/1000).toFixed(2)} · ${s.z} m · ${G.slope[s.i]}° ${ASP[Math.round(G.aspect[s.i]*360/256/45)%8]} · ${badge(s.sc)} ${s.sc.toFixed(0)}`;
-    hoverPt=s.g; draw();
+    hoverPt=s.g; dirty=true;
   };
   const snap=x.getImageData(0,0,c.width,c.height);
   function drawProfileStatic(){x.setTransform(1,0,0,1,0,0); x.putImageData(snap,0,0); x.setTransform(pr,0,0,pr,0,0);}
   c.onpointermove=move; c.onpointerdown=e=>{c.setPointerCapture(e.pointerId);move(e);};
-  c.onpointerleave=()=>{drawProfileStatic(); hoverPt=null; draw(); tip.textContent='Hover or drag across the profile';};
+  c.onpointerleave=()=>{drawProfileStatic(); hoverPt=null; dirty=true; tip.textContent='Hover or drag across the profile';};
   c.style.touchAction='none';
+}
+function routeTag(R){
+  if(R.kind==='run') return `${DIFFS[R.diff].n} · ${R.mtn}${R.area?' · area':''}`;
+  return R.kind==='gps'?'GPS track':R.kind==='approx'?'Approximate':R.kind==='osm'?'OpenStreetMap trace':R.kind==='safe'?'Safest route':'Your route';
+}
+function ritem(R,A){
+  const d=document.createElement('div'); d.className='ritem'+(R===S.selected?' on':'');
+  d.innerHTML=`${R.kind==='run'?DIFFS[R.diff].i:''}<div style="flex:1;min-width:0"><div class="nm">${R.name}</div><div class="tag">${routeTag(R)}${A&&!A.area?' · '+fmtKm(A.dist):A&&A.area?' · '+A.ha.toFixed(1)+' ha':''}</div></div>${A?badge(A.routeScore):''}${(R.kind==='user'||R.kind==='safe')?'<button class="x" title="Remove">✕</button>':''}`;
+  d.onclick=e=>{ if(e.target.classList.contains('x')){ if(R===S.safe)S.safe=null; else S.userRoutes=S.userRoutes.filter(u=>u!==R); if(S.selected===R)S.selected=null; routeListUI(); renderAssess(); drawRoutes(); return;}
+    S.selected=R; routeListUI(); renderAssess(); drawRoutes(); focusRoute(R);
+    if(window.innerWidth<=860) mapwrap.scrollIntoView({behavior:'smooth'}); };
+  return d;
 }
 function routeListUI(){
   const host=document.getElementById('routeList'); host.innerHTML='';
-  const items=[...ROUTES,...S.userRoutes,...(S.safe?[S.safe]:[])];
-  for(const R of items){
-    const A=assessRoute(R); R.A=A;
-    const d=document.createElement('div'); d.className='ritem'+(R===S.selected?' on':'');
-    d.innerHTML=`<div style="flex:1;min-width:0"><div class="nm">${R.name}</div><div class="tag">${R.kind==='gps'?'GPS track':R.kind==='approx'?'Approximate':R.kind==='safe'?'Safest route':'Your route'}${A?' · '+fmtKm(A.dist):''}</div></div>${A?badge(A.routeScore):''}${(R.kind==='user'||R.kind==='safe')?'<button class="x" title="Remove">✕</button>':''}`;
-    d.onclick=e=>{ if(e.target.classList.contains('x')){ if(R===S.safe)S.safe=null; else S.userRoutes=S.userRoutes.filter(u=>u!==R); if(S.selected===R)S.selected=null; routeListUI(); renderAssess(); draw(); return;}
-      S.selected=R; routeListUI(); renderAssess(); focusRoute(R); };
-    host.appendChild(d);
-  }
+  for(const R of [...ROUTES.filter(r=>r.group!=='uphill'),...S.userRoutes,...(S.safe?[S.safe]:[])]){ R.A=assessRoute(R); host.appendChild(ritem(R,R.A)); }
+  const up=document.getElementById('upList'); up.innerHTML='';
+  for(const R of ROUTES.filter(r=>r.group==='uphill')){ R.A=assessRoute(R); up.appendChild(ritem(R,R.A)); }
+  for(const R of RUNS) R.A=assessRoute(R);
+  runListUI();
 }
+function runListUI(){
+  const q=S.runQ.trim().toLowerCase();
+  let list=RUNS.filter(R=>R.A&&(S.mtn==='all'||R.mtn===S.mtn)&&(!q||R.name.toLowerCase().includes(q))&&(R.name!=='Unnamed run'||q));
+  list.sort(S.runSort==='risk'?(a,b)=>b.A.routeScore-a.A.routeScore:(a,b)=>a.name.localeCompare(b.name));
+  const host=document.getElementById('runList'); host.innerHTML='';
+  list.slice(0,S.runShown).forEach(R=>host.appendChild(ritem(R,R.A)));
+  document.getElementById('runCount').textContent=list.length+' run'+(list.length===1?'':'s');
+  document.getElementById('runMore').style.display=list.length>S.runShown?'inline-block':'none';
+}
+document.querySelectorAll('#mtnSeg button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('#mtnSeg button').forEach(x=>x.classList.toggle('on',x===b)); S.mtn=b.dataset.m; S.runShown=25; runListUI();});
+document.getElementById('runQ').oninput=e=>{S.runQ=e.target.value; S.runShown=25; runListUI();};
+document.getElementById('runSort').onchange=e=>{S.runSort=e.target.value; runListUI();};
+document.getElementById('runMore').onclick=()=>{S.runShown+=25; runListUI();};
 function focusRoute(R){
-  const xs=R.g.map(p=>p[0]), ys=R.g.map(p=>p[1]); const r=cv.getBoundingClientRect();
+  const pts=(R.parts||[R.g]).flat(); const xs=pts.map(p=>p[0]), ys=pts.map(p=>p[1]);
   const bx0=Math.min(...xs),bx1=Math.max(...xs),by0=Math.min(...ys),by1=Math.max(...ys);
-  V.scale=Math.min(30,Math.min(r.width/(bx1-bx0+30),r.height/(by1-by0+30)));
-  V.ox=r.width/2-(bx0+bx1)/2*V.scale; V.oy=r.height/2-(by0+by1)/2*V.scale; draw();
+  const cx=(bx0+bx1)/2, cy=(by0+by1)/2;
+  const t=new T3.Vector3(wx(cx),meshH(cx,cy)*KM,wz(cy));
+  const pol=Math.min(curPolar(),0.95), az=curAz();
+  const d=fitBox(t,wx(bx0-4),wx(bx1+4),wz(by0-4),wz(by1+4),t.y-0.3,t.y+0.6,pol,az,0.8);
+  animateTo(viewFor(t,Math.max(1.0,d),pol,az),650);
 }
 
 /* drawing */
@@ -792,7 +1150,7 @@ document.getElementById('drawDone').onclick=()=>{
   if(S.draw.length<2){document.getElementById('routeErr').textContent='Add at least two points.';return;}
   const n=S.userRoutes.filter(r=>r.kind==='user').length+1;
   const R={id:'u'+Date.now(),name:'New route '+n,kind:'user',note:'Drawn on the map.',g:S.draw.slice()};
-  S.userRoutes.push(R); S.selected=R; S.draw=[]; setMode('inspect'); routeListUI(); renderAssess(); draw();
+  S.userRoutes.push(R); S.selected=R; S.draw=[]; setMode('inspect'); routeListUI(); renderAssess(); drawRoutes();
 };
 document.getElementById('gpxIn').onchange=async e=>{
   const f=e.target.files[0]; e.target.value=''; if(!f)return;
@@ -807,7 +1165,7 @@ document.getElementById('gpxIn').onchange=async e=>{
     const inside=R.g.filter(p=>inGrid(p[0],p[1])).length;
     if(!inside) throw new Error('That track is outside the mapped Whistler area.');
     if(inside<R.g.length) err.textContent=`${R.g.length-inside} of ${R.g.length} points fall outside the mapped area and were skipped.`;
-    S.userRoutes.push(R); S.selected=R; routeListUI(); renderAssess(); focusRoute(R);
+    S.userRoutes.push(R); S.selected=R; routeListUI(); renderAssess(); drawRoutes(); focusRoute(R);
   }catch(ex){err.textContent=ex.message;}
 };
 
@@ -863,28 +1221,34 @@ document.getElementById('findBtn').onclick=()=>{
     // light smoothing for display
     g=g.map((q,k)=>{if(k<2||k>g.length-3)return q; let sx=0,sy=0; for(let j=-2;j<=2;j++){sx+=g[k+j][0];sy+=g[k+j][1];} return [sx/5,sy/5];});
     S.safe={id:'safe',name:`Safest route (${wSl.value}% safety)`,kind:'safe',note:'Computed by A* search on the current risk map. Check it against real terrain, cornices and crevasses before trusting it.',g};
-    S.selected=S.safe; msg.textContent=''; routeListUI(); renderAssess(); draw();
+    S.selected=S.safe; msg.textContent=''; routeListUI(); renderAssess(); drawRoutes(); focusRoute(S.safe);
   };
   worker.postMessage({W:G.W,H:G.H,res:G.res,slope:G.slope,elev:G.elev,score:SCORE,s,t,a});
 };
 
 /* ---------------- recompute ---------------- */
 let rq=null;
-function recompute(){ clearTimeout(rq); rq=setTimeout(()=>{ computeScores(); renderBase(); draw(); routeListUI(); renderAssess(); },60); }
+function recompute(){ clearTimeout(rq); rq=setTimeout(()=>{ computeScores(); renderBase(); routeListUI(); renderAssess(); },60); }
 
 /* ---------------- init ---------------- */
+let RUNS=[], LIFTS=[];
+const unq=p=>{const o=[]; for(let k=0;k<p.length;k+=2) o.push([p[k]/10,p[k+1]/10]); return o;};
 (async function init(){
   try{
     G=await loadTerrain();
-    ROUTES=ROUTEDATA.routes.map(r=>routeFromLL(r.name,r.kind,r.note,r.pts));
+    ROUTES=ROUTEDATA.routes.map(r=>Object.assign(routeFromLL(r.name,r.kind,r.note,r.pts),{group:r.group}));
+    RUNS=RUNDATA.runs.map((r,k)=>{const parts=r.p.map(unq); return {id:'run'+k,name:r.n,kind:'run',diff:r.d,mtn:r.m,area:!!r.a,parts,g:parts.flat(),note:''};});
+    LIFTS=RUNDATA.lifts.map(l=>({name:l.n,type:l.t,g:unq(l.p)}));
     dangerUI(); probsUI(); wxUI(); liveUI(); renderLegend(); wLbl();
-    computeScores(); renderBase();
+    computeScores(); prepTexture(); renderBase();
+    initGL();
     document.getElementById('loading').remove();
-    resize(); fit(); routeListUI();
-    new ResizeObserver(()=>{resize();}).observe(document.getElementById('mapwrap'));
+    resize(); fit(false); buildRunLayer(); drawRoutes(); routeListUI();
+    new ResizeObserver(()=>{resize();}).observe(mapwrap);
     tryLive();
   }catch(e){
-    document.getElementById('loading').textContent='Could not load terrain: '+e.message;
+    console.error(e);
+    const l=document.getElementById('loading'); if(l) l.textContent='Could not load the map: '+e.message;
   }
 })();
 </script>
