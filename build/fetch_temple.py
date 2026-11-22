@@ -55,12 +55,17 @@ def osm():
  node["tourism"~"alpine_hut|wilderness_hut|viewpoint"]({S},{W},{N},{E});
  way["natural"="water"]({S},{W},{N},{E}););
 out geom tags;"""
-    for ep in ["https://overpass-api.de/api/interpreter", "https://overpass.kumi.systems/api/interpreter"]:
-        try:
-            raw = get(ep, data=urllib.parse.urlencode({"data": q}).encode(), timeout=300); break
-        except Exception as e:
-            log.append(f"     overpass failed {ep}: {e!r}")
-    else:
+    raw = None
+    for attempt in range(3):
+        for ep in ["https://overpass-api.de/api/interpreter", "https://overpass.private.coffee/api/interpreter",
+                   "https://maps.mail.ru/osm/tools/overpass/api/interpreter", "https://overpass.kumi.systems/api/interpreter"]:
+            try:
+                raw = get(ep, data=urllib.parse.urlencode({"data": q}).encode(), timeout=300); break
+            except Exception as e:
+                log.append(f"     overpass failed {ep}: {e!r}")
+        if raw: break
+        time.sleep(30)
+    if not raw:
         raise RuntimeError("overpass unreachable")
     open(os.path.join(OUT, "osm_paths.json"), "wb").write(raw)
 
@@ -105,14 +110,33 @@ def stations():
     to = dt.datetime.utcnow().strftime("%Y-%m-%dT%H:00:00Z")
     for d, s in near[:4]:
         sid = s.get("stationId") or s.get("id")
-        try:
-            m = get(f"https://weather.prod.avalanche.ca/stations/{sid}/measurements?" + urllib.parse.urlencode({"fromDate": fr, "toDate": to}))
-            open(os.path.join(OUT, f"station_{sid}.json"), "wb").write(m)
-            log.append(f"     station {sid} {s.get('name')} {d:.1f} km")
-        except Exception as e:
-            log.append(f"     station {sid} failed: {e!r}")
+        base = f"https://weather.prod.avalanche.ca/stations/{sid}/measurements"
+        tries = [base + "?" + urllib.parse.urlencode({"fromDate": fr[:10], "toDate": to[:10]}),
+                 base + "?" + urllib.parse.urlencode({"fromDate": fr[:19], "toDate": to[:19]})]
+        # also week by week, in case long ranges are refused
+        import datetime as dt2
+        t0 = dt2.date.today() - dt2.timedelta(days=61)
+        chunks = []
+        for t in tries:
+            try:
+                m = get(t); open(os.path.join(OUT, f"station_{sid}.json"), "wb").write(m)
+                log.append(f"     station {sid} {s.get('name')} {d:.1f} km ok"); break
+            except Exception as e:
+                log.append(f"     station {sid} try failed {t[-60:]}: {e!r}")
+        else:
+            for k in range(0, 63, 7):
+                a = t0 + dt2.timedelta(days=k); b = min(dt2.date.today(), a + dt2.timedelta(days=7))
+                try:
+                    chunks.append(json.loads(get(base + "?" + urllib.parse.urlencode({"fromDate": a.isoformat(), "toDate": b.isoformat()}))))
+                except Exception as e:
+                    log.append(f"     station {sid} chunk {a} failed: {e!r}")
+            if chunks:
+                json.dump(chunks, open(os.path.join(OUT, f"station_{sid}.json"), "w"))
+                log.append(f"     station {sid} {s.get('name')} {d:.1f} km ok in {len(chunks)} chunks")
 
+only = sys.argv[1:] or ["dem", "osm", "weather", "avcan point", "stations"]
 for name, fn in [("dem", dem), ("osm", osm), ("weather", weather), ("avcan point", avcan), ("stations", stations)]:
+    if name not in only: continue
     step(name, fn)
-open(os.path.join(OUT, "fetch_log.txt"), "w").write("\n".join(log) + "\n")
+open(os.path.join(OUT, "fetch_log.txt"), "a").write("\n".join(log) + "\n")
 print("\n".join(log))
