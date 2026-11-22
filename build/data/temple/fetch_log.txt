@@ -9,3 +9,51 @@ OK   avcan point
      station 109 failed: <HTTPError 400: 'Bad Request'>
      station 108 failed: <HTTPError 400: 'Bad Request'>
 OK   stations
+     overpass failed https://overpass-api.de/api/interpreter: <HTTPError 502: 'Bad Gateway'>
+     overpass failed https://overpass.private.coffee/api/interpreter: <HTTPError 504: 'Gateway Timeout'>
+OK   osm
+     station 110 try failed tions/110/measurements?fromDate=2026-09-22&toDate=2026-11-22: <HTTPError 400: 'Bad Request'>
+     station 110 try failed mDate=2026-09-22T00%3A00%3A00&toDate=2026-11-22T23%3A00%3A00: <HTTPError 400: 'Bad Request'>
+     station 110 chunk 2026-09-22 failed: <HTTPError 400: 'Bad Request'>
+     station 110 chunk 2026-09-29 failed: <HTTPError 400: 'Bad Request'>
+     station 110 chunk 2026-10-06 failed: <HTTPError 400: 'Bad Request'>
+     station 110 chunk 2026-10-13 failed: <HTTPError 400: 'Bad Request'>
+     station 110 chunk 2026-10-20 failed: <HTTPError 400: 'Bad Request'>
+     station 110 chunk 2026-10-27 failed: <HTTPError 400: 'Bad Request'>
+     station 110 chunk 2026-11-03 failed: <HTTPError 400: 'Bad Request'>
+     station 110 chunk 2026-11-10 failed: <HTTPError 400: 'Bad Request'>
+     station 110 chunk 2026-11-17 failed: <HTTPError 400: 'Bad Request'>
+     station 111 try failed tions/111/measurements?fromDate=2026-09-22&toDate=2026-11-22: <HTTPError 400: 'Bad Request'>
+     station 111 try failed mDate=2026-09-22T00%3A00%3A00&toDate=2026-11-22T23%3A00%3A00: <HTTPError 400: 'Bad Request'>
+     station 111 chunk 2026-09-22 failed: <HTTPError 400: 'Bad Request'>
+     station 111 chunk 2026-09-29 failed: <HTTPError 400: 'Bad Request'>
+     station 111 chunk 2026-10-06 failed: <HTTPError 400: 'Bad Request'>
+     station 111 chunk 2026-10-13 failed: <HTTPError 400: 'Bad Request'>
+     station 111 chunk 2026-10-20 failed: <HTTPError 400: 'Bad Request'>
+     station 111 chunk 2026-10-27 failed: <HTTPError 400: 'Bad Request'>
+     station 111 chunk 2026-11-03 failed: <HTTPError 400: 'Bad Request'>
+     station 111 chunk 2026-11-10 failed: <HTTPError 400: 'Bad Request'>
+     station 111 chunk 2026-11-17 failed: <HTTPError 400: 'Bad Request'>
+     station 109 try failed tions/109/measurements?fromDate=2026-09-22&toDate=2026-11-22: <HTTPError 400: 'Bad Request'>
+     station 109 try failed mDate=2026-09-22T00%3A00%3A00&toDate=2026-11-22T23%3A00%3A00: <HTTPError 400: 'Bad Request'>
+     station 109 chunk 2026-09-22 failed: <HTTPError 400: 'Bad Request'>
+     station 109 chunk 2026-09-29 failed: <HTTPError 400: 'Bad Request'>
+     station 109 chunk 2026-10-06 failed: <HTTPError 400: 'Bad Request'>
+     station 109 chunk 2026-10-13 failed: <HTTPError 400: 'Bad Request'>
+     station 109 chunk 2026-10-20 failed: <HTTPError 400: 'Bad Request'>
+     station 109 chunk 2026-10-27 failed: <HTTPError 400: 'Bad Request'>
+     station 109 chunk 2026-11-03 failed: <HTTPError 400: 'Bad Request'>
+     station 109 chunk 2026-11-10 failed: <HTTPError 400: 'Bad Request'>
+     station 109 chunk 2026-11-17 failed: <HTTPError 400: 'Bad Request'>
+     station 108 try failed tions/108/measurements?fromDate=2026-09-22&toDate=2026-11-22: <HTTPError 400: 'Bad Request'>
+     station 108 try failed mDate=2026-09-22T00%3A00%3A00&toDate=2026-11-22T23%3A00%3A00: <HTTPError 400: 'Bad Request'>
+     station 108 chunk 2026-09-22 failed: <HTTPError 400: 'Bad Request'>
+     station 108 chunk 2026-09-29 failed: <HTTPError 400: 'Bad Request'>
+     station 108 chunk 2026-10-06 failed: <HTTPError 400: 'Bad Request'>
+     station 108 chunk 2026-10-13 failed: <HTTPError 400: 'Bad Request'>
+     station 108 chunk 2026-10-20 failed: <HTTPError 400: 'Bad Request'>
+     station 108 chunk 2026-10-27 failed: <HTTPError 400: 'Bad Request'>
+     station 108 chunk 2026-11-03 failed: <HTTPError 400: 'Bad Request'>
+     station 108 chunk 2026-11-10 failed: <HTTPError 400: 'Bad Request'>
+     station 108 chunk 2026-11-17 failed: <HTTPError 400: 'Bad Request'>
+OK   stations
