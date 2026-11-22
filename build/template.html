@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Avalanche Risk Atlas: Whistler</title>
+<title>Avalanche Risk Atlas: Mount Temple</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
 <style>
@@ -67,7 +67,7 @@ h2:first-child{margin-top:2px}
 .status{display:flex;flex-direction:column;gap:4px;font-size:12px}
 .status .s{display:flex;gap:6px;align-items:flex-start}
 .dot{width:8px;height:8px;border-radius:50%;margin-top:4px;flex:none;background:var(--ink3)}
-.dot.ok{background:#4cd07d}.dot.bad{background:#e36a6a}.dot.wait{background:var(--gold)}
+.dot.ok{background:#4cd07d}.dot.bad{background:#e36a6a}.dot.wait{background:var(--gold)}.dot.warn{background:#F79218}
 .btn{background:var(--gold);color:var(--navy);border:0;border-radius:8px;padding:7px 12px;font-weight:700;cursor:pointer}
 .btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
 .btn.sm{padding:5px 9px;font-size:12px}
@@ -128,9 +128,9 @@ a{color:var(--gold2)}
 <body>
 <header>
   <svg class="mark" viewBox="0 0 32 32" aria-hidden="true"><path d="M2 27 L12 10 L17 18 L21 13 L30 27 Z" fill="#C9A227"/><path d="M12 10 L14.5 14.2 L12.6 13.4 L10.6 14.8 Z" fill="#EEF2F7"/></svg>
-  <div><h1>Avalanche Risk <span>Atlas</span></h1><div class="sub">Whistler · Blackcomb · Spearhead Range · Wedgemount</div></div>
+  <div><h1>Avalanche Risk <span>Atlas</span></h1><div class="sub">Mount Temple · Larch Valley · Paradise Valley · Lake Louise · Banff National Park</div></div>
 </header>
-<div class="disclaimer"><b>Educational model only.</b> Not a substitute for the <a href="https://avalanche.ca/forecasts" target="_blank" rel="noopener">Avalanche Canada forecast</a>, AST training, or field observations. Never make go/no-go decisions from this map.</div>
+<div class="disclaimer"><b>Educational model only.</b> Not a substitute for the <a href="https://avalanche.ca/forecasts" target="_blank" rel="noopener">Parks Canada avalanche forecast</a> (Banff, Yoho and Kootenay), AST training, or field observations. Never make go/no-go decisions from this map.</div>
 <div class="app">
   <div class="mapwrap" id="mapwrap">
     <canvas id="map"></canvas>
@@ -138,7 +138,6 @@ a{color:var(--gold2)}
     <div class="loading" id="loading">Loading terrain…</div>
     <div class="maptools">
       <div class="seg" id="layerSeg"><button data-l="risk" class="on">Risk heat map</button><button data-l="ates">ATES terrain</button></div>
-      <div class="seg toggle"><button id="runsTog" class="on">Ski runs</button></div>
     </div>
     <div class="zoom"><button id="zin" aria-label="Zoom in">+</button><button id="zout" aria-label="Zoom out">−</button><button id="zfit" aria-label="Reset view" style="font-size:12px">⤢</button><button id="znorth" class="compass" aria-label="Face north"><svg id="needle" viewBox="-10 -10 20 20" width="18" height="18"><path d="M0 -8 L4 3 L0 1 L-4 3 Z" fill="#C9A227"/><path d="M0 8 L4 3 L0 1 L-4 3 Z" fill="#7F90AA"/></svg></button></div>
     <div class="help" id="help"><span class="hd">Drag to rotate · scroll to zoom · right-drag to pan</span><span class="hm">Drag to rotate · pinch to zoom · two fingers to pan</span></div>
@@ -157,14 +156,26 @@ a{color:var(--gold2)}
         <div class="rowf" style="margin-top:8px"><button class="btn sm" id="liveBtn">Retry live data</button><span class="muted small" id="srcLabel"></span></div>
       </div>
 
+      <h2>Last 60 days at Mount Temple</h2>
+      <div class="card">
+        <div class="muted small" id="seasonHead">Waiting for weather…</div>
+        <canvas id="seasonCv" style="width:100%;height:190px;display:block;margin-top:8px"></canvas>
+        <div class="small" id="seasonLegend" style="margin-top:6px"></div>
+        <div class="small muted" style="margin-top:10px">Recent loading by elevation band and aspect (0 none, 1 = at a trigger threshold)</div>
+        <div id="seasonGrid" style="margin-top:4px"></div>
+        <div class="small" id="seasonText" style="margin-top:8px"></div>
+      </div>
+
       <h2>Danger ratings</h2>
+      <div class="muted small" id="dangerSrc" style="margin:-4px 0 6px"></div>
       <div id="dangerRows"></div>
 
       <h2>Avalanche problems</h2>
       <div id="probs"></div>
       <button class="btn ghost sm" id="addProb">+ Add problem</button>
 
-      <h2>Weather</h2>
+      <h2>Weather now</h2>
+      <div class="muted small" style="margin:-4px 0 6px">Filled from the last hours of the 60-day record. Edit to test a scenario.</div>
       <div class="grid2">
         <div class="field"><label>New snow 24 h (cm)</label><input type="number" min="0" max="150" id="hn24"></div>
         <div class="field"><label>New snow 72 h (cm)</label><input type="number" min="0" max="300" id="hn72"></div>
@@ -173,25 +184,16 @@ a{color:var(--gold2)}
         <div class="field"><label>Alpine temp (°C)</label><input type="number" min="-40" max="25" id="temp"></div>
         <div class="field"><label>Freezing level (m)</label><input type="number" min="0" max="5000" step="50" id="fl"></div>
       </div>
+
+      <h2>Avalanche history near Temple</h2>
+      <div class="rlist" id="histList"></div>
+      <div class="muted small" style="margin-top:6px">Recorded incidents and accidents in the map area. Locations are approximate. Full records: <a href="https://incidents.avalanche.ca" target="_blank" rel="noopener">Avalanche Canada fatal incidents database</a>.</div>
     </div>
 
     <div class="pane" id="pane-routes">
-      <h2>Backcountry routes</h2>
+      <h2>Existing routes</h2>
+      <div class="muted small" style="margin:-4px 0 6px">Summer and winter routes, all scored in the current winter conditions. Sorted by score, highest first.</div>
       <div class="rlist" id="routeList"></div>
-
-      <h2>Designated uphill routes</h2>
-      <div class="rlist" id="upList"></div>
-      <div class="muted small" style="margin-top:6px">Whistler Blackcomb only allows uphill travel inside the ski area boundary on signed routes. The North Route, Oboe Traverse and East Col are not in the map data yet.</div>
-
-      <h2>Ski and snowboard runs</h2>
-      <div class="card">
-        <div class="rowf"><div class="seg" id="mtnSeg"><button data-m="all" class="on">Both</button><button data-m="Whistler">Whistler</button><button data-m="Blackcomb">Blackcomb</button></div>
-          <select id="runSort"><option value="risk">Highest risk first</option><option value="name">A to Z</option></select></div>
-        <div class="rowf" style="margin-top:8px"><input type="search" class="searchin" id="runQ" placeholder="Search runs"><span class="muted small" id="runCount"></span></div>
-        <div class="muted small" style="margin-top:8px">Tap a run on the map or in the list to score it. Ski patrol does avalanche control on open runs, so the score shows the slope as if it were uncontrolled.</div>
-      </div>
-      <div class="rlist" id="runList"></div>
-      <button class="btn ghost sm" id="runMore" style="margin-top:8px">Show more</button>
 
       <h2>New route</h2>
       <div class="card">
@@ -210,6 +212,7 @@ a{color:var(--gold2)}
 
       <h2>Ideal safest route</h2>
       <div class="card">
+        <div class="muted small" style="margin-bottom:8px">Pick start and end on the map, or open an existing route and use “Find a safer line”.</div>
         <div class="rowf"><button class="btn ghost sm" id="setStart">Set start</button><button class="btn ghost sm" id="setEnd">Set end</button><span class="muted small" id="seLabel">Tap the map after each button</span></div>
         <div style="margin-top:10px" class="small"><div class="rowf" style="justify-content:space-between"><span>Shortest</span><span id="wVal" class="muted"></span><span>Safest</span></div>
         <input type="range" id="wSlider" min="0" max="100" value="75"></div>
@@ -230,7 +233,7 @@ a{color:var(--gold2)}
         <div class="muted small" style="margin-top:6px">Heights are exaggerated 1.5 times on a 3 mm base. Route ridges are 2.2 mm wide and 2.2 mm tall, above the tallest texture. Print with a 0.4 mm nozzle at 0.12 to 0.16 mm layers so the texture survives.</div>
         <div class="small" style="margin-top:10px;color:var(--gold2)">Raised routes</div>
         <div id="printList" style="margin-top:4px"></div>
-        <div class="muted small" style="margin-top:6px">Select a ski run in the Routes tab to add it. Your drawn routes and the safest route are included when they exist.</div>
+        <div class="muted small" style="margin-top:6px">Select a route in the Routes tab to add it. Your drawn routes and the safest route are included when they exist.</div>
         <div class="rowf" style="margin-top:12px"><button class="btn" id="printBtn">Download STL</button><button class="btn ghost" id="pvBtn">Preview print</button></div>
         <div class="small" id="printMsg" style="margin-top:8px"></div>
       </div>
@@ -242,42 +245,55 @@ a{color:var(--gold2)}
       <p>The map is a 3D model of the elevation data, drawn as a 60 m mesh with no vertical exaggeration. The risk or ATES layer, 100 m contours and hillshade are draped over it at 15 m detail.</p>
       <h2>Terrain layers (pre-computed)</h2>
       <ul>
-        <li><b>Elevation:</b> USGS 3DEP 1 arc-second DEM, resampled to a 30 m grid.</li>
+        <li><b>Elevation:</b> USGS 3DEP 1 arc-second DEM, resampled to a 30 m grid over about 12.5 × 14.5 km around Mount Temple.</li>
         <li><b>Release areas:</b> fuzzy slope membership peaking near 40° (about 0.5 at 29° and 51°), reduced on very rough terrain and below treeline.</li>
-        <li><b>Runout exposure:</b> energy-line propagation downhill from release areas using a <code>24°</code> travel angle above treeline and <code>28°</code> below (forest friction proxy). This catches flat ground under big slopes.</li>
+        <li><b>Runout exposure:</b> energy-line propagation downhill from release areas using a <code>24°</code> travel angle above treeline and <code>28°</code> below (forest friction proxy). This catches valley floors and lakeshores under big slopes.</li>
         <li><b>Terrain traps:</b> gullies (concave curvature), cliffs (&gt;50°), and abrupt flats below steep slopes.</li>
         <li><b>ATES class:</b> simplified AutoATES-style rules: Simple, Challenging, Complex, Extreme from slope angle, release areas, runout overlap and cliffs.</li>
       </ul>
+      <h2>Last 60 days of weather</h2>
+      <ul>
+        <li>On page load the app pulls 61 past days plus 2 forecast days of hourly weather for Mount Temple from Open-Meteo (best available forecast models), plus ERA5 reanalysis precipitation up to 5 days ago. For autumn 2026 the two disagreed by about three times on precipitation (21 mm against 62 mm), so the app averages them where both exist. If the pull fails it uses a saved snapshot and says so.</li>
+        <li>The single weather point is moved to three band elevations (below treeline 1850 m, treeline 2175 m, alpine 2700 m) with a −6.5 °C/km lapse rate and +50 % precipitation per km. Precipitation falls as snow below 0 °C, rain above +2 °C, mixed in between.</li>
+        <li>Each day and band: snow depth (new snow at about 1 cm per mm of water, 3 % daily settlement, degree-day melt), snow available for wind transport, and cold dry days on a thin snowpack (faceting).</li>
+        <li>For each band and each of 8 aspects a day counts as loading when it reaches a threshold: 30 cm storm snow in 72 h, 20 cm wind-deposited snow on lee aspects (wind over 20 km/h moving recent snow), 10 mm rain on a 30 cm snowpack, or strong warming on sunny aspects.</li>
+        <li>Recent loading = strongest loading in the last days, counted 100 % today, 80 % yesterday, 60 % two days ago and so on. It multiplies the hazard on that band and aspect by up to 2.1×. Thin snowpack (under about 20 cm) lowers hazard to about a third, because there is not enough snow to slide.</li>
+        <li>When Parks Canada has issued a rating it sets the danger level. When no rating is issued (early or late season) the app models one from the replay and marks it as modelled.</li>
+      </ul>
       <h2>Conditions model</h2>
       <ul>
-        <li>Danger rating for each elevation band (BTL &lt; 1500 m, TL 1500–1900 m, ALP &gt; 1900 m) scales hazard roughly ×2 per level, following the Avalanche Canada scale.</li>
+        <li>Danger rating for each elevation band (BTL &lt; 2000 m, TL 2000–2350 m, ALP &gt; 2350 m) scales hazard roughly ×2 per level, following the Avalanche Canada scale.</li>
         <li>Avalanche problems raise hazard on the listed aspects and bands (likelihood and size) and lower it elsewhere. Persistent and deep persistent problems extend runout weight. Loose problems shorten it. Cornices add hazard on crests.</li>
-        <li>Weather: new snow loads all aspects above the freezing level. Wind over 15 km/h loads lee aspects near ridge crests. Warming above 0 °C adds hazard on sunny aspects and below the freezing level.</li>
+        <li>Weather now: new snow loads all aspects above the freezing level. Wind over 15 km/h loads lee aspects near ridge crests. Warming above 0 °C adds hazard on sunny aspects and below the freezing level.</li>
       </ul>
       <h2>Formula</h2>
-      <p><code>terrain = 1 − (1 − release) × (1 − 0.85 × runout)</code><br><code>raw = terrain × danger × problem × weather × (1 + 0.6 × trap)</code><br><code>index = 100 × (1 − e^(−1.4 × raw))</code></p>
+      <p><code>terrain = 1 − (1 − release) × (1 − 0.85 × runout)</code><br><code>season = (1 + 0.7 × recent loading + 0.35 × facets) × (0.35 + 0.65 × snowpack support)</code><br><code>raw = terrain × danger × problem × weather × season × (1 + 0.6 × trap)</code><br><code>index = 100 × (1 − e^(−1.4 × raw))</code></p>
       <p>Classes: Low &lt; 14, Moderate 14–31, Considerable 31–55, High 55–78, Extreme ≥ 78.</p>
       <h2>3D print</h2>
       <p>The STL is built in the browser from the same elevation data at about 0.4 mm spacing, with heights exaggerated 1.5 times. The risk class, from the index smoothed over 150 m, sets a geometric texture with hard edges: diagonal ribs 0.6 mm tall for Moderate, flat-topped studs 0.9 mm tall on a 3.2 mm grid for Considerable, square pyramids 1.2 mm tall for High and staggered spikes 1.5 mm tall on a 2.4 mm grid for Extreme. Low is left smooth. Routes are smooth rounded ridges 2.2 mm tall, so a finger can follow them through the textured ground. The model is watertight with a flat base. A legend strip along the south edge holds one patch for each risk class, textured with that class's pattern and marked with one to five dots, plus a sample route ridge.</p>
       <h2>Route scoring</h2>
-      <p>Routes and ski runs are sampled every 15 m. Ski areas drawn as shapes (bowls, glades) are scored over every cell inside the shape. <b>Route score = 0.55 × 90th percentile + 0.45 × maximum</b>, so one serious crux can't be averaged away by long safe sections. Cruxes are continuous stretches at Considerable or above.</p>
+      <p>Routes are sampled every 15 m. <b>Route score = 0.55 × 90th percentile + 0.45 × maximum</b>, so one serious crux can't be averaged away by long safe sections. Cruxes are continuous stretches at Considerable or above.</p>
       <h2>Safest route</h2>
       <p>A* search over the 30 m grid. Step cost = distance × slope effort + uphill gain + slider weight × distance × (index/100)². Slopes over 48° are treated as impassable. The search finds the path with the lowest total cost.</p>
       <h2>Limitations</h2>
       <ul>
-        <li>No forest-cover data: treeline effects come from elevation bands only, so cleared ski runs and open avalanche paths below treeline are under-weighted.</li>
-        <li>The ski area is not modelled as controlled terrain. Ski runs are scored as if uncontrolled, and patrol work, closures and grooming are not included.</li>
-        <li>Ski runs, lifts and uphill routes come from OpenStreetMap. Some runs are split or slightly off their real line, and about 900 m of the Blackcomb uphill route is filled with a least-effort path where the trace has a gap.</li>
-        <li>Spearhead and Musical Bumps lines are approximate (real waypoints joined by a least-effort terrain path). The Wedgemount line is a real GPS track (Peakbagger, Seán Caulfield) of the summer trail.</li>
-        <li>30 m cells miss small features like rolls, cornice edges and short gullies.</li>
-        <li>Live data only loads when the page runs outside this viewer (self-hosted or opened as a file).</li>
+        <li>One weather point for the whole map. Terrain spreads it by elevation band and aspect only; local wind channelling around Temple is not modelled.</li>
+        <li>No snowpack layering. The faceting count is a rough flag, not a stability test, and buried weak layers from before the 60-day window are not seen.</li>
+        <li>The loading thresholds came from the earlier calibration on a synthetic mountain and have not been checked against Parks Canada observations at Lake Louise.</li>
+        <li>No forest-cover data: treeline effects come from elevation bands only.</li>
+        <li>Summer trails are scored on their summer line. Winter travel often takes different lines (for example frozen lakes and the valley floor), which can be drawn or loaded as GPX.</li>
+        <li>Trail lines come from OpenStreetMap. The last pitch to the Mount Temple summit has no OSM line and uses a least-effort terrain path.</li>
+        <li>30 m cells miss small features like rolls, cornice edges and short gullies. Glaciers, seracs and crevasses on Temple's north face are not modelled.</li>
+        <li>Avalanche Canada weather station readings (Bosworth, Whymper) were not available through their public API, so the model is not corrected against stations.</li>
+        <li>Live data only loads when the page runs outside the Claude viewer (self-hosted or opened as a file).</li>
       </ul>
       <h2>Sources</h2>
       <ul class="small">
-        <li>USGS 3D Elevation Program, 1 arc-second DEM tile n51w123 (public domain)</li>
-        <li>Avalanche Canada public forecast API and danger scale</li>
-        <li>Open-Meteo forecast API (snowfall, wind, temperature, freezing level)</li>
-        <li>Ski runs, lifts and uphill routes: © OpenStreetMap contributors (ODbL), via OpenSkiMap</li>
+        <li>USGS 3D Elevation Program, 1 arc-second DEM tile n52w117 (public domain)</li>
+        <li>Open-Meteo forecast API with past days (weather, CC BY 4.0)</li>
+        <li>Avalanche Canada public forecast API (Parks Canada forecast for Banff, Yoho and Kootenay) and danger scale</li>
+        <li>Trails and peaks: © OpenStreetMap contributors (ODbL), via the Overpass API</li>
+        <li>Incident history: Avalanche Canada incident reports, Parks Canada and news reports linked in the list</li>
         <li>3D rendering: three.js (MIT licence)</li>
         <li>Statham et al. (2018) Conceptual Model of Avalanche Hazard; Larsen et al. (2020) AutoATES; Veitinger et al. (2016) PRA fuzzy model</li>
       </ul>
@@ -289,7 +305,9 @@ a{color:var(--gold2)}
 <script>
 const TERRAIN = /*__TERRAIN__*/null;
 const ROUTEDATA = /*__ROUTES__*/null;
-const RUNDATA = /*__RUNS__*/null;
+const RUNDATA = {runs:[],lifts:[]};
+const WXSNAP = /*__WXSNAP__*/null;
+const HISTORY = /*__HISTORY__*/null;
 const DIFFS=[
   {n:'Easy', i:'<svg class="diff" viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="#2E9E48"/></svg>'},
   {n:'Intermediate', i:'<svg class="diff" viewBox="0 0 14 14"><rect x="2" y="2" width="10" height="10" fill="#2F6FD8"/></svg>'},
@@ -322,8 +340,8 @@ const S = {
     {type:'storm', bands:{alp:1,tl:1,btl:0}, asp:[1,1,1,1,1,1,1,1], like:2, size:1.5},
     {type:'wind', bands:{alp:1,tl:1,btl:0}, asp:[1,1,1,0,0,0,0,0], like:2, size:2}],
   wx:{hn24:15, hn72:35, wind:35, windDir:5, temp:-6, fl:900},
-  source:'example', layer:'risk', mode:'inspect',
-  draw:[], start:null, end:null, selected:null, userRoutes:[], safe:null, showRuns:true, preview:false, mtn:'all', runQ:'', runSort:'risk', runShown:25
+  source:'example', dangerFrom:'example', layer:'risk', mode:'inspect',
+  draw:[], start:null, end:null, selected:null, userRoutes:[], safe:null, showRuns:false, preview:false, mtn:'all', runQ:'', runSort:'risk', runShown:25
 };
 
 /* ---------------- data decode ---------------- */
@@ -391,9 +409,12 @@ function factorsAt(i){
   const Wx = Math.min(2.5, wSnow*wWind*wWarm);
   let T = 1-(1-p)*(1-0.85*Math.min(1,r*rw));
   T = Math.max(T, corn);
-  const raw = T*DFACT[D-1]*f*Wx*(1+0.6*t);
+  // 60-day weather replay: recent loading on this band and aspect, and whether there is enough snow to slide
+  let wSea=1, sup=1, Lsea=0;
+  if(SEASON){ Lsea=SEASON.L[band][sec]; sup=SEASON.sup[band]; wSea=1+0.7*Math.min(1.6,Lsea)+0.35*SEASON.pers[band]; }
+  const raw = T*DFACT[D-1]*f*Wx*(1+0.6*t)*wSea*(0.35+0.65*sup);
   const score = 100*(1-Math.exp(-1.4*raw));
-  return {z,s,a,p,r,t,c,band,sec,D,f,matched,windLoad,warm:warm*solar*belowFL,Wx,T,raw,score};
+  return {z,s,a,p,r,t,c,band,sec,D,f,matched,windLoad,warm:warm*solar*belowFL,Wx,T,raw,score,Lsea,sup};
 }
 function computeScores(){
   const N=G.N; SCORE=SCORE||new Float32Array(N); CLASS=CLASS||new Uint8Array(N);
@@ -623,6 +644,7 @@ function disposeGroup(name){
 function setGroup(name,objs){ disposeGroup(name); const g=new T3.Group(); objs.forEach(o=>g.add(o)); R3.groups[name]=g; g.visible=!S.preview; R3.scene.add(g); dirty=true; return g; }
 function segsOf(pos){ const s=[]; for(let k=3;k<pos.length;k+=3) s.push(pos[k-3],pos[k-2],pos[k-1],pos[k],pos[k+1],pos[k+2]); return s; }
 function buildRunLayer(){
+  if(!RUNS.length) return;
   const runSeg=[], liftSeg=[];
   for(const R of RUNS){ R.w=R.parts.map(p=>drape(R.area?[...p,p[0]]:p,4)); R.w.forEach(w=>runSeg.push(...segsOf(w))); }
   for(const L of LIFTS){ L.w=drape(L.g,9); liftSeg.push(...segsOf(L.w)); }
@@ -812,9 +834,7 @@ function renderLegend(){
 document.querySelectorAll('#layerSeg button').forEach(b=>b.onclick=()=>{
   document.querySelectorAll('#layerSeg button').forEach(x=>x.classList.toggle('on',x===b));
   S.layer=b.dataset.l; renderBase(); renderLegend();});
-document.getElementById('runsTog').onclick=e=>{
-  S.showRuns=!S.showRuns; e.currentTarget.classList.toggle('on',S.showRuns);
-  if(R3&&R3.groups.runs){R3.groups.runs.visible=S.showRuns&&!S.preview; dirty=true;} renderLegend();};
+
 
 /* ---------------- tabs ---------------- */
 document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{
@@ -925,7 +945,7 @@ function buildSTL(widthMM){
   for(let i=nx-2;i>=0;i--)per.push([i,ny-1]); for(let j=ny-2;j>=1;j--)per.push([0,j]);
   const nTop=2*(nx-1)*(ny-1), nPer=per.length, nTri=nTop+2*nPer+nPer;
   const buf=new ArrayBuffer(84+50*nTri), dv=new DataView(buf);
-  const hdr='Avalanche Risk Atlas Whistler tactile model'; for(let c=0;c<hdr.length;c++) dv.setUint8(c,hdr.charCodeAt(c));
+  const hdr='Avalanche Risk Atlas Mount Temple tactile model'; for(let c=0;c<hdr.length;c++) dv.setUint8(c,hdr.charCodeAt(c));
   dv.setUint32(80,nTri,true);
   let o=84;
   const X=i=>i*Wmm/(nx-1), Y=j=>Dtot-j*syp;
@@ -1033,7 +1053,7 @@ document.getElementById('printBtn').onclick=async()=>{
   btn.disabled=true; msg.textContent='Building the model…';
   await new Promise(r=>setTimeout(r,30));
   try{
-    const M=buildSTL(w), base=`whistler-avalanche-model-${w}mm`;
+    const M=buildSTL(w), base=`mount-temple-avalanche-model-${w}mm`;
     const info=`${(M.nTri/1000).toFixed(0)}k triangles, ${M.Wmm.toFixed(0)} × ${M.Dmm.toFixed(0)} × ${M.hmax.toFixed(0)} mm`;
     if(dlCap){
       msg.textContent='Compressing…';
@@ -1060,7 +1080,7 @@ function dangerUI(){
     row.querySelectorAll('button').forEach(b=>{
       const v=+b.dataset.v; const on=S.danger[k]===v; b.classList.toggle('on',on);
       if(on){b.style.background=CLS[v-1].c; b.style.color=v===5?'#fff':'#111';}
-      b.onclick=()=>{S.danger[k]=v; markManual(); dangerUI(); recompute();};
+      b.onclick=()=>{S.danger[k]=v; S.dangerFrom='manual'; markManual(); dangerUI(); recompute();};
     });
     const nm=document.createElement('div'); nm.className='small muted'; nm.style.gridColumn='2'; nm.style.marginTop='-3px'; nm.textContent=DANGER[S.danger[k]-1];
     host.appendChild(row); host.appendChild(nm);
@@ -1111,14 +1131,15 @@ document.getElementById('windDir').onchange=e=>{S.wx.windDir=+e.target.value; ma
 const LIVE={wx:{st:'wait',msg:'Checking Open-Meteo…'},av:{st:'wait',msg:'Checking Avalanche Canada…'}};
 function srcLabel(){
   const l=document.getElementById('srcLabel');
-  l.textContent = S.source==='example'?'Showing example conditions, not today’s forecast':S.source==='live'?'Using live data':S.source==='mixed'?'Live data with manual edits':'Manual entry';
+  l.textContent = S.source==='example'?'Showing example conditions, not today’s forecast':S.source==='live'?'Using live data':S.source==='snapshot'?'Using saved weather snapshot':S.source==='mixed'?'Live data with manual edits':'Manual entry';
+  const ds=document.getElementById('dangerSrc'); if(ds) ds.textContent = S.dangerFrom==='avcan'?'From the Parks Canada forecast.':S.dangerFrom==='model'?'Modelled from the last 60 days of weather, because no official rating is issued. Not an official rating.':'Manual entry.';
 }
-function markManual(){ if(S.source==='live') S.source='mixed'; else if(S.source==='example') S.source='manual'; srcLabel(); }
+function markManual(){ if(S.source==='live'||S.source==='snapshot') S.source='mixed'; else if(S.source==='example') S.source='manual'; srcLabel(); }
 function liveUI(){
   const el=document.getElementById('liveStatus');
   const row=(o,name)=>`<div class="s"><span class="dot ${o.st}"></span><div><b>${name}</b> <span class="muted">${o.msg}</span></div></div>`;
   el.innerHTML=row(LIVE.av,'Avalanche Canada')+row(LIVE.wx,'Open-Meteo weather')+
-    ((LIVE.av.st==='bad'||LIVE.wx.st==='bad')?`<div class="muted small" style="margin-top:4px">Enter the current <a href="https://avalanche.ca/forecasts" target="_blank" rel="noopener">Sea-to-Sky forecast</a> below. Live loading works when this page is hosted on your own site or opened as a file.</div>`:'');
+    `<div class="muted small" style="margin-top:4px">Official forecast: <a href="${AVC.url||'https://avalanche.ca/forecasts'}" target="_blank" rel="noopener">Banff, Yoho &amp; Kootenay</a>. Live loading works when this page is hosted on its own site or opened as a file.</div>`;
   srcLabel();
 }
 async function fetchJSON(url,ms=7000){
@@ -1126,27 +1147,32 @@ async function fetchJSON(url,ms=7000){
   try{const r=await fetch(url,{signal:c.signal}); if(!r.ok) throw new Error('HTTP '+r.status); return await r.json();}
   finally{clearTimeout(t);}
 }
+const WXURL='https://api.open-meteo.com/v1/forecast?latitude=51.3506&longitude=-116.2067&hourly=temperature_2m,precipitation,rain,snowfall,wind_speed_10m,wind_direction_10m,wind_gusts_10m,freezing_level_height&past_days=61&forecast_days=2&timezone=America%2FEdmonton';
+function eraURL(){
+  const d=n=>new Date(Date.now()-7*3600e3-n*864e5).toISOString().slice(0,10);
+  return 'https://archive-api.open-meteo.com/v1/archive?latitude=51.3506&longitude=-116.2067&hourly=precipitation&timezone=America%2FEdmonton&start_date='+d(62)+'&end_date='+d(5);
+}
+// Average the forecast-model archive with ERA5 reanalysis precipitation where both exist.
+// The two disagree by up to 3x in this area; averaging hedges between them.
+function mergeERA(j,e){
+  j.era=0; if(!e||!e.hourly) return j;
+  const m={}; e.hourly.time.forEach((t,k)=>m[t]=e.hourly.precipitation[k]);
+  j.hourly.precipitation=j.hourly.precipitation.map((p,k)=>{const q=m[j.hourly.time[k]]; if(q==null) return p; j.era++; return ((p||0)+q)/2;});
+  return j;
+}
 async function liveWeather(){
-  const url='https://api.open-meteo.com/v1/forecast?latitude=50.06&longitude=-122.95&elevation=2000&hourly=snowfall,temperature_2m,wind_speed_10m,wind_direction_10m,freezing_level_height&past_days=3&forecast_days=1&timezone=America%2FVancouver';
-  const j=await fetchJSON(url); const h=j.hourly; const now=Date.now();
-  const tms=h.time.map(t=>new Date(t).getTime()); let n=tms.findIndex(t=>t>now); if(n<0)n=tms.length; n=Math.max(1,n);
-  const sum=(arr,hrs)=>arr.slice(Math.max(0,n-hrs),n).reduce((a,b)=>a+(b||0),0);
-  const last=(arr,hrs)=>arr.slice(Math.max(0,n-hrs),n).filter(v=>v!=null);
-  const ws=last(h.wind_speed_10m,12), wd=last(h.wind_direction_10m,12);
-  const sx=wd.reduce((a,d,k)=>a+Math.sin(d*Math.PI/180)*(ws[k]||1),0), sy=wd.reduce((a,d,k)=>a+Math.cos(d*Math.PI/180)*(ws[k]||1),0);
-  const dir=((Math.atan2(sx,sy)*180/Math.PI)+360)%360;
-  S.wx={hn24:Math.round(sum(h.snowfall,24)), hn72:Math.round(sum(h.snowfall,72)),
-    wind:Math.round(ws.reduce((a,b)=>a+b,0)/Math.max(1,ws.length)), windDir:Math.round(dir/45)%8,
-    temp:Math.round(h.temperature_2m[n-1]), fl:Math.round((h.freezing_level_height[n-1]||0)/50)*50};
-  return new Date(tms[n-1]).toLocaleString([], {month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+  const [j,e]=await Promise.all([fetchJSON(WXURL,15000), fetchJSON(eraURL(),15000).catch(()=>null)]);
+  if(!j.hourly||!j.hourly.time) throw new Error('No hourly data');
+  SEASON=seasonModel(mergeERA(j,e),'live');
+  return SEASON.label;
 }
 const AVMAP={low:1,moderate:2,considerable:3,high:4,extreme:5};
 const PTMAP={'storm-slab':'storm','wind-slab':'wind','persistent-slab':'persistent','deep-persistent-slab':'deep','wet-slab':'wetslab','loose-wet':'wetloose','loose-dry':'dryloose','cornice':'cornice','cornices':'cornice'};
 const LKMAP={'unlikely':1,'possible':2,'likely':3,'very-likely':4,'certain':5,'almost-certain':5};
 function val(x){return (x&&typeof x==='object')?(x.value??x.display??''):x;}
 async function liveAvalanche(){
-  const urls=['https://api.avalanche.ca/forecasts/en/products/point?lat=50.06&long=-122.95',
-              'https://api.avalanche.ca/forecasts/en/products/point?lat=50.06&lng=-122.95'];
+  const urls=['https://api.avalanche.ca/forecasts/en/products/point?lat=51.3506&long=-116.2067',
+              'https://avcan-services-api.prod.avalanche.ca/forecasts/en/products/point?lat=51.3506&long=-116.2067'];
   let j=null, err;
   for(const u of urls){try{j=await fetchJSON(u); break;}catch(e){err=e;}}
   if(!j) throw err||new Error('no response');
@@ -1155,7 +1181,14 @@ async function liveAvalanche(){
   const rt=dr.ratings||dr;
   const pick=k=>AVMAP[String(val(rt[k]?.rating)||'').toLowerCase()];
   const d={alp:pick('alp'), tl:pick('tln')||pick('tl'), btl:pick('btl')};
-  if(!d.alp||!d.tl||!d.btl) throw new Error('No rating issued (off-season or unrated)');
+  AVC.title='Parks Canada · Banff, Yoho & Kootenay'; AVC.issued=rep.dateIssued||null; AVC.url=j.url||'https://avalanche.ca/forecasts';
+  AVC.types=(rep.problems||[]).map(p=>val(p.type)).filter(Boolean);
+  if(!d.alp||!d.tl||!d.btl){
+    const raw=['alp','tln','btl'].map(k=>String(val(rt[k]?.rating)||'')).join(' ');
+    AVC.rated=false; AVC.status=/early/i.test(raw)?'Early season: no danger rating issued yet':'No danger rating issued';
+    throw new Error(AVC.status);
+  }
+  AVC.rated=true; AVC.status='Rated';
   const probs=[];
   for(const p of (rep.problems||[]).slice(0,3)){
     const type=PTMAP[String(val(p.type)).toLowerCase()]; if(!type) continue;
@@ -1166,20 +1199,204 @@ async function liveAvalanche(){
     const es=data.expectedSize||{}; const sz=parseFloat(es.max||es.min||2);
     probs.push({type,bands,asp,like,size:SIZES.reduce((a,b)=>Math.abs(b-sz)<Math.abs(a-sz)?b:a,2)});
   }
-  S.danger=d; S.problems=probs;
-  return (rep.title||'Sea-to-Sky')+(rep.dateIssued?' · issued '+new Date(rep.dateIssued).toLocaleDateString():'');
+  S.danger=d; S.problems=probs; S.dangerFrom='avcan';
+  return (AVC.title)+(rep.dateIssued?' · issued '+new Date(rep.dateIssued).toLocaleDateString():'');
 }
 async function tryLive(){
   LIVE.wx={st:'wait',msg:'Checking…'}; LIVE.av={st:'wait',msg:'Checking…'}; liveUI();
-  let got=0;
-  try{const t=await liveWeather(); LIVE.wx={st:'ok',msg:'Loaded ('+t+')'}; got++;}
-  catch(e){LIVE.wx={st:'bad',msg:'Not reachable from this page'};}
-  try{const t=await liveAvalanche(); LIVE.av={st:'ok',msg:'Loaded: '+t}; got++;}
-  catch(e){LIVE.av={st:'bad',msg: /rating|ratings/.test(e.message)?e.message:'Not reachable from this page'};}
-  if(got){ S.source = got===2?'live':'mixed'; dangerUI(); probsUI(); wxUI(); recompute(); }
+  let wxLive=false, avRated=false;
+  try{const t=await liveWeather(); LIVE.wx={st:'ok',msg:'60 days loaded, '+t}; wxLive=true;}
+  catch(e){
+    if(WXSNAP){ SEASON=seasonModel(mergeERA(structuredClone(WXSNAP),WXSNAP.era5),'snapshot'); LIVE.wx={st:'warn',msg:'Live pull failed. Using the saved snapshot from '+SEASON.label}; }
+    else LIVE.wx={st:'bad',msg:'Not reachable from this page'};
+  }
+  try{const t=await liveAvalanche(); LIVE.av={st:'ok',msg:'Loaded: '+t}; avRated=true;}
+  catch(e){LIVE.av={st:AVC.status?'warn':'bad',msg: AVC.status?AVC.status+'. Danger below is modelled from the 60-day weather.':'Not reachable from this page. Danger below is modelled from the 60-day weather.'};}
+  if(SEASON){ applySeason(!avRated); }
+  S.source = wxLive?(avRated?'live':'live'):(SEASON?'snapshot':'example');
+  dangerUI(); probsUI(); wxUI(); seasonUI(); recompute();
   liveUI();
 }
 document.getElementById('liveBtn').onclick=tryLive;
+
+
+/* ---------------- 60-day weather replay ----------------
+   One weather point (Open-Meteo at Mount Temple) is moved to three band elevations,
+   then a daily snow and wind-loading model runs per elevation band and aspect sector. */
+let SEASON=null;
+const AVC={};
+const BANDZ={btl:1850, tl:2175, alp:2700};
+function seasonModel(j,src){
+  const h=j.hourly, zref=j.elevation||3478, zP=2100, off=(j.utc_offset_seconds||0)*1000;
+  const tms=h.time.map(t=>Date.parse(t+'Z')-off), now=Date.now();
+  const dayOf=k=>h.time[k].slice(0,10);
+  const todayStr=new Date(now+off).toISOString().slice(0,10);
+  const days=[]; const idx={};
+  for(let k=0;k<h.time.length;k++){
+    const d=dayOf(k); if(!(d in idx)){idx[d]=days.length; days.push({date:d,hrs:[]});}
+    days[idx[d]].hrs.push(k);
+  }
+  const bands=['btl','tl','alp'];
+  const out={days:[], src, zref, label:'', bands};
+  const HS={btl:0,tl:0,alp:0}, SWE={btl:0,tl:0,alp:0}, loose={btl:0,tl:0,alp:0}, face={btl:0,tl:0,alp:0};
+  const hist={btl:[],tl:[],alp:[]};
+  for(const D of days){
+    const fc = D.date>todayStr || (D.date===todayStr && false);
+    const row={date:D.date, forecast:D.date>todayStr, today:D.date===todayStr, b:{}};
+    let wsx=0, wsy=0, wsum=0, wmax=0, n=0, gust=0, fl=0;
+    for(const k of D.hrs){ const ws=h.wind_speed_10m[k]||0, wd=h.wind_direction_10m[k]||0;
+      wsx+=Math.sin(wd*Math.PI/180)*ws; wsy+=Math.cos(wd*Math.PI/180)*ws; wsum+=ws; n++; wmax=Math.max(wmax,ws); gust=Math.max(gust,h.wind_gusts_10m?.[k]||0); fl+=h.freezing_level_height?.[k]||0; }
+    row.wind=wsum/Math.max(1,n); row.windDir=((Math.atan2(wsx,wsy)*180/Math.PI)+360)%360; row.gust=gust; row.fl=fl/Math.max(1,n);
+    for(const b of bands){
+      // temperature is valid at the API elevation (zref); precipitation at the model's own terrain height (~zP)
+      const zb=BANDZ[b], dT=-0.0065*(zb-zref), pf=Math.max(0.35,1+0.5*(zb-zP)/1000);
+      let hn=0, rain=0, tmax=-99, tsum=0;
+      for(const k of D.hrs){
+        const T=(h.temperature_2m[k]??0)+dT, p=Math.max(0,h.precipitation[k]||0)*pf;
+        const fs=Math.min(1,Math.max(0,(2-T)/2));
+        hn+=p*fs; rain+=p*(1-fs); tmax=Math.max(tmax,T); tsum+=T;
+      }
+      const tmean=tsum/Math.max(1,D.hrs.length);
+      // snowpack depth (cm): new snow at ~100 kg/m3 (1 mm water = 1 cm), settles 3 %/day, degree-day melt
+      const melt=Math.max(0,3*Math.max(0,tmean)+1*Math.max(0,tmax-1));
+      // water equivalent (mm) and depth (cm): fresh snow ~100 kg/m3, settles 3 %/day down to ~300 kg/m3
+      SWE[b]=Math.max(0,SWE[b]+hn-melt+(HS[b]>0?Math.min(rain,SWE[b]*0.1):0));
+      HS[b]=SWE[b]<=0?0:Math.min(SWE[b], Math.max(SWE[b]/3, HS[b]*0.97+hn-melt/3));
+      // snow available for wind transport (decays as it bonds)
+      loose[b]=loose[b]*0.6+hn;
+      // faceting: thin, cold, dry snowpack (early-season weak layers)
+      if(HS[b]>5&&HS[b]<100&&tmean<-8&&hn<2) face[b]+=1; else if(hn>15) face[b]=Math.max(0,face[b]-0.5);
+      hist[b].push({hn,rain});
+      const last=(arr,nd)=>arr.slice(-nd).reduce((a,x)=>a+x,0);
+      const hn72=last(hist[b].map(x=>x.hn),3), rain24=rain;
+      const bf=b==='btl'?0.2:b==='tl'?0.6:1;
+      const transport=Math.min(40,loose[b])*Math.max(0,Math.min(1,(row.wind-20)/40))*bf;
+      const down=(row.windDir+180)%360;
+      const asp=[];
+      for(let s=0;s<8;s++){
+        const az=s*45, align=Math.max(0,Math.cos((az-down)*Math.PI/180));
+        const solar=Math.max(0,Math.cos((az-180)*Math.PI/180));
+        const storm=hn72/30;
+        const wind=transport*align*1.6/20;
+        const wet=(HS[b]>30? Math.max(rain24/10, tmax>1 ? (tmax-1)/6*(0.4+0.6*solar):0) : 0);
+        asp.push({storm,wind,wet,I:Math.max(storm,wind,wet)});
+      }
+      row.b[b]={hn,rain,tmax,tmean,HS:HS[b],face:face[b],asp,transport};
+    }
+    out.days.push(row);
+  }
+  // keep the last 61 past days plus today and forecast
+  const ti=out.days.findIndex(d=>d.today); const endI=ti>=0?ti:out.days.length-1;
+  const startI=Math.max(0,endI-60);
+  out.days=out.days.slice(startI);
+  const nowI=endI-startI;
+  // recent loading: loading counts 100 % today, 80 % yesterday, 60 % two days ago, ...
+  out.L={}; out.sup={}; out.pers={}; out.trig={}; out.main={};
+  for(const b of bands){
+    out.L[b]=[0,0,0,0,0,0,0,0]; out.trig[b]=[0,0,0,0,0,0,0,0]; out.main[b]=['','','','','','','',''];
+    for(let i=0;i<=nowI;i++){
+      const age=nowI-i, w=Math.max(0,1-0.2*age);
+      out.days[i].b[b].asp.forEach((A,s)=>{
+        if(A.I>=1) out.trig[b][s]++;
+        if(w>0&&A.I*w>out.L[b][s]){ out.L[b][s]=A.I*w; out.main[b][s]= A.I===A.wind?'wind slab':A.I===A.storm?'storm snow':'wet'; }
+      });
+    }
+    const hs=out.days[nowI].b[b].HS;
+    out.sup[b]=Math.max(0,Math.min(1,(hs-20)/60));
+    out.pers[b]=hs>20?Math.min(1,out.days[nowI].b[b].face/14):0;
+  }
+  // modelled danger per band (not an official rating)
+  out.danger={};
+  for(const b of bands){
+    const Hh=Math.max(...out.L[b])*Math.max(0.15,out.sup[b])+0.45*out.pers[b]*out.sup[b];
+    out.danger[b]= out.days[nowI].b[b].HS<15?1: Hh<0.25?1: Hh<0.6?2: Hh<1.0?3: Hh<1.6?4:5;
+  }
+  // derived problems
+  const probs=[];
+  const anyB=f=>({alp:f('alp')?1:0,tl:f('tl')?1:0,btl:f('btl')?1:0});
+  const stormB=anyB(b=>Math.max(...out.days[nowI].b[b].asp.map(a=>a.storm))*1>=0.6&&out.sup[b]>0.1);
+  if(stormB.alp||stormB.tl||stormB.btl) probs.push({type:'storm',bands:stormB,asp:[1,1,1,1,1,1,1,1],like:2,size:1.5});
+  const windAsp=[0,0,0,0,0,0,0,0]; const windB={alp:0,tl:0,btl:0};
+  for(const b of bands) out.L[b].forEach((v,s)=>{ if(out.main[b][s]==='wind slab'&&v>=0.4&&out.days[nowI].b[b].HS>10){windAsp[s]=1; windB[b]=1;} });
+  if(windAsp.some(x=>x)) probs.push({type:'wind',bands:windB,asp:windAsp,like:2,size:1.5});
+  const persB=anyB(b=>out.pers[b]>=0.5);
+  if(persB.alp||persB.tl||persB.btl) probs.push({type:'persistent',bands:persB,asp:[1,1,1,1,1,1,1,1],like:2,size:2});
+  const wetB=anyB(b=>out.L[b].some((v,s)=>out.main[b][s]==='wet'&&v>=0.5));
+  if(wetB.alp||wetB.tl||wetB.btl) probs.push({type:'wetloose',bands:wetB,asp:[0,0,1,1,1,1,1,0],like:2,size:1.5});
+  out.problems=probs.slice(0,3);
+  // current weather for the Weather now fields (treeline band, last hours)
+  const nk=Math.max(1,tms.findIndex(t=>t>now)); const kk=nk<0?tms.length:nk;
+  const sumH=(arr,hrs,b)=>{let s=0; for(let k=Math.max(0,kk-hrs);k<kk;k++){const T=(h.temperature_2m[k]??0)-0.0065*(BANDZ[b]-zref); const p=Math.max(0,h.precipitation[k]||0)*Math.max(0.35,1+0.5*(BANDZ[b]-zP)/1000); s+=p*Math.min(1,Math.max(0,(2-T)/2));} return s;};
+  const ws=h.wind_speed_10m.slice(Math.max(0,kk-12),kk), wd=h.wind_direction_10m.slice(Math.max(0,kk-12),kk);
+  const sx=wd.reduce((a,d,k)=>a+Math.sin(d*Math.PI/180)*(ws[k]||1),0), sy=wd.reduce((a,d,k)=>a+Math.cos(d*Math.PI/180)*(ws[k]||1),0);
+  out.wx={hn24:Math.round(sumH(null,24,'tl')), hn72:Math.round(sumH(null,72,'tl')),
+    wind:Math.round(ws.reduce((a,b)=>a+(b||0),0)/Math.max(1,ws.length)), windDir:Math.round((((Math.atan2(sx,sy)*180/Math.PI)+360)%360)/45)%8,
+    temp:Math.round((h.temperature_2m[kk-1]??0)-0.0065*(BANDZ.alp-zref)), fl:Math.round((h.freezing_level_height?.[kk-1]||0)/50)*50};
+  out.nowI=nowI; out.era=j.era||0;
+  out.label=new Date(tms[Math.min(tms.length-1,kk-1)]).toLocaleString([], {month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+  out.range=out.days[0].date+' to '+out.days[nowI].date;
+  return out;
+}
+function applySeason(useDanger){
+  if(!SEASON) return;
+  S.wx={...SEASON.wx};
+  if(useDanger){ S.danger={...SEASON.danger}; S.problems=SEASON.problems.map(p=>({...p,bands:{...p.bands},asp:[...p.asp]})); S.dangerFrom='model'; }
+}
+function seasonUI(){
+  const Sx=SEASON; const head=document.getElementById('seasonHead');
+  if(!Sx){head.textContent='No weather loaded. Enter conditions by hand below.'; return;}
+  const nd=Sx.days.slice(0,Sx.nowI+1);
+  const tot=b=>nd.reduce((a,d)=>a+d.b[b].hn,0);
+  head.innerHTML=`${Sx.range} · ${Sx.src==='live'?'live from Open-Meteo':'saved snapshot'} · ${Sx.era?'precipitation averaged with ERA5 reanalysis up to 5 days ago':'forecast-model archive only (ERA5 not reached)'} · moved to each elevation band`;
+  // chart
+  const c=document.getElementById('seasonCv'), pr=window.devicePixelRatio||1, Wc=c.clientWidth||320, Hc=190;
+  c.width=Wc*pr; c.height=Hc*pr; const x=c.getContext('2d'); x.setTransform(pr,0,0,pr,0,0); x.clearRect(0,0,Wc,Hc);
+  const P={l:30,r:30,t:8,b:20}, w=Wc-P.l-P.r, hh=Hc-P.t-P.b, n=Sx.days.length;
+  const X=i=>P.l+(i+0.5)*w/n;
+  const maxHS=Math.max(40,...Sx.days.map(d=>d.b.alp.HS))*1.1, maxHN=Math.max(10,...Sx.days.map(d=>d.b.tl.hn))*1.2;
+  x.strokeStyle='rgba(238,242,247,.12)'; x.lineWidth=1; x.font='10px system-ui'; x.fillStyle='#9FB0C8';
+  for(let k=0;k<=4;k++){const yy=P.t+hh*k/4; x.beginPath(); x.moveTo(P.l,yy); x.lineTo(P.l+w,yy); x.stroke();}
+  x.textAlign='right'; x.fillText(Math.round(maxHS)+'',P.l-4,P.t+8); x.fillText('0',P.l-4,P.t+hh);
+  x.textAlign='left'; x.fillText(Math.round(maxHN)+'',P.l+w+4,P.t+8); x.fillText('0',P.l+w+4,P.t+hh);
+  x.save(); x.translate(10,P.t+hh/2); x.rotate(-Math.PI/2); x.textAlign='center'; x.fillText('snow depth cm',0,0); x.restore();
+  x.save(); x.translate(Wc-6,P.t+hh/2); x.rotate(Math.PI/2); x.textAlign='center'; x.fillText('new snow cm/day',0,0); x.restore();
+  // forecast shading
+  if(Sx.nowI<n-1){x.fillStyle='rgba(201,162,39,.10)'; x.fillRect(X(Sx.nowI+1)-w/n/2,P.t,w*(n-1-Sx.nowI)/n,hh);}
+  // trigger days
+  Sx.days.forEach((d,i)=>{ const I=Math.max(...['alp','tl'].map(b=>Math.max(...d.b[b].asp.map(a=>a.I)))); if(I>=1){x.fillStyle='rgba(239,28,41,.18)'; x.fillRect(X(i)-w/n/2,P.t,w/n,hh);} });
+  // new snow bars (treeline)
+  x.fillStyle='#7FB2E5'; Sx.days.forEach((d,i)=>{const v=d.b.tl.hn/maxHN*hh; x.fillRect(X(i)-w/n*0.35,P.t+hh-v,w/n*0.7,v);});
+  // snow depth lines
+  const line=(b,col,dash)=>{x.strokeStyle=col; x.lineWidth=2; x.setLineDash(dash); x.beginPath(); Sx.days.forEach((d,i)=>{const yy=P.t+hh-d.b[b].HS/maxHS*hh; i?x.lineTo(X(i),yy):x.moveTo(X(i),yy);}); x.stroke(); x.setLineDash([]);};
+  line('alp','#C9A227',[]); line('tl','#EEF2F7',[5,3]); line('btl','#7F90AA',[2,3]);
+  // today marker
+  x.strokeStyle='#C9A227'; x.lineWidth=1; x.beginPath(); x.moveTo(X(Sx.nowI),P.t); x.lineTo(X(Sx.nowI),P.t+hh); x.stroke();
+  x.fillStyle='#9FB0C8'; x.textAlign='center';
+  [0,Math.floor(Sx.nowI/2),Sx.nowI].forEach(i=>{const d=Sx.days[i].date; x.fillText(new Date(d+'T12:00').toLocaleDateString([], {month:'short',day:'numeric'}),Math.min(Wc-P.r-14,Math.max(P.l+14,X(i))),Hc-5);});
+  document.getElementById('seasonLegend').innerHTML=`<span style="margin-right:10px"><span class="sw" style="background:#7FB2E5;width:9px;height:9px"></span> New snow (treeline)</span><span style="margin-right:10px;color:#C9A227">━ Alpine depth</span><span style="margin-right:10px">┅ Treeline</span><span style="margin-right:10px;color:#7F90AA">┈ Below treeline</span><span style="margin-right:10px"><span class="sw" style="background:rgba(239,28,41,.45);width:9px;height:9px"></span> Loading day</span><span><span class="sw" style="background:rgba(201,162,39,.35);width:9px;height:9px"></span> Forecast</span>`;
+  // aspect grid
+  const g=document.getElementById('seasonGrid');
+  const cell=v=>{const k=v>=1?3:v>=0.6?2:v>=0.25?1:0; const col=['rgba(238,242,247,.06)','#FFF300','#F79218','#EF1C29'][k]; return `<td style="background:${col};color:${k?'#111':'#9FB0C8'};text-align:center;padding:3px 0;border-radius:3px;font-size:11px">${v.toFixed(1)}</td>`;};
+  g.innerHTML=`<table style="width:100%;border-collapse:separate;border-spacing:2px;font-size:11px"><tr><td></td>${ASP.map(a=>`<td style="text-align:center;color:#9FB0C8">${a}</td>`).join('')}<td style="text-align:right;color:#9FB0C8">Depth</td></tr>`+
+    [['alp','Alpine'],['tl','Treeline'],['btl','Below TL']].map(([b,lab])=>`<tr><td style="color:#9FB0C8;white-space:nowrap;padding-right:4px">${lab}</td>${Sx.L[b].map(cell).join('')}<td style="text-align:right">${Math.round(Sx.days[Sx.nowI].b[b].HS)} cm</td></tr>`).join('')+'</table>';
+  // text summary
+  const trigDays=nd.filter(d=>['alp','tl'].some(b=>d.b[b].asp.some(a=>a.I>=1))).length;
+  const parts=[`Modelled new snow over the period: about ${Math.round(tot('alp'))} cm alpine, ${Math.round(tot('tl'))} cm treeline, ${Math.round(tot('btl'))} cm below treeline.`,
+    `${trigDays} day${trigDays===1?'':'s'} reached a loading threshold (30 cm storm snow, 20 cm wind loading, 10 mm rain on snow, or strong warming).`];
+  if(Sx.pers.alp>=0.5||Sx.pers.tl>=0.5) parts.push('Long cold, dry spells on a thin snowpack point to weak faceted layers near the ground, a persistent slab concern once it is buried.');
+  if(Sx.days[Sx.nowI].b.tl.HS<30) parts.push('The treeline snowpack is still thin, so most low terrain does not yet have enough snow to avalanche, and rocks and shrubs anchor what is there.');
+  document.getElementById('seasonText').textContent=parts.join(' ');
+}
+function histUI(){
+  const host=document.getElementById('histList'); if(!host||!HISTORY) return; host.innerHTML='';
+  for(const H of HISTORY){
+    const d=document.createElement('div'); d.className='ritem';
+    d.innerHTML=`<div style="flex:1;min-width:0"><div class="nm">${H.date} · ${H.place}</div><div class="tag">${H.what}</div></div><a class="small" href="${H.url}" target="_blank" rel="noopener" onclick="event.stopPropagation()">Source</a>`;
+    d.onclick=()=>{ const g=toGrid(H.lat,H.lon); hoverPt=g; dirty=true; focusRoute({g:[[g[0]-15,g[1]-15],[g[0]+15,g[1]+15]]}); if(window.innerWidth<=860) mapwrap.scrollIntoView({behavior:'smooth'}); };
+    host.appendChild(d);
+  }
+}
+window.addEventListener('resize',()=>{ if(SEASON) seasonUI(); });
 
 /* ---------------- routes ---------------- */
 let ROUTES=[];
@@ -1251,16 +1468,23 @@ function reason(i){
   if(F.windLoad>0.25) parts.push('wind-loaded lee slope');
   if(F.warm>0.3) parts.push('warming on sunny aspect');
   if(F.matched) parts.push(`matches ${PTYPES.find(p=>p[0]===F.matched.type)[1].toLowerCase()} problem`);
+  if(F.Lsea>=0.6) parts.push('loaded in the last few days');
+  if(F.sup<0.4) parts.push('thin snowpack');
   return parts.join(' · ');
 }
 const fmtKm=m=>(m/1000).toFixed(m<10000?2:1)+' km';
 function badge(s){const k=clsOf(s);return `<span class="badge" style="background:${CLS[k].c};color:${k===4?'#fff':'#111'}">${CLS[k].n}</span>`;}
-function renderAssess(){
+function renderAssess(){ renderAssess0(); const b=document.getElementById('saferBtn'); if(b) b.onclick=()=>{
+  const R=S.selected; if(!R) return; const pts=R.g.filter(p=>inGrid(p[0],p[1])); if(pts.length<2) return;
+  S.start=pts[0]; S.end=pts[pts.length-1]; S.saferFor=R.name; updSE(); document.getElementById('findBtn').click(); }; }
+function renderAssess0(){
   const host=document.getElementById('assess');
   const R=S.selected; if(!R){host.innerHTML='';return;}
   const A=assessRoute(R); R.A=A;
   if(!A){host.innerHTML='<div class="err">Route is outside the mapped area.</div>';return;}
   const tot=A.lenByCls.reduce((a,b)=>a+b,0)||1;
+  const seasonNote=R.kind==='osm'&&R.season==='summer'?`<div class="small" style="margin-top:8px;padding:6px 8px;border-radius:6px;background:var(--navy)">Summer route scored in today’s winter conditions. In winter, snow covers the trail and you would follow the same line through the terrain shown here.</div>`:'';
+  const saferBtn=(R.kind==='osm'||R.kind==='user')?`<div class="rowf" style="margin-top:10px"><button class="btn sm" id="saferBtn">Find a safer line</button><span class="muted small">Same start and end, uses the slider in Ideal safest route</span></div>`:'';
   const runNote=R.kind==='run'?`<div class="small" style="margin-top:8px;padding:6px 8px;border-radius:6px;background:var(--navy)">In-bounds run. Whistler Blackcomb ski patrol does avalanche control here, so an open run carries much less risk than this score. The score shows the slope as if it were uncontrolled, which is close to how it behaves when closed or before control work.</div>`:'';
   if(A.area){
     host.innerHTML=`<h2>Assessment</h2>
@@ -1286,7 +1510,7 @@ function renderAssess(){
   host.innerHTML=`<h2>Assessment</h2>
   <div class="card">
     <div class="rowf" style="justify-content:space-between"><b>${R.name}</b><span class="tag muted small">${routeTag(R)}</span></div>
-    ${R.note?`<div class="muted small" style="margin-top:4px">${R.note}</div>`:''}${runNote}
+    ${R.note?`<div class="muted small" style="margin-top:4px">${R.note}</div>`:''}${runNote}${seasonNote}${saferBtn}
     <div class="score" style="margin-top:10px"><div class="big">${A.routeScore.toFixed(0)}</div><div>${badge(A.routeScore)}<div class="muted small" style="margin-top:4px">Route score (0–100)</div></div></div>
     <div class="stats">
       <div class="stat"><div class="v">${fmtKm(A.dist)}</div><div class="l">Distance</div></div>
@@ -1353,7 +1577,7 @@ function drawProfile(A){
 }
 function routeTag(R){
   if(R.kind==='run') return `${DIFFS[R.diff].n} · ${R.mtn}${R.area?' · area':''}`;
-  return R.kind==='gps'?'GPS track':R.kind==='approx'?'Approximate':R.kind==='osm'?'OpenStreetMap trace':R.kind==='safe'?'Safest route':'Your route';
+  return R.kind==='gps'?'GPS track':R.kind==='approx'?'Approximate':R.kind==='osm'?(R.season==='winter'?'Winter route':'Summer route')+' · OSM trail':R.kind==='safe'?'Safest route':'Your route';
 }
 function ritem(R,A){
   const d=document.createElement('div'); d.className='ritem'+(R===S.selected?' on':'');
@@ -1365,27 +1589,11 @@ function ritem(R,A){
 }
 function routeListUI(){
   const host=document.getElementById('routeList'); host.innerHTML='';
-  for(const R of [...ROUTES.filter(r=>r.group!=='uphill'),...S.userRoutes,...(S.safe?[S.safe]:[])]){ R.A=assessRoute(R); host.appendChild(ritem(R,R.A)); }
-  const up=document.getElementById('upList'); up.innerHTML='';
-  for(const R of ROUTES.filter(r=>r.group==='uphill')){ R.A=assessRoute(R); up.appendChild(ritem(R,R.A)); }
+  const all=[...ROUTES,...S.userRoutes,...(S.safe?[S.safe]:[])]; all.forEach(R=>R.A=assessRoute(R));
+  const fixed=all.filter(R=>R.kind==='osm').sort((a,b)=>(b.A?b.A.routeScore:0)-(a.A?a.A.routeScore:0));
+  for(const R of [...fixed,...all.filter(R=>R.kind!=='osm')]) host.appendChild(ritem(R,R.A));
   for(const R of RUNS) R.A=assessRoute(R);
-  runListUI();
 }
-function runListUI(){
-  printUI();
-  const q=S.runQ.trim().toLowerCase();
-  let list=RUNS.filter(R=>R.A&&(S.mtn==='all'||R.mtn===S.mtn)&&(!q||R.name.toLowerCase().includes(q))&&(R.name!=='Unnamed run'||q));
-  list.sort(S.runSort==='risk'?(a,b)=>b.A.routeScore-a.A.routeScore:(a,b)=>a.name.localeCompare(b.name));
-  const host=document.getElementById('runList'); host.innerHTML='';
-  list.slice(0,S.runShown).forEach(R=>host.appendChild(ritem(R,R.A)));
-  document.getElementById('runCount').textContent=list.length+' run'+(list.length===1?'':'s');
-  document.getElementById('runMore').style.display=list.length>S.runShown?'inline-block':'none';
-}
-document.querySelectorAll('#mtnSeg button').forEach(b=>b.onclick=()=>{
-  document.querySelectorAll('#mtnSeg button').forEach(x=>x.classList.toggle('on',x===b)); S.mtn=b.dataset.m; S.runShown=25; runListUI();});
-document.getElementById('runQ').oninput=e=>{S.runQ=e.target.value; S.runShown=25; runListUI();};
-document.getElementById('runSort').onchange=e=>{S.runSort=e.target.value; runListUI();};
-document.getElementById('runMore').onclick=()=>{S.runShown+=25; runListUI();};
 function focusRoute(R){
   const pts=(R.parts||[R.g]).flat(); const xs=pts.map(p=>p[0]), ys=pts.map(p=>p[1]);
   const bx0=Math.min(...xs),bx1=Math.max(...xs),by0=Math.min(...ys),by1=Math.max(...ys);
@@ -1418,7 +1626,7 @@ document.getElementById('gpxIn').onchange=async e=>{
     if(ll.length<2) throw new Error('No track points found in that GPX.');
     const R=routeFromLL((doc.querySelector('trk > name, rte > name, metadata > name')?.textContent||f.name.replace(/\.gpx$/i,'')).slice(0,40),'user','Imported from GPX.',ll);
     const inside=R.g.filter(p=>inGrid(p[0],p[1])).length;
-    if(!inside) throw new Error('That track is outside the mapped Whistler area.');
+    if(!inside) throw new Error('That track is outside the mapped Mount Temple area.');
     if(inside<R.g.length) err.textContent=`${R.g.length-inside} of ${R.g.length} points fall outside the mapped area and were skipped.`;
     S.userRoutes.push(R); S.selected=R; routeListUI(); renderAssess(); drawRoutes(); focusRoute(R);
   }catch(ex){err.textContent=ex.message;}
@@ -1429,7 +1637,7 @@ function updSE(){
   document.getElementById('findBtn').disabled=!(S.start&&S.end);
   document.getElementById('seLabel').textContent = S.start&&S.end?'Start and end set':S.start?'Start set':S.end?'End set':'Tap the map after each button';
 }
-document.getElementById('setStart').onclick=()=>setMode('start');
+document.getElementById('setStart').onclick=()=>{S.saferFor=null; setMode('start');};
 document.getElementById('setEnd').onclick=()=>setMode('end');
 const wSl=document.getElementById('wSlider'); const wLbl=()=>document.getElementById('wVal').textContent=wSl.value+'% safety weight'; wSl.oninput=wLbl;
 const workerSrc=`
@@ -1475,7 +1683,7 @@ document.getElementById('findBtn').onclick=()=>{
     let g=p.map(v=>[v%G.W+0.5,Math.floor(v/G.W)+0.5]);
     // light smoothing for display
     g=g.map((q,k)=>{if(k<2||k>g.length-3)return q; let sx=0,sy=0; for(let j=-2;j<=2;j++){sx+=g[k+j][0];sy+=g[k+j][1];} return [sx/5,sy/5];});
-    S.safe={id:'safe',name:`Safest route (${wSl.value}% safety)`,kind:'safe',note:'Computed by A* search on the current risk map. Check it against real terrain, cornices and crevasses before trusting it.',g};
+    S.safe={id:'safe',name:S.saferFor?`Safer line: ${S.saferFor} (${wSl.value}% safety)`:`Safest route (${wSl.value}% safety)`,kind:'safe',note:'Computed by A* search on the current risk map. Check it against real terrain, cornices and crevasses before trusting it.',g};
     S.selected=S.safe; msg.textContent=''; routeListUI(); renderAssess(); drawRoutes(); focusRoute(S.safe);
   };
   worker.postMessage({W:G.W,H:G.H,res:G.res,slope:G.slope,elev:G.elev,score:SCORE,s,t,a});
@@ -1491,10 +1699,11 @@ const unq=p=>{const o=[]; for(let k=0;k<p.length;k+=2) o.push([p[k]/10,p[k+1]/10
 (async function init(){
   try{
     G=await loadTerrain();
-    ROUTES=ROUTEDATA.routes.map(r=>Object.assign(routeFromLL(r.name,r.kind,r.note,r.pts),{group:r.group}));
+    ROUTES=ROUTEDATA.routes.map(r=>Object.assign(routeFromLL(r.name,r.kind,r.note,r.pts),{group:r.group,season:r.season,rid:r.id}));
     RUNS=RUNDATA.runs.map((r,k)=>{const parts=r.p.map(unq); return {id:'run'+k,name:r.n,kind:'run',diff:r.d,mtn:r.m,area:!!r.a,parts,g:parts.flat(),note:''};});
     LIFTS=RUNDATA.lifts.map(l=>({name:l.n,type:l.t,g:unq(l.p)}));
-    dangerUI(); probsUI(); wxUI(); liveUI(); renderLegend(); wLbl();
+    if(WXSNAP){ SEASON=seasonModel(mergeERA(structuredClone(WXSNAP),WXSNAP.era5),'snapshot'); applySeason(true); S.source='snapshot'; }
+    dangerUI(); probsUI(); wxUI(); liveUI(); renderLegend(); wLbl(); seasonUI(); histUI();
     computeScores(); prepTexture(); renderBase();
     initGL();
     document.getElementById('loading').remove();

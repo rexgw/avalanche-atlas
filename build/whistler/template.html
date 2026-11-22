@@ -1,0 +1,1511 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Avalanche Risk Atlas: Whistler</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --navy:#0B1F3A; --navy2:#10294D; --navy3:#173663; --line:#25466f;
+  --gold:#C9A227; --gold2:#E3C463; --ink:#EEF2F7; --ink2:#B8C4D6; --ink3:#7F90AA;
+  --low:#52BA4A; --mod:#FFF300; --con:#F79218; --high:#EF1C29; --ext:#1A1A1A;
+  --map:#e9edf2;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--navy);color:var(--ink);font-family:Inter,system-ui,sans-serif;font-size:14px}
+button,select,input{font:inherit;color:inherit}
+header{display:flex;align-items:center;gap:12px;padding:10px 16px;border-bottom:1px solid var(--line);background:var(--navy)}
+header .mark{width:28px;height:28px;flex:none}
+header h1{font-size:16px;margin:0;font-weight:700;letter-spacing:.2px}
+header h1 span{color:var(--gold)}
+header .sub{color:var(--ink3);font-size:12px}
+.disclaimer{background:#2a1d05;color:#f3dfa4;border-bottom:1px solid #5b4510;padding:6px 16px;font-size:12px;line-height:1.4}
+.app{display:grid;grid-template-columns:1fr 410px;height:calc(100vh - 86px);min-height:520px}
+.mapwrap{position:relative;background:var(--map);overflow:hidden;touch-action:none}
+#map{position:absolute;inset:0;width:100%;height:100%;display:block;cursor:grab;touch-action:none}
+#map.drawing{cursor:crosshair}
+#ov{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.compass svg{transition:none}
+.help{position:absolute;right:10px;bottom:10px;transition:opacity .4s;background:rgba(11,31,58,.85);color:var(--ink2);border:1px solid var(--line);border-radius:8px;padding:5px 8px;font-size:11px;pointer-events:none}
+.lsw{width:18px;height:0;display:inline-block;border-top:3px solid #fff;box-shadow:0 0 0 1px rgba(11,31,58,.5)}
+.lsw.lift{border-top:2px dashed #0B1F3A;box-shadow:none}
+.lsw.route{border-top-color:#0B1F3A;box-shadow:0 0 0 1px #fff}
+.seg.toggle button.on{background:var(--navy3);color:var(--gold2)}
+.diff{display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;flex:none}
+.searchin{flex:1;min-width:120px;background:var(--navy);border:1px solid var(--line);border-radius:6px;padding:5px 8px}
+.probe.act{pointer-events:auto}
+.pvbar{position:absolute;top:10px;left:10px;display:none;align-items:center;gap:10px;background:rgba(11,31,58,.92);border:1px solid var(--line);border-radius:10px;padding:6px 6px 6px 12px;font-size:12px;font-weight:600;color:var(--gold2);max-width:calc(100% - 70px)}
+#mapwrap.pv .pvbar{display:flex}
+#mapwrap.pv .maptools,#mapwrap.pv .legend,#mapwrap.pv .help,#mapwrap.pv .modehint{display:none}
+.help .hm{display:none}
+.maptools{position:absolute;top:10px;left:10px;display:flex;gap:6px;flex-wrap:wrap}
+.seg{display:inline-flex;background:var(--navy);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{background:none;border:0;padding:6px 10px;cursor:pointer;color:var(--ink2);font-size:12px;font-weight:600}
+.seg button.on{background:var(--gold);color:var(--navy)}
+.zoom{position:absolute;right:10px;top:10px;display:flex;flex-direction:column;gap:4px}
+.zoom button{width:32px;height:32px;border-radius:8px;border:1px solid var(--line);background:var(--navy);cursor:pointer;font-size:16px}
+.legend{position:absolute;left:10px;bottom:10px;background:rgba(11,31,58,.92);border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-size:11px;max-width:calc(100% - 20px)}
+.legend .t{color:var(--ink3);margin-bottom:5px;font-weight:600;letter-spacing:.3px;text-transform:uppercase;font-size:10px}
+.legend .row{display:flex;gap:10px;flex-wrap:wrap}
+.legend .k{display:flex;align-items:center;gap:5px;white-space:nowrap}
+.sw{width:12px;height:12px;border-radius:3px;display:inline-block;border:1px solid rgba(255,255,255,.35)}
+.probe{position:absolute;pointer-events:none;background:rgba(11,31,58,.96);border:1px solid var(--gold);border-radius:8px;padding:8px 10px;font-size:12px;line-height:1.45;min-width:170px;display:none;z-index:5}
+.probe b{color:var(--gold2)}
+.modehint{position:absolute;left:50%;transform:translateX(-50%);top:52px;background:var(--gold);color:var(--navy);font-weight:600;font-size:12px;padding:6px 12px;border-radius:999px;display:none;white-space:nowrap}
+aside{background:var(--navy2);border-left:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+.tabs{display:flex;border-bottom:1px solid var(--line)}
+.tabs button{flex:1;background:none;border:0;padding:11px 6px;cursor:pointer;color:var(--ink3);font-weight:600;border-bottom:2px solid transparent}
+.tabs button.on{color:var(--gold2);border-bottom-color:var(--gold)}
+.pane{display:none;overflow:auto;padding:14px 16px 28px;flex:1}
+.pane.on{display:block}
+h2{font-size:13px;margin:18px 0 8px;color:var(--gold2);text-transform:uppercase;letter-spacing:.6px}
+h2:first-child{margin-top:2px}
+.card{background:var(--navy3);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:10px}
+.muted{color:var(--ink3)} .small{font-size:12px}
+.status{display:flex;flex-direction:column;gap:4px;font-size:12px}
+.status .s{display:flex;gap:6px;align-items:flex-start}
+.dot{width:8px;height:8px;border-radius:50%;margin-top:4px;flex:none;background:var(--ink3)}
+.dot.ok{background:#4cd07d}.dot.bad{background:#e36a6a}.dot.wait{background:var(--gold)}
+.btn{background:var(--gold);color:var(--navy);border:0;border-radius:8px;padding:7px 12px;font-weight:700;cursor:pointer}
+.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+.btn.sm{padding:5px 9px;font-size:12px}
+.btn:disabled{opacity:.45;cursor:default}
+.rowf{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.danger-row{display:grid;grid-template-columns:96px 1fr;gap:8px;align-items:center;margin:6px 0}
+.dsel{display:flex;gap:3px}
+.dsel button{flex:1;border:1px solid var(--line);background:var(--navy);border-radius:6px;padding:5px 0;cursor:pointer;font-size:11px;font-weight:700;color:var(--ink2)}
+.dsel button.on{color:#111;border-color:transparent}
+.prob{background:var(--navy);border:1px solid var(--line);border-radius:10px;padding:10px;margin-bottom:8px}
+.prob .top{display:flex;gap:6px;align-items:center}
+.prob select{flex:1}
+select,input[type=number]{background:var(--navy);border:1px solid var(--line);border-radius:6px;padding:5px 6px}
+input[type=number]{width:74px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px 10px}
+.field label{display:block;font-size:11px;color:var(--ink3);margin-bottom:3px}
+.chips{display:flex;gap:4px;flex-wrap:wrap}
+.chip{border:1px solid var(--line);background:var(--navy);border-radius:999px;padding:3px 9px;font-size:11px;cursor:pointer;color:var(--ink2)}
+.chip.on{background:var(--gold);color:var(--navy);border-color:var(--gold);font-weight:700}
+.rose{width:92px;height:92px;flex:none;cursor:pointer}
+.rose path{stroke:var(--navy2);stroke-width:1.5}
+.x{background:none;border:0;color:var(--ink3);cursor:pointer;font-size:16px}
+.rlist{display:flex;flex-direction:column;gap:6px}
+.ritem{display:flex;align-items:center;gap:8px;border:1px solid var(--line);background:var(--navy);border-radius:9px;padding:8px 10px;cursor:pointer}
+.ritem.on{border-color:var(--gold);box-shadow:inset 3px 0 0 var(--gold)}
+.ritem .nm{flex:1;font-weight:600;font-size:13px}
+.ritem .tag{font-size:10px;color:var(--ink3);text-transform:uppercase;letter-spacing:.4px}
+.badge{font-size:11px;font-weight:700;padding:3px 8px;border-radius:999px;color:#111;white-space:nowrap}
+.score{display:flex;align-items:center;gap:12px}
+.score .big{font-size:34px;font-weight:700;font-family:'JetBrains Mono',monospace}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:10px}
+.stat{background:var(--navy);border-radius:8px;padding:6px 8px}
+.stat .v{font-weight:700;font-size:14px}
+.stat .l{font-size:10px;color:var(--ink3);text-transform:uppercase;letter-spacing:.3px}
+.bar{display:flex;height:14px;border-radius:4px;overflow:hidden;margin:8px 0 4px;gap:2px;background:var(--navy)}
+.bar div{height:100%}
+.crux{border-left:3px solid var(--gold);padding:4px 0 4px 9px;margin:6px 0;cursor:pointer;font-size:12px;line-height:1.45}
+.crux:hover{background:rgba(201,162,39,.08)}
+#profile{width:100%;height:170px;display:block;background:var(--navy);border-radius:8px}
+.ptip{font-size:12px;min-height:18px;margin-top:4px;color:var(--ink2)}
+input[type=range]{width:100%;accent-color:var(--gold)}
+.method p,.method li{line-height:1.55;color:var(--ink2)}
+.method code{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--gold2)}
+a{color:var(--gold2)}
+.err{color:#ffb4b4;font-size:12px;margin-top:6px}
+.loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--navy);font-weight:600;background:var(--map)}
+@media (max-width: 860px){
+  .app{grid-template-columns:1fr;height:auto}
+  .mapwrap{height:62vh;min-height:380px}
+  aside{border-left:0;border-top:1px solid var(--line)}
+  .pane{overflow:visible}
+  .help{bottom:auto;top:52px;left:10px;right:auto;max-width:calc(100% - 64px)}
+  .help .hd{display:none} .help .hm{display:inline}
+  header .sub{display:none}
+}
+</style>
+</head>
+<body>
+<header>
+  <svg class="mark" viewBox="0 0 32 32" aria-hidden="true"><path d="M2 27 L12 10 L17 18 L21 13 L30 27 Z" fill="#C9A227"/><path d="M12 10 L14.5 14.2 L12.6 13.4 L10.6 14.8 Z" fill="#EEF2F7"/></svg>
+  <div><h1>Avalanche Risk <span>Atlas</span></h1><div class="sub">Whistler · Blackcomb · Spearhead Range · Wedgemount</div></div>
+</header>
+<div class="disclaimer"><b>Educational model only.</b> Not a substitute for the <a href="https://avalanche.ca/forecasts" target="_blank" rel="noopener">Avalanche Canada forecast</a>, AST training, or field observations. Never make go/no-go decisions from this map.</div>
+<div class="app">
+  <div class="mapwrap" id="mapwrap">
+    <canvas id="map"></canvas>
+    <canvas id="ov"></canvas>
+    <div class="loading" id="loading">Loading terrain…</div>
+    <div class="maptools">
+      <div class="seg" id="layerSeg"><button data-l="risk" class="on">Risk heat map</button><button data-l="ates">ATES terrain</button></div>
+      <div class="seg toggle"><button id="runsTog" class="on">Ski runs</button></div>
+    </div>
+    <div class="zoom"><button id="zin" aria-label="Zoom in">+</button><button id="zout" aria-label="Zoom out">−</button><button id="zfit" aria-label="Reset view" style="font-size:12px">⤢</button><button id="znorth" class="compass" aria-label="Face north"><svg id="needle" viewBox="-10 -10 20 20" width="18" height="18"><path d="M0 -8 L4 3 L0 1 L-4 3 Z" fill="#C9A227"/><path d="M0 8 L4 3 L0 1 L-4 3 Z" fill="#7F90AA"/></svg></button></div>
+    <div class="help" id="help"><span class="hd">Drag to rotate · scroll to zoom · right-drag to pan</span><span class="hm">Drag to rotate · pinch to zoom · two fingers to pan</span></div>
+    <div class="modehint" id="modehint"></div>
+    <div class="probe" id="probe"></div>
+    <div class="legend" id="legend"></div>
+    <div class="pvbar" id="pvbar"><span id="pvInfo">Print preview</span><button class="btn sm" id="pvExit">Exit preview</button></div>
+  </div>
+  <aside>
+    <div class="tabs"><button data-t="cond" class="on">Conditions</button><button data-t="routes">Routes</button><button data-t="print">3D print</button><button data-t="method">Method</button></div>
+
+    <div class="pane on" id="pane-cond">
+      <h2>Data source</h2>
+      <div class="card">
+        <div class="status" id="liveStatus"></div>
+        <div class="rowf" style="margin-top:8px"><button class="btn sm" id="liveBtn">Retry live data</button><span class="muted small" id="srcLabel"></span></div>
+      </div>
+
+      <h2>Danger ratings</h2>
+      <div id="dangerRows"></div>
+
+      <h2>Avalanche problems</h2>
+      <div id="probs"></div>
+      <button class="btn ghost sm" id="addProb">+ Add problem</button>
+
+      <h2>Weather</h2>
+      <div class="grid2">
+        <div class="field"><label>New snow 24 h (cm)</label><input type="number" min="0" max="150" id="hn24"></div>
+        <div class="field"><label>New snow 72 h (cm)</label><input type="number" min="0" max="300" id="hn72"></div>
+        <div class="field"><label>Wind speed (km/h)</label><input type="number" min="0" max="200" id="wind"></div>
+        <div class="field"><label>Wind from</label><select id="windDir"></select></div>
+        <div class="field"><label>Alpine temp (°C)</label><input type="number" min="-40" max="25" id="temp"></div>
+        <div class="field"><label>Freezing level (m)</label><input type="number" min="0" max="5000" step="50" id="fl"></div>
+      </div>
+    </div>
+
+    <div class="pane" id="pane-routes">
+      <h2>Backcountry routes</h2>
+      <div class="rlist" id="routeList"></div>
+
+      <h2>Designated uphill routes</h2>
+      <div class="rlist" id="upList"></div>
+      <div class="muted small" style="margin-top:6px">Whistler Blackcomb only allows uphill travel inside the ski area boundary on signed routes. The North Route, Oboe Traverse and East Col are not in the map data yet.</div>
+
+      <h2>Ski and snowboard runs</h2>
+      <div class="card">
+        <div class="rowf"><div class="seg" id="mtnSeg"><button data-m="all" class="on">Both</button><button data-m="Whistler">Whistler</button><button data-m="Blackcomb">Blackcomb</button></div>
+          <select id="runSort"><option value="risk">Highest risk first</option><option value="name">A to Z</option></select></div>
+        <div class="rowf" style="margin-top:8px"><input type="search" class="searchin" id="runQ" placeholder="Search runs"><span class="muted small" id="runCount"></span></div>
+        <div class="muted small" style="margin-top:8px">Tap a run on the map or in the list to score it. Ski patrol does avalanche control on open runs, so the score shows the slope as if it were uncontrolled.</div>
+      </div>
+      <div class="rlist" id="runList"></div>
+      <button class="btn ghost sm" id="runMore" style="margin-top:8px">Show more</button>
+
+      <h2>New route</h2>
+      <div class="card">
+        <div class="rowf">
+          <button class="btn sm" id="drawBtn">Draw on map</button>
+          <label class="btn ghost sm" style="cursor:pointer">Upload GPX<input type="file" id="gpxIn" accept=".gpx,application/gpx+xml,text/xml" hidden></label>
+        </div>
+        <div class="rowf" id="drawCtl" style="margin-top:8px;display:none">
+          <span class="muted small" id="drawCount">0 points</span>
+          <button class="btn ghost sm" id="drawUndo">Undo</button>
+          <button class="btn ghost sm" id="drawClear">Clear</button>
+          <button class="btn sm" id="drawDone">Assess route</button>
+        </div>
+        <div class="err" id="routeErr"></div>
+      </div>
+
+      <h2>Ideal safest route</h2>
+      <div class="card">
+        <div class="rowf"><button class="btn ghost sm" id="setStart">Set start</button><button class="btn ghost sm" id="setEnd">Set end</button><span class="muted small" id="seLabel">Tap the map after each button</span></div>
+        <div style="margin-top:10px" class="small"><div class="rowf" style="justify-content:space-between"><span>Shortest</span><span id="wVal" class="muted"></span><span>Safest</span></div>
+        <input type="range" id="wSlider" min="0" max="100" value="75"></div>
+        <div class="rowf" style="margin-top:6px"><button class="btn sm" id="findBtn" disabled>Find route</button><span class="muted small" id="findMsg"></span></div>
+      </div>
+
+      <div id="assess"></div>
+    </div>
+
+    <div class="pane" id="pane-print">
+      <h2>Tactile 3D print</h2>
+      <p class="small">Download an STL of the mountain to print and explore by touch. Routes stand up as smooth, rounded ridges. Each risk class has its own sharp-edged pattern so it never feels like the natural terrain: Low is smooth, Moderate has diagonal ribs, Considerable has round flat-topped studs, High has square pyramids and Extreme has tall, tightly packed spikes. The texture follows the conditions set in the Conditions tab at the moment you download. Preview print shows the exact model on the map before you download it.</p>
+      <p class="small">A touch legend runs along the south edge. From west to east it has five texture patches from Low to Extreme, marked with one to five raised dots, then a smooth ridge showing how a route feels.</p>
+      <div class="card">
+        <div class="rowf"><label class="small" for="printW">Width</label>
+          <select id="printW"><option value="100">100 mm</option><option value="150" selected>150 mm</option><option value="200">200 mm</option></select></div>
+        <div class="muted small" id="printDims" style="margin-top:6px"></div>
+        <div class="muted small" style="margin-top:6px">Heights are exaggerated 1.5 times on a 3 mm base. Route ridges are 2.2 mm wide and 2.2 mm tall, above the tallest texture. Print with a 0.4 mm nozzle at 0.12 to 0.16 mm layers so the texture survives.</div>
+        <div class="small" style="margin-top:10px;color:var(--gold2)">Raised routes</div>
+        <div id="printList" style="margin-top:4px"></div>
+        <div class="muted small" style="margin-top:6px">Select a ski run in the Routes tab to add it. Your drawn routes and the safest route are included when they exist.</div>
+        <div class="rowf" style="margin-top:12px"><button class="btn" id="printBtn">Download STL</button><button class="btn ghost" id="pvBtn">Preview print</button></div>
+        <div class="small" id="printMsg" style="margin-top:8px"></div>
+      </div>
+    </div>
+
+    <div class="pane method" id="pane-method">
+      <h2>What the map shows</h2>
+      <p>Each 30 m cell gets a relative <b>risk index from 0 to 100</b>. It combines how likely an avalanche is to start there or reach there (terrain), how unstable the snowpack is (conditions), and how bad the outcome would be (consequence). It is a comparison tool, not a probability.</p>
+      <p>The map is a 3D model of the elevation data, drawn as a 60 m mesh with no vertical exaggeration. The risk or ATES layer, 100 m contours and hillshade are draped over it at 15 m detail.</p>
+      <h2>Terrain layers (pre-computed)</h2>
+      <ul>
+        <li><b>Elevation:</b> USGS 3DEP 1 arc-second DEM, resampled to a 30 m grid.</li>
+        <li><b>Release areas:</b> fuzzy slope membership peaking near 40° (about 0.5 at 29° and 51°), reduced on very rough terrain and below treeline.</li>
+        <li><b>Runout exposure:</b> energy-line propagation downhill from release areas using a <code>24°</code> travel angle above treeline and <code>28°</code> below (forest friction proxy). This catches flat ground under big slopes.</li>
+        <li><b>Terrain traps:</b> gullies (concave curvature), cliffs (&gt;50°), and abrupt flats below steep slopes.</li>
+        <li><b>ATES class:</b> simplified AutoATES-style rules: Simple, Challenging, Complex, Extreme from slope angle, release areas, runout overlap and cliffs.</li>
+      </ul>
+      <h2>Conditions model</h2>
+      <ul>
+        <li>Danger rating for each elevation band (BTL &lt; 1500 m, TL 1500–1900 m, ALP &gt; 1900 m) scales hazard roughly ×2 per level, following the Avalanche Canada scale.</li>
+        <li>Avalanche problems raise hazard on the listed aspects and bands (likelihood and size) and lower it elsewhere. Persistent and deep persistent problems extend runout weight. Loose problems shorten it. Cornices add hazard on crests.</li>
+        <li>Weather: new snow loads all aspects above the freezing level. Wind over 15 km/h loads lee aspects near ridge crests. Warming above 0 °C adds hazard on sunny aspects and below the freezing level.</li>
+      </ul>
+      <h2>Formula</h2>
+      <p><code>terrain = 1 − (1 − release) × (1 − 0.85 × runout)</code><br><code>raw = terrain × danger × problem × weather × (1 + 0.6 × trap)</code><br><code>index = 100 × (1 − e^(−1.4 × raw))</code></p>
+      <p>Classes: Low &lt; 14, Moderate 14–31, Considerable 31–55, High 55–78, Extreme ≥ 78.</p>
+      <h2>3D print</h2>
+      <p>The STL is built in the browser from the same elevation data at about 0.4 mm spacing, with heights exaggerated 1.5 times. The risk class, from the index smoothed over 150 m, sets a geometric texture with hard edges: diagonal ribs 0.6 mm tall for Moderate, flat-topped studs 0.9 mm tall on a 3.2 mm grid for Considerable, square pyramids 1.2 mm tall for High and staggered spikes 1.5 mm tall on a 2.4 mm grid for Extreme. Low is left smooth. Routes are smooth rounded ridges 2.2 mm tall, so a finger can follow them through the textured ground. The model is watertight with a flat base. A legend strip along the south edge holds one patch for each risk class, textured with that class's pattern and marked with one to five dots, plus a sample route ridge.</p>
+      <h2>Route scoring</h2>
+      <p>Routes and ski runs are sampled every 15 m. Ski areas drawn as shapes (bowls, glades) are scored over every cell inside the shape. <b>Route score = 0.55 × 90th percentile + 0.45 × maximum</b>, so one serious crux can't be averaged away by long safe sections. Cruxes are continuous stretches at Considerable or above.</p>
+      <h2>Safest route</h2>
+      <p>A* search over the 30 m grid. Step cost = distance × slope effort + uphill gain + slider weight × distance × (index/100)². Slopes over 48° are treated as impassable. The search finds the path with the lowest total cost.</p>
+      <h2>Limitations</h2>
+      <ul>
+        <li>No forest-cover data: treeline effects come from elevation bands only, so cleared ski runs and open avalanche paths below treeline are under-weighted.</li>
+        <li>The ski area is not modelled as controlled terrain. Ski runs are scored as if uncontrolled, and patrol work, closures and grooming are not included.</li>
+        <li>Ski runs, lifts and uphill routes come from OpenStreetMap. Some runs are split or slightly off their real line, and about 900 m of the Blackcomb uphill route is filled with a least-effort path where the trace has a gap.</li>
+        <li>Spearhead and Musical Bumps lines are approximate (real waypoints joined by a least-effort terrain path). The Wedgemount line is a real GPS track (Peakbagger, Seán Caulfield) of the summer trail.</li>
+        <li>30 m cells miss small features like rolls, cornice edges and short gullies.</li>
+        <li>Live data only loads when the page runs outside this viewer (self-hosted or opened as a file).</li>
+      </ul>
+      <h2>Sources</h2>
+      <ul class="small">
+        <li>USGS 3D Elevation Program, 1 arc-second DEM tile n51w123 (public domain)</li>
+        <li>Avalanche Canada public forecast API and danger scale</li>
+        <li>Open-Meteo forecast API (snowfall, wind, temperature, freezing level)</li>
+        <li>Ski runs, lifts and uphill routes: © OpenStreetMap contributors (ODbL), via OpenSkiMap</li>
+        <li>3D rendering: three.js (MIT licence)</li>
+        <li>Statham et al. (2018) Conceptual Model of Avalanche Hazard; Larsen et al. (2020) AutoATES; Veitinger et al. (2016) PRA fuzzy model</li>
+      </ul>
+    </div>
+  </aside>
+</div>
+
+<script>/*__THREE__*/</script>
+<script>
+const TERRAIN = /*__TERRAIN__*/null;
+const ROUTEDATA = /*__ROUTES__*/null;
+const RUNDATA = /*__RUNS__*/null;
+const DIFFS=[
+  {n:'Easy', i:'<svg class="diff" viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="#2E9E48"/></svg>'},
+  {n:'Intermediate', i:'<svg class="diff" viewBox="0 0 14 14"><rect x="2" y="2" width="10" height="10" fill="#2F6FD8"/></svg>'},
+  {n:'Advanced', i:'<svg class="diff" viewBox="0 0 14 14"><path d="M7 1 L13 7 L7 13 L1 7Z" fill="#111" stroke="#EEF2F7" stroke-width=".8"/></svg>'},
+  {n:'Expert', i:'<svg class="diff" viewBox="0 0 20 14" style="width:20px"><path d="M5.5 1.5 L10 7 L5.5 12.5 L1 7Z M14.5 1.5 L19 7 L14.5 12.5 L10 7Z" fill="#111" stroke="#EEF2F7" stroke-width=".8"/></svg>'},
+  {n:'Freeride', i:'<svg class="diff" viewBox="0 0 14 14"><path d="M7 1.5 L12.5 7 L7 12.5 L1.5 7Z" fill="none" stroke="#F79218" stroke-width="1.6"/></svg>'},
+  {n:'Unrated', i:'<svg class="diff" viewBox="0 0 14 14"><circle cx="7" cy="7" r="3" fill="#7F90AA"/></svg>'}];
+
+/* ---------------- constants ---------------- */
+const CLS = [
+  {n:'Low', c:'#52BA4A'}, {n:'Moderate', c:'#FFF300'}, {n:'Considerable', c:'#F79218'},
+  {n:'High', c:'#EF1C29'}, {n:'Extreme', c:'#1A1A1A'}];
+const CUT = [14,31,55,78];
+const ATES = [{n:'Non-avalanche', c:null},{n:'Simple',c:'#3FA34D'},{n:'Challenging',c:'#2F6FD8'},{n:'Complex',c:'#111111'},{n:'Extreme',c:'#B0122B'}];
+const DANGER = ['Low','Moderate','Considerable','High','Extreme'];
+const DFACT = [0.08,0.2,0.42,0.72,1.0];
+const ASP = ['N','NE','E','SE','S','SW','W','NW'];
+const PTYPES = [
+  ['storm','Storm slab'],['wind','Wind slab'],['persistent','Persistent slab'],['deep','Deep persistent slab'],
+  ['wetslab','Wet slab'],['wetloose','Loose wet'],['dryloose','Loose dry'],['cornice','Cornices']];
+const LIKE = ['Unlikely','Possible','Likely','Very likely','Almost certain'];
+const SIZES = [1,1.5,2,2.5,3,3.5,4];
+const BANDS = [['alp','Alpine'],['tl','Treeline'],['btl','Below treeline']];
+const clsOf = s => s>=CUT[3]?4:s>=CUT[2]?3:s>=CUT[1]?2:s>=CUT[0]?1:0;
+
+/* ---------------- state ---------------- */
+const S = {
+  danger:{alp:3, tl:2, btl:1},
+  problems:[
+    {type:'storm', bands:{alp:1,tl:1,btl:0}, asp:[1,1,1,1,1,1,1,1], like:2, size:1.5},
+    {type:'wind', bands:{alp:1,tl:1,btl:0}, asp:[1,1,1,0,0,0,0,0], like:2, size:2}],
+  wx:{hn24:15, hn72:35, wind:35, windDir:5, temp:-6, fl:900},
+  source:'example', layer:'risk', mode:'inspect',
+  draw:[], start:null, end:null, selected:null, userRoutes:[], safe:null, showRuns:true, preview:false, mtn:'all', runQ:'', runSort:'risk', runShown:25
+};
+
+/* ---------------- data decode ---------------- */
+let G; // grid
+function b64bytes(b64){const bin=atob(b64);const u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);return u;}
+async function gunzip(b64){
+  const bytes=b64bytes(b64);
+  if('DecompressionStream' in window){
+    const st=new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
+    return new Uint8Array(await new Response(st).arrayBuffer());
+  }
+  throw new Error('This browser cannot decompress the terrain data. Use a recent Chrome, Edge, Firefox or Safari.');
+}
+async function loadTerrain(){
+  const m=TERRAIN.meta;
+  const out={...m, N:m.W*m.H};
+  const keys=['elev','slope','aspect','pra','runout','trap','crest','ates','hill'];
+  for(const k of keys){
+    const u=await gunzip(TERRAIN[k]);
+    out[k]= k==='elev' ? new Int16Array(u.buffer, u.byteOffset, u.byteLength/2) : u;
+  }
+  return out;
+}
+const toGrid=(lat,lon)=>[(lon-G.lonW)*G.mx/G.res,(G.latN-lat)*G.my/G.res];
+const toLL=(x,y)=>[G.latN-y*G.res/G.my, G.lonW+x*G.res/G.mx];
+const inGrid=(x,y)=>x>=0&&y>=0&&x<G.W&&y<G.H;
+const cellIdx=(x,y)=>Math.min(G.H-1,Math.max(0,Math.floor(y)))*G.W+Math.min(G.W-1,Math.max(0,Math.floor(x)));
+
+/* ---------------- risk model ---------------- */
+let SCORE, CLASS;
+function factorsAt(i){
+  const z=G.elev[i], s=G.slope[i], a=G.aspect[i]*360/256;
+  const p=G.pra[i]/255, r=G.runout[i]/255, t=G.trap[i]/255, c=G.crest[i]/255;
+  const band = z<G.btlTop?'btl':z<G.tlTop?'tl':'alp';
+  const sec = Math.round(a/45)%8;
+  const D = S.danger[band];
+  let f=1, rw=1, corn=0, matched=null;
+  if(S.problems.length){
+    f=0.6;
+    for(const P of S.problems){
+      if(!P.bands[band] || !P.asp[sec]) continue;
+      const pf = 1 + 0.12*(P.like-3) + 0.15*(P.size-2) + 0.0;
+      if(matched===null || pf>f){f=pf; matched=P;}
+      if(P.type==='persistent'||P.type==='deep') rw=Math.max(rw,1.25);
+      if((P.type==='wetloose'||P.type==='dryloose') && rw===1) rw=0.6;
+      if(P.type==='cornice') corn=Math.max(corn,c*(s>25?0.6:0.3));
+    }
+  }
+  const has = t=>S.problems.some(P=>P.type===t);
+  const W=S.wx;
+  // new snow (only where it falls as snow)
+  const snowF = z>=W.fl-100 ? 1 : 0.35;
+  let wSnow = 1 + (0.5*Math.min(1,W.hn24/30) + 0.3*Math.min(1,W.hn72/60))*snowF*(has('storm')?1.2:1);
+  // wind loading on lee slopes near crests
+  const downwind = (W.windDir*45+180)%360;
+  const align = Math.max(0,Math.cos((a-downwind)*Math.PI/180));
+  const avail = 0.4+0.6*Math.min(1,W.hn72/30);
+  const windLoad = align*(0.4+0.6*c)*Math.max(0,Math.min(1,(W.wind-15)/40))*(band==='btl'?0.3:band==='tl'?0.7:1)*avail;
+  const wWind = 1 + 0.6*windLoad*(has('wind')?1.3:1);
+  // warming
+  const solar = Math.max(0,Math.cos((a-180)*Math.PI/180));
+  const warm = Math.max(0,Math.min(1,(W.temp+2)/8));
+  const belowFL = z < W.fl ? 1 : 0.3;
+  const wWarm = 1 + 0.5*warm*(0.4+0.6*solar)*belowFL*((has('wetloose')||has('wetslab'))?1.3:1);
+  const Wx = Math.min(2.5, wSnow*wWind*wWarm);
+  let T = 1-(1-p)*(1-0.85*Math.min(1,r*rw));
+  T = Math.max(T, corn);
+  const raw = T*DFACT[D-1]*f*Wx*(1+0.6*t);
+  const score = 100*(1-Math.exp(-1.4*raw));
+  return {z,s,a,p,r,t,c,band,sec,D,f,matched,windLoad,warm:warm*solar*belowFL,Wx,T,raw,score};
+}
+function computeScores(){
+  const N=G.N; SCORE=SCORE||new Float32Array(N); CLASS=CLASS||new Uint8Array(N);
+  for(let i=0;i<N;i++){const sc=factorsAt(i).score; SCORE[i]=sc; CLASS[i]=clsOf(sc);}
+}
+
+/* ---------------- base texture ---------------- */
+const SS=2;           // texture pixels per 30 m cell
+const STEP=2;         // mesh vertex spacing in cells (60 m)
+const KM=0.001;       // scene units are km
+const hex2rgb=h=>[parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)];
+const RISKSTOPS=[[0,'#52BA4A'],[14,'#52BA4A'],[24,'#FFF300'],[40,'#F79218'],[62,'#EF1C29'],[82,'#1A1A1A'],[100,'#1A1A1A']].map(([v,h])=>[v,hex2rgb(h)]);
+function riskRGB(s){
+  for(let k=1;k<RISKSTOPS.length;k++){
+    if(s<=RISKSTOPS[k][0]){const [v0,c0]=RISKSTOPS[k-1],[v1,c1]=RISKSTOPS[k];const u=(s-v0)/((v1-v0)||1);
+      return [c0[0]+(c1[0]-c0[0])*u,c0[1]+(c1[1]-c0[1])*u,c0[2]+(c1[2]-c0[2])*u];}
+  }
+  return RISKSTOPS[RISKSTOPS.length-1][1];
+}
+const clamp=(v,a,b)=>v<a?a:v>b?b:v;
+function bil(arr,gx,gy){
+  const x=clamp(gx-0.5,0,G.W-1.001), y=clamp(gy-0.5,0,G.H-1.001);
+  const x0=x|0,y0=y|0,u=x-x0,v=y-y0,i=y0*G.W+x0;
+  return arr[i]*(1-u)*(1-v)+arr[i+1]*u*(1-v)+arr[i+G.W]*(1-u)*v+arr[i+G.W+1]*u*v;
+}
+const texCv=document.createElement('canvas'); let texCtx, texImg, baseL;
+function prepTexture(){
+  const TW=G.W*SS, TH=G.H*SS; texCv.width=TW; texCv.height=TH;
+  texCtx=texCv.getContext('2d'); texImg=texCtx.createImageData(TW,TH);
+  const z=new Float32Array(TW*TH), L=new Float32Array(TW*TH);
+  for(let py=0;py<TH;py++)for(let px=0;px<TW;px++){
+    const gx=(px+0.5)/SS, gy=(py+0.5)/SS, o=py*TW+px;
+    z[o]=bil(G.elev,gx,gy); L[o]=150+bil(G.hill,gx,gy)/255*95;
+  }
+  baseL=new Uint8ClampedArray(TW*TH);
+  for(let py=0;py<TH;py++)for(let px=0;px<TW;px++){
+    const o=py*TW+px; let l=L[o];
+    if(px<TW-1&&py<TH-1){
+      const a=z[o], r=z[o+1], d=z[o+TW];
+      const c100=Math.floor(a/100)!==Math.floor(r/100)||Math.floor(a/100)!==Math.floor(d/100);
+      if(c100) l-= (Math.floor(a/500)!==Math.floor(r/500)||Math.floor(a/500)!==Math.floor(d/500))?42:20;
+    }
+    baseL[o]=l;
+  }
+}
+function renderBase(){
+  const TW=texCv.width, TH=texCv.height, d=texImg.data;
+  const atesRGB=ATES.map(a=>a.c?hex2rgb(a.c):null);
+  for(let py=0;py<TH;py++){
+    const gy=(py+0.5)/SS, cy=Math.min(G.H-1,gy|0);
+    for(let px=0;px<TW;px++){
+      const o=py*TW+px, q=o*4, gx=(px+0.5)/SS;
+      const L=baseL[o]; let r=L*0.94,g=L*0.965,b=L, col=null, al=0;
+      if(S.layer==='risk'){
+        const s=bil(SCORE,gx,gy);
+        if(s>=2){col=riskRGB(s); al=0.22+0.5*Math.min(1,s/45);}
+      } else {
+        const k=G.ates[cy*G.W+Math.min(G.W-1,gx|0)]; if(atesRGB[k]){col=atesRGB[k]; al=k===3?0.55:0.5;}
+      }
+      if(col){r=r*(1-al)+col[0]*al; g=g*(1-al)+col[1]*al; b=b*(1-al)+col[2]*al;}
+      d[q]=r; d[q+1]=g; d[q+2]=b; d[q+3]=255;
+    }
+  }
+  texCtx.putImageData(texImg,0,0);
+  if(R3){R3.tex.needsUpdate=true; dirty=true;}
+}
+
+/* ---------------- 3D map ---------------- */
+const mapwrap=document.getElementById('mapwrap');
+const cv=document.getElementById('map'), ov=document.getElementById('ov'), octx=ov.getContext('2d');
+let R3=null, dirty=true, dpr=1, NX, NY, HV, hoverPt=null;
+const LMATS=[];
+const wx=gx=>gx*G.res*KM, wz=gy=>gy*G.res*KM;
+// height of the rendered mesh surface at grid coords (matches the triangles exactly)
+function meshH(gx,gy){
+  const fx=clamp(gx/G.W*(NX-1),0,NX-1.0001), fy=clamp(gy/G.H*(NY-1),0,NY-1.0001);
+  const i=fx|0, j=fy|0, u=fx-i, v=fy-j, a=j*NX+i;
+  const ha=HV[a], hb=HV[a+1], hc=HV[a+NX], hd=HV[a+NX+1];
+  return (u+v<=1) ? ha+u*(hb-ha)+v*(hc-ha) : hd+(1-u)*(hc-hd)+(1-v)*(hb-hd);
+}
+function buildTerrain(){
+  NX=Math.round(G.W/STEP)+1; NY=Math.round(G.H/STEP)+1; HV=new Float32Array(NX*NY);
+  const pos=new Float32Array(NX*NY*3), uv=new Float32Array(NX*NY*2);
+  let zmin=1e9, zmax=-1e9;
+  for(let j=0;j<NY;j++)for(let i=0;i<NX;i++){
+    const gx=i*G.W/(NX-1), gy=j*G.H/(NY-1), k=j*NX+i, h=bil(G.elev,gx,gy);
+    HV[k]=h; zmin=Math.min(zmin,h); zmax=Math.max(zmax,h);
+    pos[k*3]=wx(gx); pos[k*3+1]=h*KM; pos[k*3+2]=wz(gy);
+    uv[k*2]=gx/G.W; uv[k*2+1]=1-gy/G.H;
+  }
+  const idx=new Uint32Array((NX-1)*(NY-1)*6); let n=0;
+  for(let j=0;j<NY-1;j++)for(let i=0;i<NX-1;i++){
+    const a=j*NX+i,b=a+1,c=a+NX,d=c+1;
+    idx[n++]=a;idx[n++]=c;idx[n++]=b; idx[n++]=b;idx[n++]=c;idx[n++]=d;
+  }
+  const geo=new T3.BufferGeometry();
+  geo.setAttribute('position',new T3.BufferAttribute(pos,3)); geo.setAttribute('uv',new T3.BufferAttribute(uv,2));
+  geo.setIndex(new T3.BufferAttribute(idx,1)); geo.computeBoundingSphere();
+  const mat=new T3.MeshBasicMaterial({map:R3.tex, polygonOffset:true, polygonOffsetFactor:1, polygonOffsetUnits:1});
+  R3.terrain=new T3.Mesh(geo,mat); R3.scene.add(R3.terrain);
+  // side walls so the model reads as a block
+  const base=(zmin-350)*KM, wpos=[], wcol=[];
+  const edge=[]; for(let i=0;i<NX;i++)edge.push(i); for(let j=1;j<NY;j++)edge.push(j*NX+NX-1);
+  for(let i=NX-2;i>=0;i--)edge.push((NY-1)*NX+i); for(let j=NY-2;j>=0;j--)edge.push(j*NX);
+  for(let k=0;k<edge.length-1;k++){
+    const a=edge[k], b=edge[k+1];
+    const ax=pos[a*3],ay=pos[a*3+1],az=pos[a*3+2],bx=pos[b*3],by=pos[b*3+1],bz=pos[b*3+2];
+    wpos.push(ax,ay,az, ax,base,az, bx,by,bz,  bx,by,bz, ax,base,az, bx,base,bz);
+  }
+  const wg=new T3.BufferGeometry(); wg.setAttribute('position',new T3.BufferAttribute(new Float32Array(wpos),3));
+  const wallM=new T3.Mesh(wg,new T3.MeshBasicMaterial({color:0x173663, side:T3.DoubleSide})); R3.scene.add(wallM);
+  const bg=new T3.BufferGeometry(); const X=wx(G.W), Z=wz(G.H);
+  bg.setAttribute('position',new T3.BufferAttribute(new Float32Array([0,base,0, X,base,0, 0,base,Z, X,base,0, X,base,Z, 0,base,Z]),3));
+  const baseM=new T3.Mesh(bg,new T3.MeshBasicMaterial({color:0x0B1F3A, side:T3.DoubleSide})); R3.scene.add(baseM);
+  R3.terrainParts=[R3.terrain,wallM,baseM];
+  R3.zmin=zmin; R3.zmax=zmax;
+}
+function initGL(){
+  let renderer;
+  try{ renderer=new T3.WebGLRenderer({canvas:cv, antialias:true, alpha:false}); }
+  catch(e){ throw new Error('This browser cannot show the 3D map (WebGL is unavailable).'); }
+  renderer.setClearColor(0xdfe5ec,1);
+  const scene=new T3.Scene();
+  const camera=new T3.PerspectiveCamera(42,1,0.03,400);
+  const tex=new T3.CanvasTexture(texCv); tex.colorSpace=T3.SRGBColorSpace;
+  tex.anisotropy=Math.min(8,renderer.capabilities.getMaxAnisotropy()); tex.minFilter=T3.LinearMipmapLinearFilter; tex.magFilter=T3.LinearFilter;
+  const controls=new T3.OrbitControls(camera,cv);
+  controls.enableDamping=true; controls.dampingFactor=0.14; controls.screenSpacePanning=false;
+  controls.minDistance=0.35; controls.maxDistance=60; controls.maxPolarAngle=1.38; controls.zoomToCursor=true;
+  controls.touches={ONE:T3.TOUCH.ROTATE, TWO:T3.TOUCH.DOLLY_PAN};
+  controls.mouseButtons={LEFT:T3.MOUSE.ROTATE, MIDDLE:T3.MOUSE.DOLLY, RIGHT:T3.MOUSE.PAN};
+  controls.addEventListener('change',()=>{dirty=true;});
+  R3={renderer,scene,camera,controls,tex,groups:{}};
+  buildTerrain();
+  const loop=()=>{
+    requestAnimationFrame(loop);
+    if(R3.anim) stepAnim();
+    const moved=controls.update();
+    if(moved||dirty){ clampTarget(); renderer.render(scene,camera); drawOverlay(); dirty=false; }
+  };
+  loop();
+}
+function clampTarget(){
+  const t=R3.controls.target, X=wx(G.W), Z=wz(G.H)*1.15;
+  const cx=clamp(t.x,0,X), cz=clamp(t.z,0,Z);
+  if(cx!==t.x||cz!==t.z){const dx=cx-t.x, dz=cz-t.z; t.x=cx; t.z=cz; R3.camera.position.x+=dx; R3.camera.position.z+=dz;}
+}
+function resize(){
+  if(!R3) return;
+  const r=mapwrap.getBoundingClientRect(); dpr=Math.min(2,window.devicePixelRatio||1);
+  R3.renderer.setPixelRatio(dpr); R3.renderer.setSize(r.width,r.height,false);
+  R3.camera.aspect=r.width/Math.max(1,r.height); R3.camera.updateProjectionMatrix();
+  ov.width=Math.round(r.width*dpr); ov.height=Math.round(r.height*dpr);
+  LMATS.forEach(m=>m.resolution.set(r.width,r.height));
+  dirty=true;
+}
+/* camera moves */
+function viewFor(target,dist,polar,az){
+  const s=Math.sin(polar);
+  return {t:target.clone(), p:new T3.Vector3(target.x+dist*s*Math.sin(az), target.y+dist*Math.cos(polar), target.z+dist*s*Math.cos(az))};
+}
+function animateTo(v,ms=550){ R3.anim={t0:performance.now(),ms,ft:R3.controls.target.clone(),fp:R3.camera.position.clone(),tt:v.t,tp:v.p}; dirty=true; }
+function stepAnim(){
+  const A=R3.anim, u=Math.min(1,(performance.now()-A.t0)/A.ms), e=u<.5?2*u*u:1-Math.pow(-2*u+2,2)/2;
+  R3.controls.target.lerpVectors(A.ft,A.tt,e); R3.camera.position.lerpVectors(A.fp,A.tp,e);
+  if(u>=1) R3.anim=null; dirty=true;
+}
+function fitBox(t,x0,x1,z0,z1,y0,y1,polar,az,margin){
+  // distance at which the box just fills the view
+  const cam=R3.camera.clone(), pts=[];
+  for(const x of [x0,x1])for(const y of [y0,y1])for(const z of [z0,z1]) pts.push(new T3.Vector3(x,y,z));
+  let lo=0.3, hi=80;
+  for(let k=0;k<18;k++){
+    const m=(lo+hi)/2, v=viewFor(t,m,polar,az); cam.position.copy(v.p); cam.lookAt(t); cam.updateMatrixWorld(); cam.updateProjectionMatrix();
+    const ok=pts.every(p=>{const q=p.clone().project(cam); return q.z<1&&Math.abs(q.x)<=margin&&Math.abs(q.y)<=margin;});
+    if(ok) hi=m; else lo=m;
+  }
+  return hi;
+}
+function fit(animate){
+  const X=wx(G.W), Z=wz(G.H), t=new T3.Vector3(X/2,1.2,Z/2);
+  const v=viewFor(t,fitBox(t,0,X,0,Z,(R3.zmin-350)*KM,R3.zmax*KM,0.85,0,0.94),0.85,0);
+  if(animate) animateTo(v); else {R3.controls.target.copy(v.t); R3.camera.position.copy(v.p); dirty=true;}
+}
+function curAz(){ const o=R3.camera.position.clone().sub(R3.controls.target); return Math.atan2(o.x,o.z); }
+function curPolar(){ const o=R3.camera.position.clone().sub(R3.controls.target); return Math.acos(clamp(o.y/o.length(),-1,1)); }
+function zoomBy(k){ const t=R3.controls.target, o=R3.camera.position.clone().sub(t); const d=clamp(o.length()*k,R3.controls.minDistance,R3.controls.maxDistance); animateTo({t:t.clone(),p:t.clone().add(o.setLength(d))},300); }
+function lookAtGrid(gx,gy,dist){
+  const t=new T3.Vector3(wx(gx),meshH(gx,gy)*KM,wz(gy));
+  const d=dist||Math.min(R3.camera.position.distanceTo(R3.controls.target),3);
+  animateTo(viewFor(t,d,Math.min(curPolar(),1.0),curAz()));
+}
+document.getElementById('zin').onclick=()=>zoomBy(1/1.6);
+document.getElementById('zout').onclick=()=>zoomBy(1.6);
+document.getElementById('zfit').onclick=()=>S.preview&&PV?fitPreview():fit(true);
+document.getElementById('znorth').onclick=()=>{const t=R3.controls.target; animateTo(viewFor(t,R3.camera.position.distanceTo(t),curPolar(),0),450);};
+
+/* ---------------- lines draped on the terrain ---------------- */
+function drape(g,lift){
+  const out=[];
+  for(let k=0;k<g.length;k++){
+    if(k){
+      const [x0,y0]=g[k-1],[x1,y1]=g[k]; const n=Math.max(1,Math.ceil(Math.hypot(x1-x0,y1-y0)/(STEP*0.5)));
+      for(let j=1;j<=n;j++){const x=x0+(x1-x0)*j/n, y=y0+(y1-y0)*j/n; out.push(wx(x),(meshH(x,y)+lift)*KM,wz(y));}
+    } else out.push(wx(g[0][0]),(meshH(g[0][0],g[0][1])+lift)*KM,wz(g[0][1]));
+  }
+  return out;
+}
+function lineMat(color,width,o={}){
+  const m=new T3.LineMaterial({color,linewidth:width,worldUnits:false,transparent:o.opacity!==undefined,opacity:o.opacity??1,
+    dashed:!!o.dash,dashSize:o.dash||0,gapSize:o.gap||0,dashScale:1,depthTest:true,depthWrite:o.depthWrite??true});
+  const r=mapwrap.getBoundingClientRect(); m.resolution.set(r.width,r.height); LMATS.push(m); return m;
+}
+function mkLine(pos,mat,order){
+  const geo=new T3.LineGeometry(); geo.setPositions(pos);
+  const l=new T3.Line2(geo,mat); if(mat.dashed) l.computeLineDistances(); l.renderOrder=order||0; return l;
+}
+function mkSegs(segs,mat,order){
+  const geo=new T3.LineSegmentsGeometry(); geo.setPositions(segs);
+  const l=new T3.LineSegments2(geo,mat); if(mat.dashed) l.computeLineDistances(); l.renderOrder=order||0; return l;
+}
+function disposeGroup(name){
+  const g=R3.groups[name]; if(!g) return;
+  g.traverse(o=>{ if(o.geometry) o.geometry.dispose(); if(o.material){ const i=LMATS.indexOf(o.material); if(i>=0) LMATS.splice(i,1); o.material.dispose(); } });
+  R3.scene.remove(g); delete R3.groups[name];
+}
+function setGroup(name,objs){ disposeGroup(name); const g=new T3.Group(); objs.forEach(o=>g.add(o)); R3.groups[name]=g; g.visible=!S.preview; R3.scene.add(g); dirty=true; return g; }
+function segsOf(pos){ const s=[]; for(let k=3;k<pos.length;k+=3) s.push(pos[k-3],pos[k-2],pos[k-1],pos[k],pos[k+1],pos[k+2]); return s; }
+function buildRunLayer(){
+  const runSeg=[], liftSeg=[];
+  for(const R of RUNS){ R.w=R.parts.map(p=>drape(R.area?[...p,p[0]]:p,4)); R.w.forEach(w=>runSeg.push(...segsOf(w))); }
+  for(const L of LIFTS){ L.w=drape(L.g,9); liftSeg.push(...segsOf(L.w)); }
+  setGroup('runs',[
+    mkSegs(runSeg,lineMat(0xffffff,1.6,{opacity:0.9}),1),
+    mkSegs(liftSeg,lineMat(0x0B1F3A,1.6,{dash:0.05,gap:0.035}),1)]);
+  R3.groups.runs.visible=S.showRuns;
+}
+function routeWorld(R){ if(!R.w) R.w=(R.parts||[R.g]).map(p=>drape(R.area?[...p,p[0]]:p,R.kind==='run'?4:6)); return R.w; }
+function drawRoutes(){
+  const objs=[];
+  const add=(R,color,width,casing,cw,order,dash)=>{
+    for(const w of routeWorld(R)){
+      if(casing) objs.push(mkLine(w,lineMat(casing,width+cw,{depthWrite:false}),order));
+      objs.push(mkLine(w,lineMat(color,width,dash?{dash:0.08,gap:0.05}:{}),order+1));
+    }
+  };
+  for(const R of [...ROUTES,...S.userRoutes]) if(R!==S.selected) add(R,0x0B1F3A,2.4,0xffffff,2.6,2);
+  if(S.safe&&S.safe!==S.selected) add(S.safe,0x0E8FA3,3,0xffffff,2.6,2,true);
+  if(S.selected) add(S.selected,S.selected===S.safe?0x0E8FA3:0xC9A227,4.2,0x0B1F3A,3,4);
+  if(S.draw.length>1) objs.push(mkLine(drape(S.draw,6),lineMat(0x7B2CBF,3),6));
+  setGroup('routes',objs);
+}
+
+/* ---------------- overlay: labels and markers ---------------- */
+const _v=new T3.Vector3();
+function toScreen(x,y,z){
+  _v.set(x,y,z).project(R3.camera);
+  if(_v.z>1||_v.z<-1) return null;
+  const r=mapwrap.getBoundingClientRect(); return [(_v.x+1)/2*r.width,(1-_v.y)/2*r.height];
+}
+const gridScreen=(gx,gy,lift=6)=>toScreen(wx(gx),(meshH(gx,gy)+lift)*KM,wz(gy));
+function drawOverlay(){
+  const r=mapwrap.getBoundingClientRect();
+  octx.setTransform(dpr,0,0,dpr,0,0); octx.clearRect(0,0,r.width,r.height);
+  if(S.preview){ const t=R3.controls.target, a=toScreen(t.x,t.y,t.z), b=toScreen(t.x,t.y,t.z-1);
+    if(a&&b) document.getElementById('needle').style.transform=`rotate(${Math.atan2(b[0]-a[0],a[1]-b[1])}rad)`; return; }
+  const dist=R3.camera.position.distanceTo(R3.controls.target);
+  octx.font='600 11px Inter, sans-serif';
+  const placed=[];
+  for(const l of ROUTEDATA.landmarks){
+    const [gx,gy]=toGrid(l.lat,l.lon); const s=gridScreen(gx,gy,0); if(!s) continue;
+    const [sx,sy]=s; if(sx<-50||sy<-20||sx>r.width+50||sy>r.height+20) continue;
+    octx.fillStyle='#0B1F3A'; octx.beginPath(); octx.moveTo(sx,sy-6); octx.lineTo(sx+4.5,sy+1.5); octx.lineTo(sx-4.5,sy+1.5); octx.closePath(); octx.fill();
+    const tw=octx.measureText(l.name).width, box=[sx+5,sy-9,sx+8+tw,sy+5];
+    const clash=placed.some(b=>!(box[2]<b[0]||box[0]>b[2]||box[3]<b[1]||box[1]>b[3]));
+    if(!clash&&dist<48){placed.push(box); octx.lineWidth=3; octx.strokeStyle='rgba(255,255,255,.88)'; octx.strokeText(l.name,sx+6,sy+2); octx.fillText(l.name,sx+6,sy+2);}
+  }
+  const dot=(g,fill,rad,stroke)=>{const s=gridScreen(g[0],g[1]); if(!s)return; octx.beginPath(); octx.arc(s[0],s[1],rad,0,7); octx.fillStyle=fill; octx.fill(); if(stroke){octx.strokeStyle=stroke; octx.lineWidth=2; octx.stroke();}};
+  if(S.mode==='draw'||S.draw.length) S.draw.forEach(p=>dot(p,'#7B2CBF',4.5,'#fff'));
+  if(S.start) dot(S.start,'#2bb673',7,'#fff');
+  if(S.end) dot(S.end,'#C9A227',7,'#0B1F3A');
+  if(hoverPt) dot(hoverPt,'#fff',6,'#0B1F3A');
+  // compass needle points to north on screen
+  const t=R3.controls.target, a=toScreen(t.x,t.y,t.z), b=toScreen(t.x,t.y,t.z-1);
+  if(a&&b) document.getElementById('needle').style.transform=`rotate(${Math.atan2(b[0]-a[0],a[1]-b[1])}rad)`;
+}
+
+/* ---------------- picking ---------------- */
+function rayFrom(sx,sy){
+  const r=mapwrap.getBoundingClientRect();
+  const v=new T3.Vector3(sx/r.width*2-1, -(sy/r.height)*2+1, 0.5).unproject(R3.camera);
+  const o=R3.camera.position.clone(); return {o, d:v.sub(o).normalize()};
+}
+function terrainHit(o,d,maxT=200){
+  const X=wx(G.W), Z=wz(G.H), y0=R3.zmin*KM-0.01, y1=R3.zmax*KM+0.01;
+  let t0=0, t1=maxT;
+  for(const [oo,dd,lo,hi] of [[o.x,d.x,0,X],[o.y,d.y,y0,y1],[o.z,d.z,0,Z]]){
+    if(Math.abs(dd)<1e-9){ if(oo<lo||oo>hi) return null; continue; }
+    let a=(lo-oo)/dd, b=(hi-oo)/dd; if(a>b){const s=a;a=b;b=s;}
+    t0=Math.max(t0,a); t1=Math.min(t1,b); if(t0>t1) return null;
+  }
+  const gap=t=>{const x=(o.x+d.x*t)/(G.res*KM), y=(o.z+d.z*t)/(G.res*KM); return (o.y+d.y*t)-meshH(x,y)*KM;};
+  let t=t0, prev=t0;
+  for(let n=0;n<6000&&t<=t1;n++){
+    const g=gap(t);
+    if(g<=0){
+      let a=prev,b=t; for(let k=0;k<16;k++){const m=(a+b)/2; if(gap(m)>0)a=m; else b=m;}
+      return {gx:(o.x+d.x*b)/(G.res*KM), gy:(o.z+d.z*b)/(G.res*KM), t:b};
+    }
+    prev=t; t+=Math.max(0.003,Math.min(0.3,g*0.45));
+  }
+  return null;
+}
+function pickTerrain(sx,sy){ const {o,d}=rayFrom(sx,sy); const h=terrainHit(o,d); return h&&inGrid(h.gx,h.gy)?[h.gx,h.gy]:null; }
+function segDist(px,py,a,b){const dx=b[0]-a[0],dy=b[1]-a[1],L=dx*dx+dy*dy; let u=L?((px-a[0])*dx+(py-a[1])*dy)/L:0; u=clamp(u,0,1); return Math.hypot(px-a[0]-u*dx,py-a[1]-u*dy);}
+function pickLine(sx,sy,tol){
+  const cands=[...ROUTES,...S.userRoutes,...(S.safe?[S.safe]:[]),...(S.showRuns?RUNS:[])];
+  const hits=[];
+  for(const R of cands){
+    let best=1e9, bw=null;
+    for(const w of routeWorld(R)){
+      let prev=null;
+      for(let k=0;k<w.length;k+=3){
+        const s=toScreen(w[k],w[k+1],w[k+2]);
+        if(s&&prev){const dd=segDist(sx,sy,prev,s); if(dd<best){best=dd; bw=[w[k],w[k+1],w[k+2]];}}
+        prev=s;
+      }
+    }
+    if(best<tol) hits.push({R,d:best+(R.kind==='run'?3:0),p:bw});
+  }
+  hits.sort((a,b)=>a.d-b.d);
+  for(const h of hits.slice(0,4)){
+    const o=R3.camera.position, p=new T3.Vector3(...h.p), d=p.clone().sub(o), L=d.length(); d.normalize();
+    const th=terrainHit(o,d,L); if(th&&th.t<L-0.06) continue; // hidden behind terrain
+    return h.R;
+  }
+  return null;
+}
+
+/* pointer interaction: taps on the canvas (rotation, zoom and pan come from OrbitControls) */
+let downAt=null, nPtr=0, multi=false, hoverReq=null;
+const helpEl=document.getElementById('help'); let helpT=setTimeout(()=>helpEl.style.opacity=0,9000);
+cv.addEventListener('pointerdown',e=>{helpEl.style.opacity=0; nPtr++; if(nPtr>1) multi=true; if(nPtr===1){multi=false; downAt={x:e.offsetX,y:e.offsetY,t:Date.now()};} R3&&(R3.anim=null); hideProbe();});
+const ptrUp=e=>{
+  nPtr=Math.max(0,nPtr-1);
+  if(e.type==='pointerup'&&!multi&&downAt&&Math.hypot(e.offsetX-downAt.x,e.offsetY-downAt.y)<7&&Date.now()-downAt.t<600&&e.button<=0) onTap(e.offsetX,e.offsetY,e.pointerType);
+  if(!nPtr) downAt=null;
+};
+cv.addEventListener('pointerup',ptrUp); cv.addEventListener('pointercancel',ptrUp);
+cv.addEventListener('pointermove',e=>{
+  if(e.pointerType!=='mouse'||nPtr||S.mode!=='inspect'||S.preview) return;
+  const x=e.offsetX,y=e.offsetY; if(hoverReq) return;
+  hoverReq=requestAnimationFrame(()=>{hoverReq=null; const g=pickTerrain(x,y); if(g) showProbe(x,y,describeCell(cellIdx(g[0],g[1])),false); else hideProbe();});
+});
+cv.addEventListener('pointerleave',e=>{if(e.pointerType==='mouse'&&!nPtr&&!probe.classList.contains('act'))hideProbe();});
+cv.addEventListener('contextmenu',e=>e.preventDefault());
+
+const probe=document.getElementById('probe');
+function describeCell(i){
+  const F=factorsAt(i);
+  return `<b>${CLS[clsOf(F.score)].n}</b> · index ${F.score.toFixed(0)}<br>`+
+    `${F.z} m · ${F.s}° · ${ASP[F.sec]} aspect · ${F.band.toUpperCase()}<br>`+
+    `ATES: ${ATES[G.ates[i]].n}<br>`+
+    `<span class="muted">Release ${(F.p*100|0)}% · Runout ${(F.r*100|0)}% · Trap ${(F.t*100|0)}%</span>`;
+}
+function showProbe(sx,sy,html,active){
+  probe.innerHTML=html; probe.style.display='block'; probe.classList.toggle('act',!!active);
+  const r=mapwrap.getBoundingClientRect(); const w=probe.offsetWidth,h=probe.offsetHeight;
+  probe.style.left=clamp(sx+14,8,r.width-w-8)+'px'; probe.style.top=clamp(sy-h-10,8,r.height-h-8)+'px';
+}
+function hideProbe(){probe.style.display='none'; probe.classList.remove('act');}
+function onTap(sx,sy,ptype){
+  if(!R3||S.preview) return;
+  if(S.mode!=='inspect'){
+    const g=pickTerrain(sx,sy); if(!g) return;
+    if(S.mode==='draw'){S.draw.push(g); updDraw(); drawRoutes(); return;}
+    if(S.mode==='start'){S.start=g; setMode('inspect'); updSE(); dirty=true; return;}
+    if(S.mode==='end'){S.end=g; setMode('inspect'); updSE(); dirty=true; return;}
+  }
+  const R=pickLine(sx,sy,ptype==='mouse'?8:16);
+  if(R){
+    S.selected=R; drawRoutes(); routeListUI(); renderAssess();
+    const A=R.A;
+    showProbe(sx,sy,`<b>${R.name}</b><br><span class="muted">${routeTag(R)}</span><br>${A?badge(A.routeScore)+' score '+A.routeScore.toFixed(0):''}${R.kind==='run'?'<br><span class="muted small">Scored as uncontrolled terrain</span>':''}<div style="margin-top:6px"><button class="btn sm" id="probeOpen">Full assessment</button></div>`,true);
+    document.getElementById('probeOpen').onclick=()=>{hideProbe(); openAssess();};
+    return;
+  }
+  const g=pickTerrain(sx,sy); if(g) showProbe(sx,sy,describeCell(cellIdx(g[0],g[1])),false); else hideProbe();
+}
+function openAssess(){
+  document.querySelector('.tabs button[data-t="routes"]').click();
+  const el=document.getElementById('assess'); if(el) el.scrollIntoView({behavior:'smooth',block:'start'});
+}
+function setMode(m){
+  S.mode=m; cv.classList.toggle('drawing',m!=='inspect');
+  const hint=document.getElementById('modehint');
+  const msg={draw:'Tap the terrain to add route points',start:'Tap the terrain to set the start',end:'Tap the terrain to set the end'}[m];
+  hint.style.display=msg?'block':'none'; hint.textContent=msg||'';
+  hideProbe();
+  document.getElementById('drawCtl').style.display = m==='draw'?'flex':'none';
+  document.getElementById('drawBtn').textContent = m==='draw'?'Cancel drawing':'Draw on map';
+  dirty=true;
+}
+function draw(){ if(R3){ drawRoutes(); } }
+
+/* ---------------- legend ---------------- */
+function renderLegend(){
+  const el=document.getElementById('legend');
+  if(S.layer==='risk'){
+    el.innerHTML=`<div class="t">Risk index (relative)</div><div class="row">${CLS.map((c,k)=>`<span class="k"><span class="sw" style="background:${c.c}"></span>${c.n}</span>`).join('')}</div>`;
+  } else {
+    el.innerHTML=`<div class="t">ATES terrain class</div><div class="row">${ATES.slice(1).map(c=>`<span class="k"><span class="sw" style="background:${c.c}"></span>${c.n}</span>`).join('')}</div>`;
+  }
+  el.innerHTML+=`<div class="row" style="margin-top:6px">${S.showRuns?'<span class="k"><span class="lsw"></span>Ski run</span><span class="k"><span class="lsw lift"></span>Lift</span>':''}<span class="k"><span class="lsw route"></span>Route</span></div>`;
+}
+document.querySelectorAll('#layerSeg button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('#layerSeg button').forEach(x=>x.classList.toggle('on',x===b));
+  S.layer=b.dataset.l; renderBase(); renderLegend();});
+document.getElementById('runsTog').onclick=e=>{
+  S.showRuns=!S.showRuns; e.currentTarget.classList.toggle('on',S.showRuns);
+  if(R3&&R3.groups.runs){R3.groups.runs.visible=S.showRuns&&!S.preview; dirty=true;} renderLegend();};
+
+/* ---------------- tabs ---------------- */
+document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('.tabs button').forEach(x=>x.classList.toggle('on',x===b));
+  document.querySelectorAll('.pane').forEach(p=>p.classList.toggle('on',p.id==='pane-'+b.dataset.t));
+  if(b.dataset.t==='routes' && S.selected && S.selected.A && !S.selected.A.area) drawProfile(S.selected.A);
+  if(b.dataset.t==='print') printUI();
+});
+/* ---------------- 3D print (STL) ---------------- */
+const PRINT={vex:1.5, base:3, ridgeH:2.2, ridgeR:1.1, fade:1.0};
+function printRoutes(){
+  const list=[...ROUTES,...S.userRoutes,...(S.safe?[S.safe]:[])];
+  if(S.selected&&S.selected.kind==='run') list.push(S.selected);
+  return list;
+}
+function printUI(){
+  const host=document.getElementById('printList'); if(!host) return;
+  schedulePreview();
+  host.innerHTML=printRoutes().map(R=>`<div class="small">· ${R.name}${R.kind==='run'?' (selected run)':''}</div>`).join('');
+  const w=+document.getElementById('printW').value;
+  if(!G.zr){let lo=1e9,hi=-1e9; for(const e of G.elev){if(e<lo)lo=e; if(e>hi)hi=e;} G.zr=hi-lo;}
+  document.getElementById('printDims').textContent=`${w} × ${Math.round(w*G.H/G.W+legendDepth(w))} mm footprint, up to about ${Math.round(PRINT.base+G.zr*w/(G.W*G.res)*PRINT.vex+PRINT.ridgeH)} mm tall`;
+}
+function legendDepth(w){ return Math.max(13,Math.round(w*0.1)); }
+function blurScore(){
+  const W=G.W,H=G.H,out=new Float32Array(W*H),tmp=new Float32Array(W*H);
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++){let s=0,n=0;for(let d=-2;d<=2;d++){const xx=x+d;if(xx>=0&&xx<W){s+=SCORE[y*W+xx];n++;}}tmp[y*W+x]=s/n;}
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++){let s=0,n=0;for(let d=-2;d<=2;d++){const yy=y+d;if(yy>=0&&yy<H){s+=tmp[yy*W+x];n++;}}out[y*W+x]=s/n;}
+  return out;
+}
+function buildPrintGrid(widthMM){
+  const P=PRINT, Wmm=widthMM, Dmm=widthMM*G.H/G.W;
+  const sp=Math.max(0.4,Math.sqrt(Wmm*Dmm/260000));
+  const nx=Math.round(Wmm/sp)+1, nyT=Math.round(Dmm/sp)+1, syp=Dmm/(nyT-1);
+  const Lmm=legendDepth(Wmm), nL=Math.round(Lmm/syp), ny=nyT+nL, Dtot=(ny-1)*syp;
+  const mmPerM=Wmm/(G.W*G.res), SC=blurScore();
+  const Z=new Float32Array(nx*ny), TX=new Float32Array(nx*ny), D=new Float32Array(nx*ny).fill(1e9);
+  let zmin=1e9;
+  for(let k=0;k<G.elev.length;k++) zmin=Math.min(zmin,G.elev[k]);
+  const TAU=Math.PI*2;
+  // one geometric pattern per risk class, with hard edges so it never reads as terrain
+  const md=(v,p)=>((v%p)+p)%p;
+  const texAt=(px,py,c)=>{
+    if(c<=0) return 0;                                   // Low: smooth
+    if(c===1){ const u=md((px+py)/Math.SQRT2,2.2)/2.2;   // Moderate: diagonal ribs
+      return 0.6*Math.max(0,1-Math.abs(2*u-1)*1.25); }
+    if(c===2){ const u=md(px,3.2)-1.6, v=md(py,3.2)-1.6, r=Math.hypot(u,v); // Considerable: flat-topped studs
+      return r<0.75?0.9:r<1.05?0.9*(1.05-r)/0.3:0; }
+    if(c===3){ const u=Math.abs(md(px,3.2)-1.6)/1.6, v=Math.abs(md(py,3.2)-1.6)/1.6; // High: square pyramids
+      return 1.2*Math.max(0,1-Math.max(u,v)*1.1); }
+    const q=2.4, sx=md(px,q)-q/2, sy=md(py+(Math.floor(px/q)%2?q/2:0),q)-q/2;    // Extreme: tall staggered spikes
+    return 1.5*Math.max(0,1-Math.hypot(sx,sy)/(q*0.48));
+  };
+  const clsP=s=>s<14?0:s<31?1:s<55?2:s<78?3:4;
+  for(let j=0;j<nyT;j++)for(let i=0;i<nx;i++){
+    const k=j*nx+i, gx=i/(nx-1)*G.W, gy=j/(nyT-1)*G.H, px=i*Wmm/(nx-1), py=j*syp;
+    Z[k]=P.base+(bil(G.elev,gx,gy)-zmin)*mmPerM*P.vex;
+    TX[k]=texAt(px,py,clsP(bil(SC,gx,gy)));
+  }
+  // touch legend along the south edge: 5 risk patches (1 to 5 dots) and a route sample
+  const mX=3, gapX=1.2, cellW=(Wmm-2*mX-5*gapX)/6, groove=1.2, plate=P.base+1.0;
+  const patchTop=groove+1.0, dotRow=Lmm-2.4, patchBot=dotRow-1.8;
+  for(let j=nyT;j<ny;j++)for(let i=0;i<nx;i++){
+    const k=j*nx+i, px=i*Wmm/(nx-1), ly=(j-(nyT-1))*syp;
+    let z=plate;
+    if(ly<groove) z=P.base;
+    else {
+      const rel=px-mX, c=Math.floor(rel/(cellW+gapX)), cx=rel-c*(cellW+gapX);
+      const inCell=c>=0&&c<6&&cx<=cellW;
+      if(!inCell&&ly>=patchTop&&ly<=patchBot&&px>mX&&px<Wmm-mX) z=P.base+0.3; // groove between patches
+      if(inCell&&ly>=patchTop&&ly<=patchBot){
+        if(c<5) z=plate+0.3+texAt(px,ly,c);
+        else { const q=Math.abs(ly-(patchTop+patchBot)/2)/P.ridgeR; z=plate+0.3+(q<1?P.ridgeH*Math.sqrt(1-q*q):0); }
+      }
+      if(inCell&&c<5){
+        const n=c+1, dsp=2.5, x0=cellW/2-(n-1)*dsp/2;
+        for(let d=0;d<n;d++){const rr=Math.hypot(cx-(x0+d*dsp),ly-dotRow)/0.75; if(rr<1) z=Math.max(z,plate+0.8*Math.sqrt(1-rr*rr));}
+      }
+    }
+    Z[k]=z;
+  }
+  // distance from each vertex to the nearest route, in mm
+  const reach=P.ridgeR+P.fade, gxmm=Wmm/G.W, gymm=Dmm/G.H;
+  for(const R of printRoutes()) for(const g of (R.parts||[R.g])) for(let s=1;s<g.length;s++){
+    const ax=g[s-1][0]*gxmm, ay=g[s-1][1]*gymm, bx=g[s][0]*gxmm, by=g[s][1]*gymm;
+    const i0=Math.max(0,Math.floor((Math.min(ax,bx)-reach)/Wmm*(nx-1))), i1=Math.min(nx-1,Math.ceil((Math.max(ax,bx)+reach)/Wmm*(nx-1)));
+    const j0=Math.max(0,Math.floor((Math.min(ay,by)-reach)/syp)), j1=Math.min(nyT-1,Math.ceil((Math.max(ay,by)+reach)/syp));
+    for(let j=j0;j<=j1;j++)for(let i=i0;i<=i1;i++){
+      const d=segDist(i*Wmm/(nx-1),j*syp,[ax,ay],[bx,by]), k=j*nx+i; if(d<D[k]) D[k]=d;
+    }
+  }
+  for(let k=0;k<Z.length;k++){
+    const d=D[k], w=clamp((P.ridgeR+P.fade-d)/P.fade,0,1), q=d/P.ridgeR;
+    Z[k]+=TX[k]*(1-w)+(q<1?P.ridgeH*Math.sqrt(1-q*q):0);
+  }
+  let hmax=0; for(let k=0;k<Z.length;k++) if(Z[k]>hmax) hmax=Z[k];
+  return {Z,nx,ny,syp,Wmm,Dmm:Dtot,hmax};
+}
+function printPerimeter(nx,ny){
+  const per=[]; for(let i=0;i<nx;i++)per.push([i,0]); for(let j=1;j<ny;j++)per.push([nx-1,j]);
+  for(let i=nx-2;i>=0;i--)per.push([i,ny-1]); for(let j=ny-2;j>=1;j--)per.push([0,j]);
+  return per;
+}
+function buildSTL(widthMM){
+  const M=buildPrintGrid(widthMM), {Z,nx,ny,syp,Wmm}=M, Dtot=M.Dmm;
+  // binary STL: top surface, side walls, bottom fan
+  const per=[]; for(let i=0;i<nx;i++)per.push([i,0]); for(let j=1;j<ny;j++)per.push([nx-1,j]);
+  for(let i=nx-2;i>=0;i--)per.push([i,ny-1]); for(let j=ny-2;j>=1;j--)per.push([0,j]);
+  const nTop=2*(nx-1)*(ny-1), nPer=per.length, nTri=nTop+2*nPer+nPer;
+  const buf=new ArrayBuffer(84+50*nTri), dv=new DataView(buf);
+  const hdr='Avalanche Risk Atlas Whistler tactile model'; for(let c=0;c<hdr.length;c++) dv.setUint8(c,hdr.charCodeAt(c));
+  dv.setUint32(80,nTri,true);
+  let o=84;
+  const X=i=>i*Wmm/(nx-1), Y=j=>Dtot-j*syp;
+  function tri(a,b,c){
+    const ux=b[0]-a[0],uy=b[1]-a[1],uz=b[2]-a[2],vx=c[0]-a[0],vy=c[1]-a[1],vz=c[2]-a[2];
+    let nx_=uy*vz-uz*vy, ny_=uz*vx-ux*vz, nz_=ux*vy-uy*vx; const L=Math.hypot(nx_,ny_,nz_)||1;
+    for(const v of [nx_/L,ny_/L,nz_/L,...a,...b,...c]){dv.setFloat32(o,v,true); o+=4;}
+    dv.setUint16(o,0,true); o+=2;
+  }
+  const V=(i,j)=>[X(i),Y(j),Z[j*nx+i]];
+  for(let j=0;j<ny-1;j++)for(let i=0;i<nx-1;i++){
+    const a=V(i,j),b=V(i+1,j),c=V(i,j+1),d=V(i+1,j+1);
+    tri(a,c,b); tri(b,c,d);
+  }
+  for(let k=0;k<nPer;k++){
+    const [ia,ja]=per[k],[ib,jb]=per[(k+1)%nPer];
+    const A=V(ia,ja),B=V(ib,jb),A0=[A[0],A[1],0],B0=[B[0],B[1],0];
+    tri(A,B,A0); tri(B,B0,A0);
+  }
+  const C=[Wmm/2,Dtot/2,0];
+  for(let k=0;k<nPer;k++){
+    const [ia,ja]=per[k],[ib,jb]=per[(k+1)%nPer];
+    tri(C,[X(ia),Y(ja),0],[X(ib),Y(jb),0]);
+  }
+  return {buf,nTri,Wmm,Dmm:Dtot,hmax:M.hmax};
+}
+/* zip with one deflated (or stored) entry, for viewers that only accept .zip */
+const CRCT=(()=>{const t=new Uint32Array(256);for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0;}return t;})();
+function crc32(u8){let c=0xFFFFFFFF;for(let i=0;i<u8.length;i++)c=CRCT[(c^u8[i])&255]^(c>>>8);return (c^0xFFFFFFFF)>>>0;}
+async function zipOne(name,u8){
+  let data=u8, method=0;
+  if(typeof CompressionStream!=='undefined'){
+    try{ data=new Uint8Array(await new Response(new Blob([u8]).stream().pipeThrough(new CompressionStream('deflate-raw'))).arrayBuffer()); method=8; }catch(e){ data=u8; method=0; }
+  }
+  const nm=new TextEncoder().encode(name), crc=crc32(u8);
+  const lh=new DataView(new ArrayBuffer(30)); lh.setUint32(0,0x04034b50,true); lh.setUint16(4,20,true); lh.setUint16(8,method,true);
+  lh.setUint32(14,crc,true); lh.setUint32(18,data.length,true); lh.setUint32(22,u8.length,true); lh.setUint16(26,nm.length,true);
+  const ch=new DataView(new ArrayBuffer(46)); ch.setUint32(0,0x02014b50,true); ch.setUint16(4,20,true); ch.setUint16(6,20,true); ch.setUint16(10,method,true);
+  ch.setUint32(16,crc,true); ch.setUint32(20,data.length,true); ch.setUint32(24,u8.length,true); ch.setUint16(28,nm.length,true);
+  const cdOff=30+nm.length+data.length, cdLen=46+nm.length;
+  const eo=new DataView(new ArrayBuffer(22)); eo.setUint32(0,0x06054b50,true); eo.setUint16(8,1,true); eo.setUint16(10,1,true);
+  eo.setUint32(12,cdLen,true); eo.setUint32(16,cdOff,true);
+  return new Blob([lh,nm,data,ch,nm,eo],{type:'application/zip'});
+}
+let dlCap=null;
+if(window.claude&&typeof window.claude.use==='function'){ window.claude.use('downloads').then(d=>{dlCap=d;}).catch(()=>{}); }
+document.getElementById('printW').onchange=printUI;
+/* print preview: the STL surface shown in the 3D view, lit so texture and ridges read */
+let PV=null, pvT=null;
+function buildPreview(){
+  const w=+document.getElementById('printW').value;
+  const M=buildPrintGrid(w), {Z,nx,ny,syp,Wmm}=M, D=M.Dmm, s=wx(G.W)/Wmm;
+  if(PV){ PV.group.traverse(o=>{if(o.geometry)o.geometry.dispose(); if(o.material)o.material.dispose();}); R3.scene.remove(PV.group); }
+  const pos=new Float32Array(nx*ny*3);
+  for(let j=0;j<ny;j++)for(let i=0;i<nx;i++){const k=j*nx+i; pos[k*3]=i*Wmm/(nx-1)*s; pos[k*3+1]=Z[k]*s; pos[k*3+2]=j*syp*s;}
+  const idx=new Uint32Array((nx-1)*(ny-1)*6); let n=0;
+  for(let j=0;j<ny-1;j++)for(let i=0;i<nx-1;i++){const a=j*nx+i,b=a+1,c=a+nx,d=c+1; idx[n++]=a;idx[n++]=c;idx[n++]=b; idx[n++]=b;idx[n++]=c;idx[n++]=d;}
+  const geo=new T3.BufferGeometry(); geo.setAttribute('position',new T3.BufferAttribute(pos,3)); geo.setIndex(new T3.BufferAttribute(idx,1)); geo.computeVertexNormals();
+  const mat=new T3.MeshStandardMaterial({color:0xE9E3D3, roughness:0.8, metalness:0, side:T3.DoubleSide, flatShading:false});
+  const group=new T3.Group(); group.add(new T3.Mesh(geo,mat));
+  const wp=[]; const per=printPerimeter(nx,ny);
+  for(let k=0;k<per.length;k++){
+    const [ia,ja]=per[k],[ib,jb]=per[(k+1)%per.length], a=(ja*nx+ia)*3, b=(jb*nx+ib)*3;
+    wp.push(pos[a],pos[a+1],pos[a+2], pos[b],pos[b+1],pos[b+2], pos[a],0,pos[a+2],  pos[b],pos[b+1],pos[b+2], pos[b],0,pos[b+2], pos[a],0,pos[a+2]);
+  }
+  const X=Wmm*s, Zd=D*s;
+  wp.push(0,0,0, X,0,0, 0,0,Zd, X,0,0, X,0,Zd, 0,0,Zd);
+  const wg=new T3.BufferGeometry(); wg.setAttribute('position',new T3.BufferAttribute(new Float32Array(wp),3)); wg.computeVertexNormals();
+  group.add(new T3.Mesh(wg,mat));
+  group.add(new T3.HemisphereLight(0xffffff,0x4a5a70,0.9));
+  const sun=new T3.DirectionalLight(0xffffff,2.4); sun.position.set(X/2-16,11,Zd/2-11); sun.target.position.set(X/2,0,Zd/2);
+  group.add(sun); group.add(sun.target);
+  group.visible=S.preview; R3.scene.add(group);
+  PV={group,X,Zd,H:M.hmax*s,w,M};
+  document.getElementById('pvInfo').textContent=`Print preview · ${Wmm} × ${D.toFixed(0)} × ${M.hmax.toFixed(0)} mm`;
+  dirty=true;
+}
+function schedulePreview(){ if(!S.preview) return; clearTimeout(pvT); pvT=setTimeout(buildPreview,200); }
+function fitPreview(){
+  const t=new T3.Vector3(PV.X/2,PV.H*0.35,PV.Zd/2);
+  animateTo(viewFor(t,fitBox(t,0,PV.X,0,PV.Zd,0,PV.H,0.95,0.5,0.98),0.95,0.5),600);
+}
+function setPreview(on){
+  if(!R3) return;
+  S.preview=on;
+  if(on) buildPreview();
+  R3.terrainParts.forEach(m=>m.visible=!on);
+  if(R3.groups.runs) R3.groups.runs.visible=!on&&S.showRuns;
+  if(R3.groups.routes) R3.groups.routes.visible=!on;
+  if(PV) PV.group.visible=on;
+  R3.renderer.setClearColor(on?0xd5dbe3:0xdfe5ec,1);
+  mapwrap.classList.toggle('pv',on); hideProbe(); hoverPt=null;
+  document.getElementById('pvBtn').textContent=on?'Exit preview':'Preview print';
+  if(on){
+    fitPreview();
+    if(window.innerWidth<=860) mapwrap.scrollIntoView({behavior:'smooth'});
+  } else fit(true);
+  dirty=true;
+}
+document.getElementById('pvBtn').onclick=()=>setPreview(!S.preview);
+document.getElementById('pvExit').onclick=()=>setPreview(false);
+
+document.getElementById('printBtn').onclick=async()=>{
+  const msg=document.getElementById('printMsg'), btn=document.getElementById('printBtn'), w=+document.getElementById('printW').value;
+  btn.disabled=true; msg.textContent='Building the model…';
+  await new Promise(r=>setTimeout(r,30));
+  try{
+    const M=buildSTL(w), base=`whistler-avalanche-model-${w}mm`;
+    const info=`${(M.nTri/1000).toFixed(0)}k triangles, ${M.Wmm.toFixed(0)} × ${M.Dmm.toFixed(0)} × ${M.hmax.toFixed(0)} mm`;
+    if(dlCap){
+      msg.textContent='Compressing…';
+      const z=await zipOne(base+'.stl',new Uint8Array(M.buf));
+      try{ await dlCap.save({filename:base+'.zip',data:z}); msg.textContent=`Saved ${base}.zip (${info}). Unzip it to get the STL.`; }
+      catch(e){ msg.textContent=e&&e.code==='declined'?'Download cancelled.':'Downloads are not available in this view. Open the GitHub Pages site to get the STL.'; }
+    } else {
+      const url=URL.createObjectURL(new Blob([M.buf],{type:'model/stl'}));
+      const a=document.createElement('a'); a.href=url; a.download=base+'.stl'; document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(()=>URL.revokeObjectURL(url),60000);
+      msg.textContent=`Downloaded ${base}.stl (${info}, ${(M.buf.byteLength/1048576).toFixed(0)} MB).`;
+    }
+  }catch(e){ console.error(e); msg.textContent='Could not build the model: '+e.message; }
+  btn.disabled=false;
+};
+
+
+/* ---------------- conditions UI ---------------- */
+function dangerUI(){
+  const host=document.getElementById('dangerRows'); host.innerHTML='';
+  for(const [k,label] of BANDS){
+    const row=document.createElement('div'); row.className='danger-row';
+    row.innerHTML=`<div class="small">${label}</div><div class="dsel">${DANGER.map((d,j)=>`<button data-v="${j+1}" title="${d}">${j+1}</button>`).join('')}</div>`;
+    row.querySelectorAll('button').forEach(b=>{
+      const v=+b.dataset.v; const on=S.danger[k]===v; b.classList.toggle('on',on);
+      if(on){b.style.background=CLS[v-1].c; b.style.color=v===5?'#fff':'#111';}
+      b.onclick=()=>{S.danger[k]=v; markManual(); dangerUI(); recompute();};
+    });
+    const nm=document.createElement('div'); nm.className='small muted'; nm.style.gridColumn='2'; nm.style.marginTop='-3px'; nm.textContent=DANGER[S.danger[k]-1];
+    host.appendChild(row); host.appendChild(nm);
+  }
+}
+function roseSVG(asp){
+  let s='<svg class="rose" viewBox="-50 -50 100 100">';
+  for(let k=0;k<8;k++){
+    const a0=(k*45-22.5-90)*Math.PI/180, a1=(k*45+22.5-90)*Math.PI/180, R=44, r=10;
+    const p=`M${r*Math.cos(a0)} ${r*Math.sin(a0)} L${R*Math.cos(a0)} ${R*Math.sin(a0)} A${R} ${R} 0 0 1 ${R*Math.cos(a1)} ${R*Math.sin(a1)} L${r*Math.cos(a1)} ${r*Math.sin(a1)} A${r} ${r} 0 0 0 ${r*Math.cos(a0)} ${r*Math.sin(a0)}Z`;
+    s+=`<path data-k="${k}" d="${p}" fill="${asp[k]?'#C9A227':'#0B1F3A'}"><title>${ASP[k]}</title></path>`;
+    const am=(k*45-90)*Math.PI/180; s+=`<text x="${30*Math.cos(am)}" y="${30*Math.sin(am)+3}" text-anchor="middle" font-size="9" font-weight="700" fill="${asp[k]?'#0B1F3A':'#7F90AA'}" pointer-events="none">${ASP[k]}</text>`;
+  }
+  return s+'</svg>';
+}
+function probsUI(){
+  const host=document.getElementById('probs'); host.innerHTML='';
+  if(!S.problems.length) host.innerHTML='<div class="muted small" style="margin-bottom:8px">No problems listed. Hazard follows the danger ratings evenly across aspects.</div>';
+  S.problems.forEach((P,idx)=>{
+    const d=document.createElement('div'); d.className='prob';
+    d.innerHTML=`<div class="top"><select class="ptype">${PTYPES.map(([v,l])=>`<option value="${v}" ${v===P.type?'selected':''}>${l}</option>`).join('')}</select><button class="x" title="Remove">✕</button></div>
+      <div class="rowf" style="margin-top:8px;align-items:flex-start;flex-wrap:nowrap">${roseSVG(P.asp)}
+        <div style="flex:1;min-width:0">
+          <div class="field"><label>Elevation bands</label><div class="chips">${BANDS.map(([k,l])=>`<span class="chip ${P.bands[k]?'on':''}" data-b="${k}">${k.toUpperCase()}</span>`).join('')}</div></div>
+          <div class="field" style="margin-top:6px"><label>Likelihood</label><select class="plike">${LIKE.map((l,j)=>`<option value="${j+1}" ${P.like===j+1?'selected':''}>${l}</option>`).join('')}</select></div>
+          <div class="field" style="margin-top:6px"><label>Expected size</label><select class="psize">${SIZES.map(z=>`<option ${P.size===z?'selected':''}>${z}</option>`).join('')}</select></div>
+        </div></div>`;
+    d.querySelector('.ptype').onchange=e=>{P.type=e.target.value; markManual(); recompute();};
+    d.querySelector('.plike').onchange=e=>{P.like=+e.target.value; markManual(); recompute();};
+    d.querySelector('.psize').onchange=e=>{P.size=+e.target.value; markManual(); recompute();};
+    d.querySelector('.x').onclick=()=>{S.problems.splice(idx,1); markManual(); probsUI(); recompute();};
+    d.querySelectorAll('.chip').forEach(c=>c.onclick=()=>{P.bands[c.dataset.b]=P.bands[c.dataset.b]?0:1; markManual(); probsUI(); recompute();});
+    d.querySelectorAll('path').forEach(p=>p.onclick=()=>{const k=+p.dataset.k; P.asp[k]=P.asp[k]?0:1; markManual(); probsUI(); recompute();});
+    host.appendChild(d);
+  });
+  document.getElementById('addProb').style.display=S.problems.length>=3?'none':'inline-block';
+}
+document.getElementById('addProb').onclick=()=>{S.problems.push({type:'persistent',bands:{alp:1,tl:1,btl:0},asp:[1,1,0,0,0,0,0,1],like:2,size:2}); markManual(); probsUI(); recompute();};
+const wxIds=['hn24','hn72','wind','temp','fl'];
+function wxUI(){
+  wxIds.forEach(k=>document.getElementById(k).value=S.wx[k]);
+  const sel=document.getElementById('windDir'); sel.innerHTML=ASP.map((a,k)=>`<option value="${k}" ${S.wx.windDir===k?'selected':''}>${a}</option>`).join('');
+}
+wxIds.forEach(k=>document.getElementById(k).addEventListener('input',e=>{const v=parseFloat(e.target.value); if(!isNaN(v)){S.wx[k]=v; markManual(); recompute();}}));
+document.getElementById('windDir').onchange=e=>{S.wx.windDir=+e.target.value; markManual(); recompute();};
+
+/* ---------------- live data (hybrid) ---------------- */
+const LIVE={wx:{st:'wait',msg:'Checking Open-Meteo…'},av:{st:'wait',msg:'Checking Avalanche Canada…'}};
+function srcLabel(){
+  const l=document.getElementById('srcLabel');
+  l.textContent = S.source==='example'?'Showing example conditions, not today’s forecast':S.source==='live'?'Using live data':S.source==='mixed'?'Live data with manual edits':'Manual entry';
+}
+function markManual(){ if(S.source==='live') S.source='mixed'; else if(S.source==='example') S.source='manual'; srcLabel(); }
+function liveUI(){
+  const el=document.getElementById('liveStatus');
+  const row=(o,name)=>`<div class="s"><span class="dot ${o.st}"></span><div><b>${name}</b> <span class="muted">${o.msg}</span></div></div>`;
+  el.innerHTML=row(LIVE.av,'Avalanche Canada')+row(LIVE.wx,'Open-Meteo weather')+
+    ((LIVE.av.st==='bad'||LIVE.wx.st==='bad')?`<div class="muted small" style="margin-top:4px">Enter the current <a href="https://avalanche.ca/forecasts" target="_blank" rel="noopener">Sea-to-Sky forecast</a> below. Live loading works when this page is hosted on your own site or opened as a file.</div>`:'');
+  srcLabel();
+}
+async function fetchJSON(url,ms=7000){
+  const c=new AbortController(); const t=setTimeout(()=>c.abort(),ms);
+  try{const r=await fetch(url,{signal:c.signal}); if(!r.ok) throw new Error('HTTP '+r.status); return await r.json();}
+  finally{clearTimeout(t);}
+}
+async function liveWeather(){
+  const url='https://api.open-meteo.com/v1/forecast?latitude=50.06&longitude=-122.95&elevation=2000&hourly=snowfall,temperature_2m,wind_speed_10m,wind_direction_10m,freezing_level_height&past_days=3&forecast_days=1&timezone=America%2FVancouver';
+  const j=await fetchJSON(url); const h=j.hourly; const now=Date.now();
+  const tms=h.time.map(t=>new Date(t).getTime()); let n=tms.findIndex(t=>t>now); if(n<0)n=tms.length; n=Math.max(1,n);
+  const sum=(arr,hrs)=>arr.slice(Math.max(0,n-hrs),n).reduce((a,b)=>a+(b||0),0);
+  const last=(arr,hrs)=>arr.slice(Math.max(0,n-hrs),n).filter(v=>v!=null);
+  const ws=last(h.wind_speed_10m,12), wd=last(h.wind_direction_10m,12);
+  const sx=wd.reduce((a,d,k)=>a+Math.sin(d*Math.PI/180)*(ws[k]||1),0), sy=wd.reduce((a,d,k)=>a+Math.cos(d*Math.PI/180)*(ws[k]||1),0);
+  const dir=((Math.atan2(sx,sy)*180/Math.PI)+360)%360;
+  S.wx={hn24:Math.round(sum(h.snowfall,24)), hn72:Math.round(sum(h.snowfall,72)),
+    wind:Math.round(ws.reduce((a,b)=>a+b,0)/Math.max(1,ws.length)), windDir:Math.round(dir/45)%8,
+    temp:Math.round(h.temperature_2m[n-1]), fl:Math.round((h.freezing_level_height[n-1]||0)/50)*50};
+  return new Date(tms[n-1]).toLocaleString([], {month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+}
+const AVMAP={low:1,moderate:2,considerable:3,high:4,extreme:5};
+const PTMAP={'storm-slab':'storm','wind-slab':'wind','persistent-slab':'persistent','deep-persistent-slab':'deep','wet-slab':'wetslab','loose-wet':'wetloose','loose-dry':'dryloose','cornice':'cornice','cornices':'cornice'};
+const LKMAP={'unlikely':1,'possible':2,'likely':3,'very-likely':4,'certain':5,'almost-certain':5};
+function val(x){return (x&&typeof x==='object')?(x.value??x.display??''):x;}
+async function liveAvalanche(){
+  const urls=['https://api.avalanche.ca/forecasts/en/products/point?lat=50.06&long=-122.95',
+              'https://api.avalanche.ca/forecasts/en/products/point?lat=50.06&lng=-122.95'];
+  let j=null, err;
+  for(const u of urls){try{j=await fetchJSON(u); break;}catch(e){err=e;}}
+  if(!j) throw err||new Error('no response');
+  const rep=j.report||j.product?.report||j;
+  const dr=(rep.dangerRatings||[])[0]; if(!dr) throw new Error('No danger ratings in response');
+  const rt=dr.ratings||dr;
+  const pick=k=>AVMAP[String(val(rt[k]?.rating)||'').toLowerCase()];
+  const d={alp:pick('alp'), tl:pick('tln')||pick('tl'), btl:pick('btl')};
+  if(!d.alp||!d.tl||!d.btl) throw new Error('No rating issued (off-season or unrated)');
+  const probs=[];
+  for(const p of (rep.problems||[]).slice(0,3)){
+    const type=PTMAP[String(val(p.type)).toLowerCase()]; if(!type) continue;
+    const data=p.data||p;
+    const bands={alp:0,tl:0,btl:0}; (data.elevations||[]).forEach(e=>{const v=String(val(e)).toLowerCase(); if(v==='alp')bands.alp=1; if(v==='tln'||v==='tl')bands.tl=1; if(v==='btl')bands.btl=1;});
+    const asp=[0,0,0,0,0,0,0,0]; (data.aspects||[]).forEach(a=>{const k=ASP.indexOf(String(val(a)).toUpperCase()); if(k>=0)asp[k]=1;});
+    const like=LKMAP[String(val(data.likelihood)).toLowerCase()]||2;
+    const es=data.expectedSize||{}; const sz=parseFloat(es.max||es.min||2);
+    probs.push({type,bands,asp,like,size:SIZES.reduce((a,b)=>Math.abs(b-sz)<Math.abs(a-sz)?b:a,2)});
+  }
+  S.danger=d; S.problems=probs;
+  return (rep.title||'Sea-to-Sky')+(rep.dateIssued?' · issued '+new Date(rep.dateIssued).toLocaleDateString():'');
+}
+async function tryLive(){
+  LIVE.wx={st:'wait',msg:'Checking…'}; LIVE.av={st:'wait',msg:'Checking…'}; liveUI();
+  let got=0;
+  try{const t=await liveWeather(); LIVE.wx={st:'ok',msg:'Loaded ('+t+')'}; got++;}
+  catch(e){LIVE.wx={st:'bad',msg:'Not reachable from this page'};}
+  try{const t=await liveAvalanche(); LIVE.av={st:'ok',msg:'Loaded: '+t}; got++;}
+  catch(e){LIVE.av={st:'bad',msg: /rating|ratings/.test(e.message)?e.message:'Not reachable from this page'};}
+  if(got){ S.source = got===2?'live':'mixed'; dangerUI(); probsUI(); wxUI(); recompute(); }
+  liveUI();
+}
+document.getElementById('liveBtn').onclick=tryLive;
+
+/* ---------------- routes ---------------- */
+let ROUTES=[];
+function routeFromLL(name,kind,note,ll){
+  const g=ll.map(([a,b])=>toGrid(a,b)); return {id:Math.random().toString(36).slice(2),name,kind,note,ll,g};
+}
+function resample(g,stepCells=0.5){
+  const out=[g[0]];
+  for(let k=1;k<g.length;k++){
+    const [x0,y0]=g[k-1],[x1,y1]=g[k]; const L=Math.hypot(x1-x0,y1-y0); const n=Math.max(1,Math.ceil(L/stepCells));
+    for(let j=1;j<=n;j++) out.push([x0+(x1-x0)*j/n, y0+(y1-y0)*j/n]);
+  }
+  return out;
+}
+function assessArea(R){
+  const ring=R.g; const xs=ring.map(p=>p[0]), ys=ring.map(p=>p[1]);
+  const cells=[];
+  for(let y=Math.max(0,Math.floor(Math.min(...ys)));y<=Math.min(G.H-1,Math.ceil(Math.max(...ys)));y++)
+    for(let x=Math.max(0,Math.floor(Math.min(...xs)));x<=Math.min(G.W-1,Math.ceil(Math.max(...xs)));x++){
+      const px=x+0.5, py=y+0.5; let inside=false;
+      for(let i=0,j=ring.length-1;i<ring.length;j=i++){const [xi,yi]=ring[i],[xj,yj]=ring[j]; if((yi>py)!==(yj>py)&&px<(xj-xi)*(py-yi)/(yj-yi)+xi) inside=!inside;}
+      if(inside) cells.push(y*G.W+x);
+    }
+  if(!cells.length) resample(ring).forEach(p=>{if(inGrid(p[0],p[1]))cells.push(cellIdx(p[0],p[1]));});
+  if(!cells.length) return null;
+  const lenByCls=[0,0,0,0,0]; let maxScore=0,maxS=0,maxA=0,zmin=1e9,zmax=-1e9,mi=cells[0];
+  const sc=cells.map(i=>{const s=SCORE[i]; lenByCls[clsOf(s)]+=G.res*G.res/1e4; if(s>maxScore){maxScore=s;mi=i;} maxS=Math.max(maxS,G.slope[i]); maxA=Math.max(maxA,G.ates[i]); zmin=Math.min(zmin,G.elev[i]); zmax=Math.max(zmax,G.elev[i]); return s;}).sort((a,b)=>a-b);
+  const p90=sc[Math.floor(0.9*(sc.length-1))];
+  return {area:true, ha:cells.length*G.res*G.res/1e4, zmin, zmax, maxS, maxA, maxScore, p90, routeScore:0.55*p90+0.45*maxScore, lenByCls, mi, dist:0};
+}
+function assessRoute(R){
+  if(R.area) return assessArea(R);
+  const parts=(R.parts||[R.g]).map(p=>resample(p).filter(q=>inGrid(q[0],q[1]))).filter(p=>p.length);
+  if(!parts.length||parts.reduce((a,p)=>a+p.length,0)<2) return null;
+  const sm=[]; let dist=0, gain=0, loss=0, maxS=0, maxA=0, maxScore=0, maxIdx=0;
+  const lenByCls=[0,0,0,0,0];
+  for(const pts of parts){
+    for(let k=0;k<pts.length;k++){
+      const i=cellIdx(pts[k][0],pts[k][1]);
+      const z=G.elev[i], sc=SCORE[i];
+      if(k){const dd=Math.hypot(pts[k][0]-pts[k-1][0],pts[k][1]-pts[k-1][1])*G.res; dist+=dd; const dz=z-sm[sm.length-1].z; if(dz>0)gain+=dz; else loss-=dz; lenByCls[clsOf(sc)]+=dd;}
+      sm.push({d:dist,z,sc,i,g:pts[k]});
+      if(sc>maxScore){maxScore=sc;maxIdx=sm.length-1;}
+      maxS=Math.max(maxS,G.slope[i]);
+    }
+  }
+  // highest ATES held for >= 60 m
+  let run=0, prevA=-1;
+  for(let k=0;k<sm.length;k++){const a=G.ates[sm[k].i]; run = a===prevA?run+1:1; prevA=a; if(run>=4) maxA=Math.max(maxA,a);}
+  const sorted=sm.map(s=>s.sc).sort((a,b)=>a-b); const p90=sorted[Math.floor(0.9*(sorted.length-1))];
+  const routeScore=0.55*p90+0.45*maxScore;
+  // cruxes: contiguous >= Considerable
+  const cr=[]; let cur=null;
+  sm.forEach((s,k)=>{
+    if(clsOf(s.sc)>=2){ if(!cur) cur={a:k,b:k,max:s.sc,mk:k}; cur.b=k; if(s.sc>cur.max){cur.max=s.sc;cur.mk=k;} }
+    else if(cur && k-cur.b>4){cr.push(cur);cur=null;}
+  });
+  if(cur)cr.push(cur);
+  cr.forEach(c=>c.len=sm[c.b].d-sm[c.a].d);
+  const cruxes=cr.filter(c=>c.len>=30||c.max>=CUT[2]).sort((a,b)=>b.max-a.max).slice(0,4);
+  return {sm,dist,gain,loss,maxS,maxA,maxScore,p90,routeScore,lenByCls,cruxes};
+}
+function reason(i){
+  const F=factorsAt(i); const parts=[];
+  if(F.p>=0.45) parts.push(`start zone, ${F.s}° ${ASP[F.sec]} slope`);
+  else if(F.r>=0.3) parts.push(`runout below steep start zones`);
+  else parts.push(`${F.s}° ${ASP[F.sec]} slope`);
+  if(F.t>=0.45) parts.push('terrain trap');
+  if(F.windLoad>0.25) parts.push('wind-loaded lee slope');
+  if(F.warm>0.3) parts.push('warming on sunny aspect');
+  if(F.matched) parts.push(`matches ${PTYPES.find(p=>p[0]===F.matched.type)[1].toLowerCase()} problem`);
+  return parts.join(' · ');
+}
+const fmtKm=m=>(m/1000).toFixed(m<10000?2:1)+' km';
+function badge(s){const k=clsOf(s);return `<span class="badge" style="background:${CLS[k].c};color:${k===4?'#fff':'#111'}">${CLS[k].n}</span>`;}
+function renderAssess(){
+  const host=document.getElementById('assess');
+  const R=S.selected; if(!R){host.innerHTML='';return;}
+  const A=assessRoute(R); R.A=A;
+  if(!A){host.innerHTML='<div class="err">Route is outside the mapped area.</div>';return;}
+  const tot=A.lenByCls.reduce((a,b)=>a+b,0)||1;
+  const runNote=R.kind==='run'?`<div class="small" style="margin-top:8px;padding:6px 8px;border-radius:6px;background:var(--navy)">In-bounds run. Whistler Blackcomb ski patrol does avalanche control here, so an open run carries much less risk than this score. The score shows the slope as if it were uncontrolled, which is close to how it behaves when closed or before control work.</div>`:'';
+  if(A.area){
+    host.innerHTML=`<h2>Assessment</h2>
+    <div class="card">
+      <div class="rowf" style="justify-content:space-between"><b>${R.name}</b><span class="tag muted small">${routeTag(R)}</span></div>
+      ${runNote}
+      <div class="score" style="margin-top:10px"><div class="big">${A.routeScore.toFixed(0)}</div><div>${badge(A.routeScore)}<div class="muted small" style="margin-top:4px">Area score (0–100)</div></div></div>
+      <div class="stats">
+        <div class="stat"><div class="v">${A.ha.toFixed(1)} ha</div><div class="l">Area</div></div>
+        <div class="stat"><div class="v">${A.zmin}–${A.zmax}</div><div class="l">Elevation m</div></div>
+        <div class="stat"><div class="v">${A.maxS}°</div><div class="l">Steepest</div></div>
+        <div class="stat"><div class="v">${A.maxScore.toFixed(0)}</div><div class="l">Peak index</div></div>
+        <div class="stat"><div class="v">${A.p90.toFixed(0)}</div><div class="l">90th pct</div></div>
+        <div class="stat"><div class="v">${ATES[A.maxA].n}</div><div class="l">Max ATES</div></div>
+      </div>
+      <div class="small muted" style="margin-top:10px">Area by risk class</div>
+      <div class="bar">${A.lenByCls.map((l,k)=>l>0?`<div style="width:${l/tot*100}%;background:${CLS[k].c}"></div>`:'').join('')}</div>
+      <div class="small">${A.lenByCls.map((l,k)=>l>0?`<span style="margin-right:10px"><span class="sw" style="background:${CLS[k].c};width:9px;height:9px"></span> ${CLS[k].n} ${Math.round(l/tot*100)}%</span>`:'').join('')}</div>
+      <div class="small muted" style="margin-top:8px">Highest cell: ${reason(A.mi)}</div>
+    </div>`;
+    return;
+  }
+  host.innerHTML=`<h2>Assessment</h2>
+  <div class="card">
+    <div class="rowf" style="justify-content:space-between"><b>${R.name}</b><span class="tag muted small">${routeTag(R)}</span></div>
+    ${R.note?`<div class="muted small" style="margin-top:4px">${R.note}</div>`:''}${runNote}
+    <div class="score" style="margin-top:10px"><div class="big">${A.routeScore.toFixed(0)}</div><div>${badge(A.routeScore)}<div class="muted small" style="margin-top:4px">Route score (0–100)</div></div></div>
+    <div class="stats">
+      <div class="stat"><div class="v">${fmtKm(A.dist)}</div><div class="l">Distance</div></div>
+      <div class="stat"><div class="v">+${Math.round(A.gain)} / −${Math.round(A.loss)}</div><div class="l">Gain / loss m</div></div>
+      <div class="stat"><div class="v">${A.maxS}°</div><div class="l">Steepest</div></div>
+      <div class="stat"><div class="v">${A.maxScore.toFixed(0)}</div><div class="l">Peak index</div></div>
+      <div class="stat"><div class="v">${A.p90.toFixed(0)}</div><div class="l">90th pct</div></div>
+      <div class="stat"><div class="v">${ATES[A.maxA].n}</div><div class="l">Max ATES</div></div>
+    </div>
+    <div class="small muted" style="margin-top:10px">Distance by risk class</div>
+    <div class="bar">${A.lenByCls.map((l,k)=>l>0?`<div title="${CLS[k].n}: ${fmtKm(l)}" style="width:${l/tot*100}%;background:${CLS[k].c}"></div>`:'').join('')}</div>
+    <div class="small">${A.lenByCls.map((l,k)=>l>0?`<span style="margin-right:10px"><span class="sw" style="background:${CLS[k].c};width:9px;height:9px"></span> ${CLS[k].n} ${Math.round(l/tot*100)}%</span>`:'').join('')}</div>
+  </div>
+  <div class="card"><div class="small muted">Elevation and risk along the route</div>
+    <canvas id="profile"></canvas><div class="ptip" id="ptip">Hover or drag across the profile</div></div>
+  <div class="card"><div class="small muted">Cruxes (Considerable or higher)</div>
+    ${A.cruxes.length?A.cruxes.map((c,k)=>`<div class="crux" data-k="${k}">${badge(c.max)} <b>km ${(A.sm[c.a].d/1000).toFixed(2)}–${(A.sm[c.b].d/1000).toFixed(2)}</b> · ${Math.round(c.len)} m · peak ${c.max.toFixed(0)}<br><span class="muted">${reason(A.sm[c.mk].i)}</span></div>`).join(''):'<div class="small" style="margin-top:6px">No sustained sections at Considerable or above under these conditions.</div>'}
+  </div>`;
+  host.querySelectorAll('.crux').forEach(el=>el.onclick=()=>{
+    const c=A.cruxes[+el.dataset.k]; const g=A.sm[c.mk].g;
+    hoverPt=g; lookAtGrid(g[0],g[1],2.2);
+    if(window.innerWidth<=860) document.getElementById('mapwrap').scrollIntoView({behavior:'smooth'});
+  });
+  drawProfile(A);
+}
+function drawProfile(A){
+  const c=document.getElementById('profile'); if(!c||A.area)return;
+  const r=c.getBoundingClientRect(); if(r.width<10) return; const pr=window.devicePixelRatio||1;
+  c.width=r.width*pr; c.height=r.height*pr; const x=c.getContext('2d'); x.setTransform(pr,0,0,pr,0,0);
+  const P={l:44,r:10,t:10,b:24}; const w=r.width-P.l-P.r, h=r.height-P.t-P.b;
+  const zs=A.sm.map(s=>s.z); let z0=Math.min(...zs), z1=Math.max(...zs); const pad=Math.max(20,(z1-z0)*0.08); z0=Math.floor((z0-pad)/100)*100; z1=Math.ceil((z1+pad)/100)*100;
+  const X=d=>P.l+d/A.dist*w, Y=z=>P.t+h-(z-z0)/(z1-z0)*h;
+  // grid
+  x.strokeStyle='rgba(184,196,214,.12)'; x.lineWidth=1; x.fillStyle='#7F90AA'; x.font='10px Inter, sans-serif';
+  const zstep=(z1-z0)>1200?500:(z1-z0)>500?200:100;
+  for(let z=Math.ceil(z0/zstep)*zstep; z<=z1; z+=zstep){x.beginPath();x.moveTo(P.l,Y(z));x.lineTo(P.l+w,Y(z));x.stroke(); x.textAlign='right'; x.fillText(z+' m',P.l-5,Y(z)+3);}
+  const kstep=A.dist>20000?5000:A.dist>8000?2000:A.dist>3000?1000:500;
+  x.textAlign='center'; for(let d=0; d<=A.dist; d+=kstep) x.fillText((d/1000)+' km',X(d),P.t+h+15);
+  // risk-coloured fill segments
+  for(let k=1;k<A.sm.length;k++){
+    const a=A.sm[k-1], b=A.sm[k];
+    x.fillStyle=CLS[clsOf(b.sc)].c; x.globalAlpha=0.85;
+    x.beginPath(); x.moveTo(X(a.d),Y(a.z)); x.lineTo(X(b.d)+0.5,Y(b.z)); x.lineTo(X(b.d)+0.5,P.t+h); x.lineTo(X(a.d),P.t+h); x.closePath(); x.fill();
+  }
+  x.globalAlpha=1;
+  x.beginPath(); A.sm.forEach((s,k)=>k?x.lineTo(X(s.d),Y(s.z)):x.moveTo(X(s.d),Y(s.z))); x.strokeStyle='#EEF2F7'; x.lineWidth=2; x.stroke();
+  const tip=document.getElementById('ptip');
+  const move=e=>{
+    const rr=c.getBoundingClientRect(); const px=(e.clientX-rr.left); const d=Math.max(0,Math.min(A.dist,(px-P.l)/w*A.dist));
+    let k=0; while(k<A.sm.length-1&&A.sm[k].d<d)k++;
+    const s=A.sm[k];
+    // redraw crosshair
+    drawProfileStatic();
+    x.strokeStyle='#C9A227'; x.lineWidth=1.5; x.beginPath(); x.moveTo(X(s.d),P.t); x.lineTo(X(s.d),P.t+h); x.stroke();
+    x.beginPath(); x.arc(X(s.d),Y(s.z),4.5,0,7); x.fillStyle='#C9A227'; x.fill(); x.strokeStyle='#0B1F3A'; x.lineWidth=2; x.stroke();
+    tip.innerHTML=`km ${(s.d/1000).toFixed(2)} · ${s.z} m · ${G.slope[s.i]}° ${ASP[Math.round(G.aspect[s.i]*360/256/45)%8]} · ${badge(s.sc)} ${s.sc.toFixed(0)}`;
+    hoverPt=s.g; dirty=true;
+  };
+  const snap=x.getImageData(0,0,c.width,c.height);
+  function drawProfileStatic(){x.setTransform(1,0,0,1,0,0); x.putImageData(snap,0,0); x.setTransform(pr,0,0,pr,0,0);}
+  c.onpointermove=move; c.onpointerdown=e=>{c.setPointerCapture(e.pointerId);move(e);};
+  c.onpointerleave=()=>{drawProfileStatic(); hoverPt=null; dirty=true; tip.textContent='Hover or drag across the profile';};
+  c.style.touchAction='none';
+}
+function routeTag(R){
+  if(R.kind==='run') return `${DIFFS[R.diff].n} · ${R.mtn}${R.area?' · area':''}`;
+  return R.kind==='gps'?'GPS track':R.kind==='approx'?'Approximate':R.kind==='osm'?'OpenStreetMap trace':R.kind==='safe'?'Safest route':'Your route';
+}
+function ritem(R,A){
+  const d=document.createElement('div'); d.className='ritem'+(R===S.selected?' on':'');
+  d.innerHTML=`${R.kind==='run'?DIFFS[R.diff].i:''}<div style="flex:1;min-width:0"><div class="nm">${R.name}</div><div class="tag">${routeTag(R)}${A&&!A.area?' · '+fmtKm(A.dist):A&&A.area?' · '+A.ha.toFixed(1)+' ha':''}</div></div>${A?badge(A.routeScore):''}${(R.kind==='user'||R.kind==='safe')?'<button class="x" title="Remove">✕</button>':''}`;
+  d.onclick=e=>{ if(e.target.classList.contains('x')){ if(R===S.safe)S.safe=null; else S.userRoutes=S.userRoutes.filter(u=>u!==R); if(S.selected===R)S.selected=null; routeListUI(); renderAssess(); drawRoutes(); return;}
+    S.selected=R; routeListUI(); renderAssess(); drawRoutes(); focusRoute(R);
+    if(window.innerWidth<=860) mapwrap.scrollIntoView({behavior:'smooth'}); };
+  return d;
+}
+function routeListUI(){
+  const host=document.getElementById('routeList'); host.innerHTML='';
+  for(const R of [...ROUTES.filter(r=>r.group!=='uphill'),...S.userRoutes,...(S.safe?[S.safe]:[])]){ R.A=assessRoute(R); host.appendChild(ritem(R,R.A)); }
+  const up=document.getElementById('upList'); up.innerHTML='';
+  for(const R of ROUTES.filter(r=>r.group==='uphill')){ R.A=assessRoute(R); up.appendChild(ritem(R,R.A)); }
+  for(const R of RUNS) R.A=assessRoute(R);
+  runListUI();
+}
+function runListUI(){
+  printUI();
+  const q=S.runQ.trim().toLowerCase();
+  let list=RUNS.filter(R=>R.A&&(S.mtn==='all'||R.mtn===S.mtn)&&(!q||R.name.toLowerCase().includes(q))&&(R.name!=='Unnamed run'||q));
+  list.sort(S.runSort==='risk'?(a,b)=>b.A.routeScore-a.A.routeScore:(a,b)=>a.name.localeCompare(b.name));
+  const host=document.getElementById('runList'); host.innerHTML='';
+  list.slice(0,S.runShown).forEach(R=>host.appendChild(ritem(R,R.A)));
+  document.getElementById('runCount').textContent=list.length+' run'+(list.length===1?'':'s');
+  document.getElementById('runMore').style.display=list.length>S.runShown?'inline-block':'none';
+}
+document.querySelectorAll('#mtnSeg button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('#mtnSeg button').forEach(x=>x.classList.toggle('on',x===b)); S.mtn=b.dataset.m; S.runShown=25; runListUI();});
+document.getElementById('runQ').oninput=e=>{S.runQ=e.target.value; S.runShown=25; runListUI();};
+document.getElementById('runSort').onchange=e=>{S.runSort=e.target.value; runListUI();};
+document.getElementById('runMore').onclick=()=>{S.runShown+=25; runListUI();};
+function focusRoute(R){
+  const pts=(R.parts||[R.g]).flat(); const xs=pts.map(p=>p[0]), ys=pts.map(p=>p[1]);
+  const bx0=Math.min(...xs),bx1=Math.max(...xs),by0=Math.min(...ys),by1=Math.max(...ys);
+  const cx=(bx0+bx1)/2, cy=(by0+by1)/2;
+  const t=new T3.Vector3(wx(cx),meshH(cx,cy)*KM,wz(cy));
+  const pol=Math.min(curPolar(),0.95), az=curAz();
+  const d=fitBox(t,wx(bx0-4),wx(bx1+4),wz(by0-4),wz(by1+4),t.y-0.3,t.y+0.6,pol,az,0.8);
+  animateTo(viewFor(t,Math.max(1.0,d),pol,az),650);
+}
+
+/* drawing */
+function updDraw(){document.getElementById('drawCount').textContent=S.draw.length+' point'+(S.draw.length===1?'':'s');}
+document.getElementById('drawBtn').onclick=()=>{ if(S.mode==='draw'){S.draw=[];setMode('inspect');draw();return;} S.draw=[]; updDraw(); setMode('draw'); document.getElementById('routeErr').textContent=''; };
+document.getElementById('drawUndo').onclick=()=>{S.draw.pop();updDraw();draw();};
+document.getElementById('drawClear').onclick=()=>{S.draw=[];updDraw();draw();};
+document.getElementById('drawDone').onclick=()=>{
+  if(S.draw.length<2){document.getElementById('routeErr').textContent='Add at least two points.';return;}
+  const n=S.userRoutes.filter(r=>r.kind==='user').length+1;
+  const R={id:'u'+Date.now(),name:'New route '+n,kind:'user',note:'Drawn on the map.',g:S.draw.slice()};
+  S.userRoutes.push(R); S.selected=R; S.draw=[]; setMode('inspect'); routeListUI(); renderAssess(); drawRoutes();
+};
+document.getElementById('gpxIn').onchange=async e=>{
+  const f=e.target.files[0]; e.target.value=''; if(!f)return;
+  const err=document.getElementById('routeErr'); err.textContent='';
+  try{
+    const txt=await f.text(); const doc=new DOMParser().parseFromString(txt,'application/xml');
+    if(doc.querySelector('parsererror')) throw new Error('Could not read that file as GPX.');
+    let nodes=[...doc.getElementsByTagName('trkpt')]; if(!nodes.length) nodes=[...doc.getElementsByTagName('rtept')]; if(!nodes.length) nodes=[...doc.getElementsByTagName('wpt')];
+    const ll=nodes.map(n=>[parseFloat(n.getAttribute('lat')),parseFloat(n.getAttribute('lon'))]).filter(p=>!isNaN(p[0])&&!isNaN(p[1]));
+    if(ll.length<2) throw new Error('No track points found in that GPX.');
+    const R=routeFromLL((doc.querySelector('trk > name, rte > name, metadata > name')?.textContent||f.name.replace(/\.gpx$/i,'')).slice(0,40),'user','Imported from GPX.',ll);
+    const inside=R.g.filter(p=>inGrid(p[0],p[1])).length;
+    if(!inside) throw new Error('That track is outside the mapped Whistler area.');
+    if(inside<R.g.length) err.textContent=`${R.g.length-inside} of ${R.g.length} points fall outside the mapped area and were skipped.`;
+    S.userRoutes.push(R); S.selected=R; routeListUI(); renderAssess(); drawRoutes(); focusRoute(R);
+  }catch(ex){err.textContent=ex.message;}
+};
+
+/* safest route */
+function updSE(){
+  document.getElementById('findBtn').disabled=!(S.start&&S.end);
+  document.getElementById('seLabel').textContent = S.start&&S.end?'Start and end set':S.start?'Start set':S.end?'End set':'Tap the map after each button';
+}
+document.getElementById('setStart').onclick=()=>setMode('start');
+document.getElementById('setEnd').onclick=()=>setMode('end');
+const wSl=document.getElementById('wSlider'); const wLbl=()=>document.getElementById('wVal').textContent=wSl.value+'% safety weight'; wSl.oninput=wLbl;
+const workerSrc=`
+onmessage=e=>{
+  const {W,H,res,slope,elev,score,s,t,a}=e.data;
+  const N=W*H, dist=new Float64Array(N).fill(Infinity), prev=new Int32Array(N).fill(-1), done=new Uint8Array(N);
+  const hk=[], hv=[];
+  const push=(k,v)=>{hk.push(k);hv.push(v);let i=hk.length-1;while(i>0){const p=(i-1)>>1;if(hk[p]<=hk[i])break;[hk[p],hk[i]]=[hk[i],hk[p]];[hv[p],hv[i]]=[hv[i],hv[p]];i=p;}};
+  const pop=()=>{const v=hv[0];const lk=hk.pop(),lv=hv.pop();if(hk.length){hk[0]=lk;hv[0]=lv;let i=0;for(;;){const l=2*i+1,r=l+1;let m=i;if(l<hk.length&&hk[l]<hk[m])m=l;if(r<hk.length&&hk[r]<hk[m])m=r;if(m===i)break;[hk[m],hk[i]]=[hk[i],hk[m]];[hv[m],hv[i]]=[hv[i],hv[m]];i=m;}}return v;};
+  const tx=t%W, ty=(t/W)|0, K=a*250;
+  dist[s]=0; push(Math.hypot(s%W-tx,((s/W)|0)-ty)*res,s);
+  const NB=[[-1,-1],[0,-1],[1,-1],[-1,0],[1,0],[-1,1],[0,1],[1,1]];
+  let found=false;
+  while(hk.length){
+    const u=pop(); if(done[u])continue; done[u]=1; if(u===t){found=true;break;}
+    const ux=u%W, uy=(u/W)|0;
+    for(const [dx,dy] of NB){
+      const vx=ux+dx, vy=uy+dy; if(vx<0||vy<0||vx>=W||vy>=H)continue;
+      const v=vy*W+vx; if(done[v])continue;
+      const sl=slope[v]; if(sl>48&&v!==t)continue;
+      const d=(dx&&dy?1.41421356:1)*res;
+      const dz=elev[v]-elev[u];
+      const sc=score[v]/100;
+      const c=d*(1+Math.max(0,sl-25)/10)+Math.max(0,dz)*6+Math.max(0,-dz)*0.3+K*d*sc*sc;
+      const nd=dist[u]+c;
+      if(nd<dist[v]){dist[v]=nd;prev[v]=u;push(nd+Math.hypot(vx-tx,vy-ty)*res,v);}
+    }
+  }
+  if(!found){postMessage({path:null});return;}
+  const path=[];for(let v=t;v!==-1;v=prev[v])path.push(v);path.reverse();
+  postMessage({path});
+};`;
+let worker=null;
+document.getElementById('findBtn').onclick=()=>{
+  const msg=document.getElementById('findMsg'); msg.textContent='Searching…';
+  document.getElementById('findBtn').disabled=true;
+  try{ if(!worker) worker=new Worker(URL.createObjectURL(new Blob([workerSrc],{type:'text/javascript'}))); }
+  catch(e){ msg.textContent='Background search unavailable in this browser.'; return; }
+  const s=cellIdx(...S.start), t=cellIdx(...S.end); const a=wSl.value/100;
+  worker.onmessage=ev=>{
+    document.getElementById('findBtn').disabled=false;
+    const p=ev.data.path; if(!p){msg.textContent='No passable route found between those points.';return;}
+    let g=p.map(v=>[v%G.W+0.5,Math.floor(v/G.W)+0.5]);
+    // light smoothing for display
+    g=g.map((q,k)=>{if(k<2||k>g.length-3)return q; let sx=0,sy=0; for(let j=-2;j<=2;j++){sx+=g[k+j][0];sy+=g[k+j][1];} return [sx/5,sy/5];});
+    S.safe={id:'safe',name:`Safest route (${wSl.value}% safety)`,kind:'safe',note:'Computed by A* search on the current risk map. Check it against real terrain, cornices and crevasses before trusting it.',g};
+    S.selected=S.safe; msg.textContent=''; routeListUI(); renderAssess(); drawRoutes(); focusRoute(S.safe);
+  };
+  worker.postMessage({W:G.W,H:G.H,res:G.res,slope:G.slope,elev:G.elev,score:SCORE,s,t,a});
+};
+
+/* ---------------- recompute ---------------- */
+let rq=null;
+function recompute(){ clearTimeout(rq); rq=setTimeout(()=>{ computeScores(); renderBase(); routeListUI(); renderAssess(); },60); }
+
+/* ---------------- init ---------------- */
+let RUNS=[], LIFTS=[];
+const unq=p=>{const o=[]; for(let k=0;k<p.length;k+=2) o.push([p[k]/10,p[k+1]/10]); return o;};
+(async function init(){
+  try{
+    G=await loadTerrain();
+    ROUTES=ROUTEDATA.routes.map(r=>Object.assign(routeFromLL(r.name,r.kind,r.note,r.pts),{group:r.group}));
+    RUNS=RUNDATA.runs.map((r,k)=>{const parts=r.p.map(unq); return {id:'run'+k,name:r.n,kind:'run',diff:r.d,mtn:r.m,area:!!r.a,parts,g:parts.flat(),note:''};});
+    LIFTS=RUNDATA.lifts.map(l=>({name:l.n,type:l.t,g:unq(l.p)}));
+    dangerUI(); probsUI(); wxUI(); liveUI(); renderLegend(); wLbl();
+    computeScores(); prepTexture(); renderBase();
+    initGL();
+    document.getElementById('loading').remove();
+    resize(); fit(false); buildRunLayer(); drawRoutes(); routeListUI();
+    new ResizeObserver(()=>{resize();}).observe(mapwrap);
+    tryLive();
+  }catch(e){
+    console.error(e);
+    const l=document.getElementById('loading'); if(l) l.textContent='Could not load the map: '+e.message;
+  }
+})();
+</script>
+</body>
+</html>
