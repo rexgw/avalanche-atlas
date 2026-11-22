@@ -1,0 +1,11 @@
+OK   dem
+     overpass failed https://overpass-api.de/api/interpreter: <HTTPError 502: 'Bad Gateway'>
+     overpass failed https://overpass.kumi.systems/api/interpreter: <HTTPError 502: 'Bad Gateway'>
+FAIL osm: RuntimeError('overpass unreachable')
+OK   weather
+OK   avcan point
+     station 110 failed: <HTTPError 400: 'Bad Request'>
+     station 111 failed: <HTTPError 400: 'Bad Request'>
+     station 109 failed: <HTTPError 400: 'Bad Request'>
+     station 108 failed: <HTTPError 400: 'Bad Request'>
+OK   stations
