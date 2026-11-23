@@ -1,0 +1,1 @@
+2025-26: weather 4368 h, era5 4368 h, stations [4373, 4374, 4100, 4375], forecasts 119/121
