@@ -3,6 +3,7 @@
 Writes to build/data/<SITE>/:
   dem.tif           USGS 1 arc-second DEM cropped to the study area (public domain)
   osm_paths.json    OpenStreetMap trails and roads in the study area (ODbL, via Overpass)
+  glaciers.json     OpenStreetMap glacier outlines (natural=glacier, ODbL, via Overpass)
   weather_60d.json  Open-Meteo hourly weather, 61 past days + 2 forecast days (snapshot fallback)
   avcan_point.json  Avalanche Canada forecast product for the site point
   avcan_stations.json, station_<id>.json  Avalanche Canada weather stations near the area
@@ -59,6 +60,28 @@ def dem():
     with rasterio.open(os.path.join(OUT, "dem.tif"), "w", **prof) as dst:
         dst.write(z, 1)
     json.dump({"source": src_url}, open(os.path.join(OUT, "dem_source.json"), "w"))
+
+def overpass(q):
+    for attempt in range(3):
+        for ep in ["https://overpass-api.de/api/interpreter", "https://overpass.private.coffee/api/interpreter",
+                   "https://maps.mail.ru/osm/tools/overpass/api/interpreter", "https://overpass.kumi.systems/api/interpreter"]:
+            try:
+                return get(ep, data=urllib.parse.urlencode({"data": q}).encode(), timeout=300)
+            except Exception as e:
+                log.append(f"     overpass failed {ep}: {e!r}")
+        time.sleep(30)
+    raise RuntimeError("overpass unreachable")
+
+def glaciers():
+    # glacier outlines (natural=glacier ways and multipolygon relations), slightly wider than the map
+    q = f"""[out:json][timeout:180];
+(way["natural"="glacier"]({S-0.02},{W-0.03},{N+0.02},{E+0.03});
+ relation["natural"="glacier"]({S-0.02},{W-0.03},{N+0.02},{E+0.03}););
+out geom tags;"""
+    raw = overpass(q)
+    els = json.loads(raw).get("elements", [])
+    log.append(f"     glaciers: {len(els)} elements")
+    open(os.path.join(OUT, "glaciers.json"), "wb").write(raw)
 
 def osm():
     q = f"""[out:json][timeout:120];
@@ -147,7 +170,7 @@ def stations():
                 log.append(f"     station {sid} {s.get('name')} {d:.1f} km ok in {len(chunks)} chunks")
 
 only = sys.argv[1:] or ["dem", "osm", "weather", "avcan point", "stations"]
-for name, fn in [("dem", dem), ("osm", osm), ("weather", weather), ("avcan point", avcan), ("stations", stations)]:
+for name, fn in [("dem", dem), ("osm", osm), ("glaciers", glaciers), ("weather", weather), ("avcan point", avcan), ("stations", stations)]:
     if name not in only: continue
     step(name, fn)
 open(os.path.join(OUT, "fetch_log.txt"), "a").write("\n".join(log) + "\n")

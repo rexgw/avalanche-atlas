@@ -1,5 +1,5 @@
 name: Fetch Whistler data
-# Elevation, OpenStreetMap trails, weather snapshot and forecast for Whistler and Blackcomb,
+# Elevation, OpenStreetMap trails and glaciers, weather snapshot and forecast for Whistler and Blackcomb,
 # plus four winters of forecasts and weather for the accuracy test.
 on:
   workflow_dispatch:
@@ -16,7 +16,7 @@ jobs:
       - uses: actions/setup-python@v5
         with: {python-version: "3.12"}
       - run: pip install rasterio numpy
-      - run: SITE=whistler python build/fetch_site.py weather
+      - run: SITE=whistler python build/fetch_site.py weather glaciers
       - name: Accuracy test data
         run: |
           for y in 2022 2023 2024 2025; do
