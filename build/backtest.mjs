@@ -154,7 +154,7 @@ const report = {
   design: { compared_against: 'Parks Canada daily danger ratings and problems for Mount Temple (Banff, Yoho and Kootenay forecast)',
             months: 'December to March', tuned_on: train.map(S => S.season), tested_on: test.map(S => S.season),
             tuning: `${SEEDS.length} seeded random-search runs, each ${N1} samples + ${N2} refinements; objective = mean absolute rating error + 0.3 x (1 - mean F1 of storm, wind, persistent, deep problems) + 0.1 x (1 - wet problem F1) on the tuning winters; the run with the best tuning score is kept`,
-            disclosure: 'The test winter (2025-26) was scored three times while the tuning setup was adjusted (warming thresholds added, five range limits widened). The kept setup is the one with the best tuning-winter score. Because the test winter was looked at three times, it is not fully unseen.',
+            disclosure: 'The test winter (2025-26) was scored four times while the setup was adjusted: (1) original ranges: average error 0.655; (2) warming thresholds added to tuning: 0.597; (3) five range limits widened: 0.695; (4) duplicate-crust bug fixed in the model: 0.815 (this version is published). Each time the kept tuning run was the one with the best tuning-winter score, never the best test score. Because the test winter was looked at four times, it is not fully unseen.',
             note: 'Ratings are forecasts, not observed avalanches. Parks Canada days with no numeric rating (early season, spring, no rating) are skipped band by band.' },
   seasons: Object.values(seasons).map(S => ({ season: S.season, forecast_days: S.days.length, station_days: S.obsDays, snowfall_scale: +S.kcal.toFixed(2), temp_bias_c: +S.tbias.toFixed(2), station_rows: S.stationCounts })),
   test: { tuned_model: metrics(testRows), default_model: metrics(runAll(test, P0)), benchmark_climatology: metrics(clim(runAll(test, tuned))) },
@@ -177,6 +177,6 @@ const summary = { tested_on: report.design.tested_on.join(', '), months: 'Dec–
   runs: report.tuning_runs.length, range_exact: [Math.min(...report.tuning_runs.map(x => x.test_exact)), Math.max(...report.tuning_runs.map(x => x.test_exact))],
   range_mae: [Math.min(...report.tuning_runs.map(x => x.test_mae)), Math.max(...report.tuning_runs.map(x => x.test_mae))],
   per_season: report.per_season_tuned_params, per_season_benchmark: report.per_season_benchmark,
-  disclosure: 'Test winter scored three times while adjusting the tuning setup; earlier setups scored average error 0.60 to 0.66.' };
+  disclosure: 'Test winter scored four times while adjusting the setup (average error 0.60 to 0.82); this published version scored 0.82.' };
 fs.writeFileSync(path.join(DIR, 'summary.json'), JSON.stringify(summary, null, 1));
 console.log(JSON.stringify(summary, null, 1));

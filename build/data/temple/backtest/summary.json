@@ -2,10 +2,10 @@
  "tested_on": "2025-26",
  "months": "Dec–Mar",
  "n_band_ratings": 357,
- "exact": 0.35,
- "within1": 0.958,
- "mae": 0.695,
- "kappa": 0.624,
+ "exact": 0.308,
+ "within1": 0.88,
+ "mae": 0.815,
+ "kappa": 0.572,
  "bench_exact": 0.482,
  "bench_within1": 0.905,
  "bench_mae": 0.633,
@@ -13,18 +13,18 @@
  "beats_benchmark": false,
  "problems": {
   "storm": {
-   "hit": 0.8,
-   "false_alarm": 0.76,
+   "hit": 0.667,
+   "false_alarm": 0.667,
    "parks_days": 15
   },
   "wind": {
-   "hit": 0.363,
-   "false_alarm": 0.214,
+   "hit": 0.484,
+   "false_alarm": 0.241,
    "parks_days": 91
   },
   "persistent": {
-   "hit": 0.984,
-   "false_alarm": 0.465,
+   "hit": 0.887,
+   "false_alarm": 0.481,
    "parks_days": 62
   },
   "deep": {
@@ -34,63 +34,63 @@
   },
   "wet": {
    "hit": 1,
-   "false_alarm": 0.708,
+   "false_alarm": 0.65,
    "parks_days": 7
   }
  },
  "runs": 8,
  "range_exact": [
-  0.269,
-  0.409
+  0.294,
+  0.389
  ],
  "range_mae": [
-  0.681,
-  0.98
+  0.703,
+  0.86
  ],
  "per_season": {
   "2022-23": {
    "role": "tuning",
    "n": 363,
-   "exact": 0.424,
-   "within1": 0.961,
-   "mae": 0.614,
-   "bias": -0.466,
-   "kappa": 0.304,
+   "exact": 0.399,
+   "within1": 0.967,
+   "mae": 0.634,
+   "bias": -0.518,
+   "kappa": 0.351,
    "wind_hit": 0,
-   "persistent_hit": 0.952
+   "persistent_hit": 0.651
   },
   "2023-24": {
    "role": "tuning",
    "n": 359,
-   "exact": 0.398,
-   "within1": 0.947,
-   "mae": 0.655,
-   "bias": 0.214,
-   "kappa": 0.425,
-   "wind_hit": 0.269,
-   "persistent_hit": 1
+   "exact": 0.415,
+   "within1": 0.958,
+   "mae": 0.627,
+   "bias": 0.304,
+   "kappa": 0.515,
+   "wind_hit": 0.254,
+   "persistent_hit": 0.943
   },
   "2024-25": {
    "role": "tuning",
    "n": 363,
-   "exact": 0.435,
-   "within1": 0.992,
-   "mae": 0.573,
-   "bias": 0.193,
-   "kappa": 0.496,
-   "wind_hit": 0.203,
+   "exact": 0.479,
+   "within1": 0.994,
+   "mae": 0.526,
+   "bias": 0.284,
+   "kappa": 0.584,
+   "wind_hit": 0.291,
    "persistent_hit": 1
   },
   "2025-26": {
    "role": "test",
    "n": 357,
-   "exact": 0.35,
-   "within1": 0.958,
-   "mae": 0.695,
-   "bias": 0.499,
-   "kappa": 0.624,
-   "wind_hit": 0.363,
-   "persistent_hit": 0.984
+   "exact": 0.308,
+   "within1": 0.88,
+   "mae": 0.815,
+   "bias": 0.748,
+   "kappa": 0.572,
+   "wind_hit": 0.484,
+   "persistent_hit": 0.887
   }
  },
  "per_season_benchmark": {
@@ -115,5 +115,5 @@
    "mae": 0.633
   }
  },
- "disclosure": "Test winter scored three times while adjusting the tuning setup; earlier setups scored average error 0.60 to 0.66."
+ "disclosure": "Test winter scored four times while adjusting the setup (average error 0.60 to 0.82); this published version scored 0.82."
 }

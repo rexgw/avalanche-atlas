@@ -129,9 +129,15 @@
             if (surf && surf.type !== 'crust') { surf.str = Math.min(3, surf.str + 1); if (type === 'sh') surf.type = 'sh'; }
             else if (!surf) s.layers.push({ type, day: i, date: D.date, depth: 0, buried: false, str: 1, asp: [1, 1, 1, 1, 1, 1, 1, 1] });
           }
-          // crusts: rain on snow, or melt on sunny slopes
-          if (d.rain > 2) s.layers.push({ type: 'crust', day: i, date: D.date, depth: 0, buried: false, str: 1, asp: [1, 1, 1, 1, 1, 1, 1, 1] });
-          else if (d.tmax > P.meltT && D.solar > 2) s.layers.push({ type: 'crust', day: i, date: D.date, depth: 0, buried: false, str: 1, asp: [0, 0, 1, 1, 1, 1, 1, 0] });
+          // crusts: rain on snow, or melt on sunny slopes. One surface crust at a time: further melt days
+          // strengthen it (and rain widens it to all aspects) until new snow buries it.
+          const melt = d.rain > 2 ? 'rain' : (d.tmax > P.meltT && D.solar > 2) ? 'sun' : null;
+          if (melt) {
+            const sc = s.layers.find(L => !L.buried && L.type === 'crust');
+            if (sc) { sc.str = Math.min(3, sc.str + 1); if (melt === 'rain') sc.asp = [1, 1, 1, 1, 1, 1, 1, 1]; }
+            else s.layers.push({ type: 'crust', day: i, date: D.date, depth: 0, buried: false, str: 1,
+                                 asp: melt === 'rain' ? [1, 1, 1, 1, 1, 1, 1, 1] : [0, 0, 1, 1, 1, 1, 1, 0] });
+          }
           // basal facets: strong gradient through a thin pack (ground at 0 °C)
           const grad = (0 - d.tmean) / (Math.max(5, s.HS) / 100);
           if (grad > P.grad && s.HS < P.basalMaxHS) s.cold++;
