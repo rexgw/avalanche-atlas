@@ -1,0 +1,33 @@
+name: Accuracy test
+# Collects four winters of Parks Canada forecasts, weather and station data,
+# then tunes the model on 2022-25 and tests it on 2025-26 (Dec-Mar only).
+on:
+  workflow_dispatch:
+  push:
+    paths: [build/collect_backtest.py, build/backtest.mjs, build/model.js, .github/workflows/accuracy-test.yml]
+permissions:
+  contents: write
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12"}
+      - uses: actions/setup-node@v4
+        with: {node-version: "20"}
+      - name: Collect data (skipped for seasons already saved)
+        run: |
+          for y in 2022 2023 2024 2025; do
+            [ -f build/data/temple/backtest/season_$y.json ] || python build/collect_backtest.py $y
+          done
+      - name: Tune and test
+        run: if [ -f build/backtest.mjs ]; then node build/backtest.mjs; fi
+      - name: Commit results
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898699+github-actions[bot]@users.noreply.github.com"
+          git add build/data/temple/backtest
+          git diff --cached --quiet || git commit -m "Accuracy test data and results"
+          git pull --rebase -q && git push
