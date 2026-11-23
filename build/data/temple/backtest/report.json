@@ -1,5 +1,5 @@
 {
- "generated": "2026-11-23T04:04:36.570Z",
+ "generated": "2026-11-23T04:06:42.712Z",
  "design": {
   "compared_against": "Parks Canada daily danger ratings and problems for Mount Temple (Banff, Yoho and Kootenay forecast)",
   "months": "December to March",
@@ -12,8 +12,8 @@
    "2025-26"
   ],
   "tuning": "8 seeded random-search runs, each 600 samples + 400 refinements; objective = mean absolute rating error + 0.3 x (1 - mean F1 of storm, wind, persistent, deep problems) + 0.1 x (1 - wet problem F1) on the tuning winters; the run with the best tuning score is kept",
-  "note": "Ratings are forecasts, not observed avalanches. Parks Canada days with no numeric rating (early season, spring, no rating) are skipped band by band.",
-  "disclosure": "The test winter (2025-26) was scored three times while the tuning setup was adjusted: (1) original ranges and objective: kept run test MAE 0.655, exact 0.387; (2) warming thresholds added to tuning: test MAE 0.597, exact 0.423; (3) five range limits widened: test MAE 0.695, exact 0.350 (this version is kept, because the rule is to keep the setup with the best tuning-winter score, not the best test score). Because the test winter was looked at three times, it is not fully unseen."
+  "disclosure": "The test winter (2025-26) was scored three times while the tuning setup was adjusted (warming thresholds added, five range limits widened). The kept setup is the one with the best tuning-winter score. Because the test winter was looked at three times, it is not fully unseen.",
+  "note": "Ratings are forecasts, not observed avalanches. Parks Canada days with no numeric rating (early season, spring, no rating) are skipped band by band."
  },
  "seasons": [
   {
