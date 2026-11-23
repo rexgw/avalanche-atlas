@@ -151,6 +151,47 @@ trap = ndimage.gaussian_filter(trap, 0.6)
 zmax = ndimage.maximum_filter(z, size=11)  # ~330 m window
 crest = np.clip(1.0 - (zmax - z) / 150.0, 0, 1)
 
+# ---------- glaciers (OpenStreetMap natural=glacier), optional ----------
+import os
+from PIL import Image, ImageDraw
+glac = np.zeros(z.shape, dtype=np.uint8)
+gpath = os.path.join(os.path.dirname(os.path.abspath(dem_path)), "glaciers.json")
+def to_px(geom):
+    return [((pt["lon"] - LON_W) * MX / RES, (LAT_N - pt["lat"]) * MY / RES) for pt in geom]
+def rings(members):
+    """join member ways end to end into closed rings"""
+    segs = [m["geometry"] for m in members if m.get("geometry")]
+    out = []
+    while segs:
+        ring = list(segs.pop(0))
+        changed = True
+        while changed and (ring[0]["lat"], ring[0]["lon"]) != (ring[-1]["lat"], ring[-1]["lon"]):
+            changed = False
+            for k, sg in enumerate(segs):
+                a, b = (sg[0]["lat"], sg[0]["lon"]), (sg[-1]["lat"], sg[-1]["lon"])
+                e = (ring[-1]["lat"], ring[-1]["lon"])
+                if a == e: ring += sg[1:]
+                elif b == e: ring += list(reversed(sg))[1:]
+                else: continue
+                segs.pop(k); changed = True; break
+        if len(ring) >= 3: out.append(ring)
+    return out
+n_gl = 0
+if os.path.exists(gpath):
+    img = Image.new("L", (W, H), 0); dr = ImageDraw.Draw(img)
+    els = json.load(open(gpath)).get("elements", [])
+    holes = []
+    for el in els:
+        if el["type"] == "way" and el.get("geometry"):
+            dr.polygon(to_px(el["geometry"]), fill=1); n_gl += 1
+        elif el["type"] == "relation":
+            for r in rings([m for m in el.get("members", []) if m.get("role") == "outer"]):
+                dr.polygon(to_px(r), fill=1); n_gl += 1
+            holes += rings([m for m in el.get("members", []) if m.get("role") == "inner"])
+    for r in holes: dr.polygon(to_px(r), fill=0)
+    glac = np.array(img, dtype=np.uint8)
+print("glacier polygons", n_gl, "share of map", round(float(glac.mean()), 3))
+
 # ---------- ATES v1-04 technical model, three classes ----------
 # 0 Simple, 1 Challenging, 2 Complex (Parks Canada ATES v1-04, technical model).
 # ATES is meant for terrain at route scale, so each 30 m cell is rated from the terrain within
@@ -178,6 +219,12 @@ cplx = (f35 >= 0.30) | ((ftrap >= 0.25) & (f35 >= 0.10)) | ((runout >= 0.6) & (f
 ates[chall] = 1
 ates[cplx] = 2
 ates = ndimage.median_filter(ates, 3)
+# Glaciation (default descriptors): any glacier is at least Challenging ("isolated bands of crevasses");
+# glacier steeper than 25 deg is Complex ("broken or steep sections of crevasses, icefalls").
+# The 25 deg cut-off is our proxy: crevasse and icefall locations are not mapped.
+gsteep = ndimage.maximum_filter(((glac > 0) & (slope >= 25)).astype(np.uint8), 3) & (glac > 0)
+ates[(glac > 0) & (ates < 1)] = 1
+ates[gsteep > 0] = 2
 
 # ---------- hillshade ----------
 az, alt = np.radians(315), np.radians(40)
@@ -198,12 +245,13 @@ layers = {
     "trap": u8(trap * 255),
     "crest": u8(crest * 255),
     "ates": ates.astype(np.uint8),
+    "glac": glac,
     "hill": u8(hs * 255),
 }
 
 meta = dict(W=W, H=H, res=RES, lonW=LON_W, latN=LAT_N, mx=MX, my=MY,
             btlTop=BTL_TOP, tlTop=TL_TOP, alphaDeg=24.0,
-            source="USGS 3DEP 1 arc-second DEM tile n51w123 (public domain)")
+            source="USGS 3DEP 1 arc-second DEM tile n51w123 (public domain)", glaciers=n_gl)
 blob = {"meta": meta}
 for k, a in layers.items():
     raw = a.tobytes()

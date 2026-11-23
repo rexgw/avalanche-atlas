@@ -373,6 +373,7 @@ a{color:var(--gold2)}
         <li><b>Elevation:</b> USGS 3DEP 1 arc-second DEM, resampled to a 30 m grid over about 17 × 20.5 km covering Whistler, Blackcomb, the Spearhead Range and Wedgemount.</li>
         <li><b>Release areas:</b> fuzzy slope membership peaking near 40° (about 0.5 at 29° and 51°), reduced on very rough terrain and below treeline.</li>
         <li><b>Runout exposure:</b> energy-line propagation downhill from release areas using a <code>24°</code> travel angle above treeline and <code>28°</code> below (forest friction proxy). This catches valley floors and lakeshores under big slopes.</li>
+        <li><b>Glaciers:</b> OpenStreetMap glacier outlines (natural=glacier), drawn as a blue outline with light hatching on both map layers. They raise the ATES class: any glacier is at least Challenging, and glacier steeper than 25° is Complex as a stand-in for broken ice and icefalls, which are not mapped. Glaciers do not change the avalanche risk index, because crevasse hazard is not avalanche hazard. OSM outlines can be out of date as glaciers retreat.</li>
         <li><b>Terrain traps:</b> gullies (concave curvature), cliffs (&gt;50°), and abrupt flats below steep slopes.</li>
         <li><b>ATES class:</b> the three classes of the Parks Canada Avalanche Terrain Exposure Scale (technical model v1-04): Simple, Challenging, Complex. ATES rates terrain at route scale, so each 30 m cell is rated from the terrain within about 150 m. The scale's italic "default" descriptors force a class or higher:
           <ul>
@@ -380,7 +381,7 @@ a{color:var(--gold2)}
             <li>Complex: a large share over 35° (30 % or more of nearby cells), many terrain traps under steep ground (25 % or more trap cells with at least 10 % over 35°), numerous overlapping paths (runout reach of 0.6 or more with 30 % or more release-area cells within about 225 m; strong runout under a single path stays Challenging), and frequent exposure to start zones (inside a 35°+ release area where 30 % or more of nearby cells are release areas).</li>
             <li>Non-default descriptors: slopes over 30° on the cell, or open terrain above 1500 m with 20 % or more over 30°, also make it Challenging.</li>
           </ul>
-          The percentage cut-offs stand in for words like "isolated" and "large %" and are our choices, not values from the scale. Glaciers, crevasses, forest density and avalanche frequency are not mapped, so they cannot raise a class. Result for this map: Simple 41 %, Challenging 31 %, Complex 28 % of cells. A route's highest class is the highest it holds for 60 m or more; the assessment also shows how much of the route is in each class.</li>
+          The percentage cut-offs stand in for words like "isolated" and "large %" and are our choices, not values from the scale. Glacier outlines come from OpenStreetMap (see Glaciers above); crevasses, forest density and avalanche frequency are not mapped, so they cannot raise a class. Result for this map: Simple 41 %, Challenging 31 %, Complex 28 % of cells. A route's highest class is the highest it holds for 60 m or more; the assessment also shows how much of the route is in each class.</li>
       </ul>
       <h2>Overall danger and rating source</h2>
       <ul>
@@ -431,8 +432,9 @@ a{color:var(--gold2)}
         <li>Weather now: new snow loads all aspects above the freezing level. Wind over 15 km/h loads lee aspects near ridge crests. Warming above 0 °C adds hazard on sunny aspects and below the freezing level.</li>
       </ul>
       <h2>Formula</h2>
-      <p><code>terrain = 1 − (1 − release) × (1 − 0.85 × runout)</code><br><code>season = (1 + 0.7 × recent loading + 0.35 × facets) × (0.35 + 0.65 × snowpack support)</code><br><code>raw = terrain × danger × problem × weather × season × (1 + 0.6 × trap)</code><br><code>index = 100 × (1 − e^(−1.4 × raw))</code></p>
+      <p><code>terrain = 1 − (1 − release) × (1 − 0.85 × runout)</code><br><code>season = (1 + 0.7 × recent loading + 0.35 × facets) × (0.35 + 0.65 × snowpack support)</code><br><code>raw = terrain × danger × problem × weather × season × (1 + 0.6 × trap) × angle</code><br><code>index = 100 × (1 − e^(−1.4 × raw))</code></p>
       <p>Classes: Low &lt; 14, Moderate 14–31, Considerable 31–55, High 55–78, Extreme ≥ 78.</p>
+      <p><b>Slope angle factor.</b> The slope angle of each 30 m cell scales the risk directly, on top of the release-area term: ×0.4 under 20°, rising to ×0.9 at 30°, ×1.2 at 35° and ×1.3 from 38° to 45°, then easing to ×1.0 at 55° and steeper. Avalanche courses teach that most slab avalanches start on slopes of about 30° to 45°; the factor values themselves are our choice, not from a published source. Cells in runout zones keep at least ×1.0, because avalanches stop on gentle ground and a flat valley floor under big slopes is not safe. Mouse over the map to see the factor for a cell.</p>
       <h2>3D print</h2>
       <p>The STL is built in the browser from the same elevation data at about 0.4 mm spacing, with heights exaggerated 1.5 times. Routes are smooth rounded ridges 2.2 mm tall. The terrain has no risk texture and there is no legend strip. The model is watertight with a flat base.</p>
       <h2>Route scoring</h2>
@@ -447,7 +449,7 @@ a{color:var(--gold2)}
         <li>No forest-cover data: treeline effects come from elevation bands only.</li>
         <li>Summer trails are scored on their summer line. Winter travel often takes different lines (for example frozen lakes and the valley floor), which can be drawn or loaded as GPX.</li>
         <li>Trail, run and lift lines come from OpenStreetMap. Where OSM has no line (for example parts of the Spearhead Traverse) a least-effort terrain path joins the waypoints.</li>
-        <li>30 m cells miss small features like rolls, cornice edges and short gullies. Glaciers, seracs and crevasses (Blackcomb, Spearhead and Wedgemount glaciers) are not modelled.</li>
+        <li>30 m cells miss small features like rolls, cornice edges and short gullies. Glacier outlines are shown, but crevasses and seracs are not mapped, and glacier travel needs its own skills and rescue gear.</li>
         <li>Archived forecast models go back to 2022. Older dates run on ERA5 reanalysis alone.</li>
       </ul>
       <h2>Sources</h2>
@@ -459,7 +461,7 @@ a{color:var(--gold2)}
         <li>Open-Meteo forecast, historical forecast and ERA5 archive APIs (weather, CC BY 4.0)</li>
                 <li>Avalanche Canada Mountain Information Network</li>
         <li>Avalanche Canada public forecast API (Sea-to-Sky forecast region)</li>
-        <li>Trails and peaks: © OpenStreetMap contributors (ODbL), via the Overpass API</li>
+        <li>Trails, peaks and glacier outlines: © OpenStreetMap contributors (ODbL), via the Overpass API</li>
         <li>Incident history: Avalanche Canada incident reports and news reports linked in the list</li>
         <li>3D rendering: three.js (MIT licence)</li>
         <li>Statham et al. (2018) Conceptual Model of Avalanche Hazard; Larsen et al. (2020) AutoATES; Veitinger et al. (2016) PRA fuzzy model</li>
@@ -532,10 +534,16 @@ async function gunzip(b64){
 async function loadTerrain(){
   const m=TERRAIN.meta;
   const out={...m, N:m.W*m.H};
-  const keys=['elev','slope','aspect','pra','runout','trap','crest','ates','hill'];
+  const keys=['elev','slope','aspect','pra','runout','trap','crest','ates','hill'].concat(TERRAIN.glac?['glac']:[]);
   for(const k of keys){
     const u=await gunzip(TERRAIN[k]);
     out[k]= k==='elev' ? new Int16Array(u.buffer, u.byteOffset, u.byteLength/2) : u;
+  }
+  if(out.glac){ // glacier edge cells for the outline
+    const W=out.W,H=out.H,g=out.glac,e=new Uint8Array(W*H);
+    for(let y=0;y<H;y++)for(let x=0;x<W;x++){const i=y*W+x; if(!g[i]) continue;
+      if(x===0||y===0||x===W-1||y===H-1||!g[i-1]||!g[i+1]||!g[i-W]||!g[i+W]) e[i]=1;}
+    out.gedge=e;
   }
   return out;
 }
@@ -546,6 +554,10 @@ const cellIdx=(x,y)=>Math.min(G.H-1,Math.max(0,Math.floor(y)))*G.W+Math.min(G.W-
 
 /* ---------------- risk model ---------------- */
 let SCORE, CLASS;
+// Slope angle factor: strongest where most slab avalanches start (35-45 deg), weaker on gentle slopes,
+// easing on very steep ground that sluffs often. Breakpoints are our choice, documented in Method.
+const ANGLE=[[0,0.4],[20,0.4],[30,0.9],[35,1.2],[38,1.3],[45,1.3],[55,1.0],[90,1.0]];
+function angleF(s){ for(let k=1;k<ANGLE.length;k++){ if(s<=ANGLE[k][0]){ const [a,fa]=ANGLE[k-1],[b,fb]=ANGLE[k]; return fa+(fb-fa)*(s-a)/(b-a); } } return 1; }
 function factorsAt(i){
   const z=G.elev[i], s=G.slope[i], a=G.aspect[i]*360/256;
   const p=G.pra[i]/255, r=G.runout[i]/255, t=G.trap[i]/255, c=G.crest[i]/255;
@@ -587,9 +599,11 @@ function factorsAt(i){
   let wSea=1, sup=1, Lsea=0;
   const SP=PLAN||SEASON;
   if(SP){ Lsea=SP.L[band][sec]; sup=SP.sup[band]; wSea=1+0.7*Math.min(1.6,Lsea)+0.35*SP.pers[band]; }
-  const raw = T*DFACT[D-1]*f*Wx*(1+0.6*t)*wSea*(0.35+0.65*sup);
+  // angle factor; runout cells keep at least full weight (avalanches run out onto gentle ground)
+  const fa=angleF(s), rr=Math.min(1,r*rw), fA=fa*(1-rr)+Math.max(1,fa)*rr;
+  const raw = T*DFACT[D-1]*f*Wx*(1+0.6*t)*wSea*(0.35+0.65*sup)*fA;
   const score = 100*(1-Math.exp(-1.4*raw));
-  return {z,s,a,p,r,t,c,band,sec,D,f,matched,windLoad,warm:warm*solar*belowFL,Wx,T,raw,score,Lsea,sup};
+  return {z,s,a,p,r,t,c,band,sec,D,f,matched,windLoad,warm:warm*solar*belowFL,Wx,T,raw,score,Lsea,sup,fA};
 }
 function computeScores(){
   const N=G.N; SCORE=SCORE||new Float32Array(N); CLASS=CLASS||new Uint8Array(N);
@@ -650,6 +664,9 @@ function renderBase(){
         const k=G.ates[cy*G.W+Math.min(G.W-1,gx|0)]; if(atesRGB[k]){col=atesRGB[k]; al=k===2?0.55:0.45;}
       }
       if(col){r=r*(1-al)+col[0]*al; g=g*(1-al)+col[1]*al; b=b*(1-al)+col[2]*al;}
+      if(G.glac){ const gi=cy*G.W+Math.min(G.W-1,gx|0);
+        if(G.gedge[gi]){ r=r*0.15+25; g=g*0.15+150; b=b*0.15+215; }                 // outline
+        else if(G.glac[gi]&&((px+py)%7===0)){ r=r*0.45+60; g=g*0.45+150; b=b*0.45+210; } } // light hatch
       d[q]=r; d[q+1]=g; d[q+2]=b; d[q+3]=255;
     }
   }
@@ -954,7 +971,7 @@ function describeCell(i){
   const F=factorsAt(i);
   return `<b>${CLS[clsOf(F.score)].n}</b> · index ${F.score.toFixed(0)}<br>`+
     `${F.z} m · ${F.s}° · ${ASP[F.sec]} aspect · ${F.band.toUpperCase()}<br>`+
-    `ATES: ${ATES[G.ates[i]].n}<br>`+
+    `ATES: ${ATES[G.ates[i]].n}${G.glac&&G.glac[i]?' · glacier':''} · angle factor ×${F.fA.toFixed(2)}<br>`+
     `<span class="muted">Release ${(F.p*100|0)}% · Runout ${(F.r*100|0)}% · Trap ${(F.t*100|0)}%</span>`;
 }
 function showProbe(sx,sy,html,active){
@@ -1005,7 +1022,7 @@ function renderLegend(){
   } else {
     el.innerHTML=`<div class="t">ATES terrain class</div><div class="row">${ATES.map(c=>`<span class="k"><span class="sw" style="background:${c.c}"></span>${c.n}</span>`).join('')}</div>`;
   }
-  el.innerHTML+=`<div class="row" style="margin-top:6px">${S.showRuns?'<span class="k"><span class="lsw"></span>Ski run</span><span class="k"><span class="lsw lift"></span>Lift</span>':''}<span class="k"><span class="lsw route"></span>Route</span></div>`;
+  el.innerHTML+=`<div class="row" style="margin-top:6px">${G&&G.glac?'<span class="k"><span class="sw" style="background:repeating-linear-gradient(45deg,#cfe6f7 0 3px,#3c9ad8 3px 4px);border:2px solid #1996D7"></span>Glacier</span>':''}${S.showRuns?'<span class="k"><span class="lsw"></span>Ski run</span><span class="k"><span class="lsw lift"></span>Lift</span>':''}<span class="k"><span class="lsw route"></span>Route</span></div>`;
 }
 document.querySelectorAll('#layerSeg button').forEach(b=>b.onclick=()=>{
   document.querySelectorAll('#layerSeg button').forEach(x=>x.classList.toggle('on',x===b));
@@ -1720,6 +1737,7 @@ function reason(i){
   if(F.p>=0.45) parts.push(`start zone, ${F.s}° ${ASP[F.sec]} slope`);
   else if(F.r>=0.3) parts.push(`runout below steep start zones`);
   else parts.push(`${F.s}° ${ASP[F.sec]} slope`);
+  if(F.s>=35&&F.s<=45) parts.push('35–45° slope angle, where most slab avalanches start');
   if(F.t>=0.45) parts.push('terrain trap');
   if(F.windLoad>0.25) parts.push('wind-loaded lee slope');
   if(F.warm>0.3) parts.push('warming on sunny aspect');
