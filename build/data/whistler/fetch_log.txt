@@ -1,0 +1,16 @@
+OK   dem
+OK   osm
+FAIL weather: URLError(TimeoutError('_ssl.c:994: The handshake operation timed out'))
+OK   avcan point
+     station 71 try failed ations/71/measurements?fromDate=2026-09-23&toDate=2026-11-23: <HTTPError 400: 'Bad Request'>
+     station 71 try failed mDate=2026-09-23T00%3A00%3A00&toDate=2026-11-23T04%3A00%3A00: <HTTPError 400: 'Bad Request'>
+     station 71 chunk 2026-09-23 failed: <HTTPError 400: 'Bad Request'>
+     station 71 chunk 2026-09-30 failed: <HTTPError 400: 'Bad Request'>
+     station 71 chunk 2026-10-07 failed: <HTTPError 400: 'Bad Request'>
+     station 71 chunk 2026-10-14 failed: <HTTPError 400: 'Bad Request'>
+     station 71 chunk 2026-10-21 failed: <HTTPError 400: 'Bad Request'>
+     station 71 chunk 2026-10-28 failed: <HTTPError 400: 'Bad Request'>
+     station 71 chunk 2026-11-04 failed: <HTTPError 400: 'Bad Request'>
+     station 71 chunk 2026-11-11 failed: <HTTPError 400: 'Bad Request'>
+     station 71 chunk 2026-11-18 failed: <HTTPError 400: 'Bad Request'>
+OK   stations
