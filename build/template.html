@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Avalanche Risk Atlas: Mount Temple</title>
+<title>Avalanche Risk Atlas: Whistler and Blackcomb</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
 <style>
@@ -128,9 +128,9 @@ a{color:var(--gold2)}
 <body>
 <header>
   <svg class="mark" viewBox="0 0 32 32" aria-hidden="true"><path d="M2 27 L12 10 L17 18 L21 13 L30 27 Z" fill="#C9A227"/><path d="M12 10 L14.5 14.2 L12.6 13.4 L10.6 14.8 Z" fill="#EEF2F7"/></svg>
-  <div><h1>Avalanche Risk <span>Atlas</span></h1><div class="sub">Mount Temple · Larch Valley · Paradise Valley · Lake Louise · Banff National Park</div></div>
+  <div><h1>Avalanche Risk <span>Atlas</span></h1><div class="sub">Whistler · Blackcomb · Spearhead Range · Wedgemount</div></div>
 </header>
-<div class="disclaimer"><b>Educational model only.</b> Not a substitute for the <a href="https://avalanche.ca/forecasts" target="_blank" rel="noopener">Parks Canada avalanche forecast</a> (Banff, Yoho and Kootenay), AST training, or field observations. Never make go/no-go decisions from this map.</div>
+<div class="disclaimer"><b>Educational model only.</b> Not a substitute for the <a href="https://avalanche.ca/forecasts" target="_blank" rel="noopener">Avalanche Canada forecast</a> (Sea-to-Sky), AST training, or field observations. Never make go/no-go decisions from this map.</div>
 <div class="app">
   <div class="mapwrap" id="mapwrap">
     <canvas id="map"></canvas>
@@ -138,6 +138,7 @@ a{color:var(--gold2)}
     <div class="loading" id="loading">Loading terrain…</div>
     <div class="maptools">
       <div class="seg" id="layerSeg"><button data-l="risk" class="on">Risk heat map</button><button data-l="ates">ATES terrain</button></div>
+      <div class="seg toggle"><button id="runsTog" class="on">Ski runs</button></div>
     </div>
     <div class="zoom"><button id="zin" aria-label="Zoom in">+</button><button id="zout" aria-label="Zoom out">−</button><button id="zfit" aria-label="Reset view" style="font-size:12px">⤢</button><button id="znorth" class="compass" aria-label="Face north"><svg id="needle" viewBox="-10 -10 20 20" width="18" height="18"><path d="M0 -8 L4 3 L0 1 L-4 3 Z" fill="#C9A227"/><path d="M0 8 L4 3 L0 1 L-4 3 Z" fill="#7F90AA"/></svg></button></div>
     <div class="help" id="help"><span class="hd">Drag to rotate · scroll to zoom · right-drag to pan</span><span class="hm">Drag to rotate · pinch to zoom · two fingers to pan</span></div>
@@ -157,7 +158,7 @@ a{color:var(--gold2)}
           <button class="btn sm" id="todayBtn">Today</button>
           <button class="btn ghost sm" id="liveBtn">Reload data</button>
         </div>
-        <div class="muted small" style="margin-top:6px">Risk uses the 60 days of weather before this date. Official Parks Canada ratings are available from 2023, station readings from 2024, weather back to 1940.</div>
+        <div class="muted small" style="margin-top:6px">Risk uses the 60 days of weather before this date. Official Avalanche Canada ratings are available from 2022, weather back to 1940. There is no public weather station on the mountain.</div>
       </div>
 
       <h2>Live data sources</h2>
@@ -185,18 +186,18 @@ a{color:var(--gold2)}
       <div id="probs"></div>
 
       <h2>Buried weak layers (modelled)</h2>
-      <div class="muted small" style="margin:-4px 0 6px">Layers the model tracks from 1 October: surface hoar and near-surface facets formed on clear, cold nights, crusts from rain or sun, and facets near the ground in a thin, cold snowpack. Not observed; Parks Canada's forecast is the reference.</div>
+      <div class="muted small" style="margin:-4px 0 6px">Layers the model tracks from 1 October: surface hoar and near-surface facets formed on clear, cold nights, crusts from rain or sun, and facets near the ground in a thin, cold snowpack. Not observed; Avalanche Canada's forecast is the reference.</div>
       <div class="rlist" id="layerList"></div>
 
       <h2>Weather at the selected time</h2>
       <div class="muted small" style="margin:-4px 0 6px" id="wxSrc"></div>
       <div class="stats" id="wxStats"></div>
 
-      <h2>Field reports near Temple</h2>
+      <h2>Field reports near Whistler</h2>
       <div class="muted small" style="margin:-4px 0 6px">Avalanche Canada Mountain Information Network (MIN) reports within 20 km, in the 31 days before the selected date.</div>
       <div class="rlist" id="minList"></div>
 
-      <h2>Avalanche history near Temple</h2>
+      <h2>Avalanche history near Whistler</h2>
       <div class="rlist" id="histList"></div>
       <div class="muted small" style="margin-top:6px">Recorded incidents and accidents in the map area. Locations are approximate. Full records: <a href="https://incidents.avalanche.ca" target="_blank" rel="noopener">Avalanche Canada fatal incidents database</a>.</div>
     </div>
@@ -211,9 +212,23 @@ a{color:var(--gold2)}
         <div class="muted small" style="margin-top:6px">Used for travel time and exposure on the selected date. Warming on sunny slopes follows the hourly forecast for that day.</div>
       </div>
 
-      <h2>Existing routes</h2>
-      <div class="muted small" style="margin:-4px 0 6px">Summer and winter routes, all scored in the current winter conditions. Sorted by score, highest first.</div>
+      <h2>Hiking and backcountry routes</h2>
+      <div class="muted small" style="margin:-4px 0 6px">Summer and winter routes, all scored in the selected day's winter conditions. Sorted by score, highest first.</div>
       <div class="rlist" id="routeList"></div>
+
+      <h2>Designated uphill routes</h2>
+      <div class="rlist" id="upList"></div>
+      <div class="muted small" style="margin-top:6px">Whistler Blackcomb only allows uphill travel inside the ski area boundary on signed routes.</div>
+
+      <h2>Ski and snowboard runs</h2>
+      <div class="card">
+        <div class="rowf"><div class="seg" id="mtnSeg"><button data-m="all" class="on">Both</button><button data-m="Whistler">Whistler</button><button data-m="Blackcomb">Blackcomb</button></div>
+          <select id="runSort"><option value="risk">Highest risk first</option><option value="name">A to Z</option></select></div>
+        <div class="rowf" style="margin-top:8px"><input type="search" class="searchin" id="runQ" placeholder="Search runs"><span class="muted small" id="runCount"></span></div>
+        <div class="muted small" style="margin-top:8px">Tap a run on the map or in the list to score it. Ski patrol does avalanche control on open runs, so the score shows the slope as if it were uncontrolled.</div>
+      </div>
+      <div class="rlist" id="runList"></div>
+      <button class="btn ghost sm" id="runMore" style="margin-top:8px">Show more</button>
 
       <h2>New route</h2>
       <div class="card">
@@ -265,7 +280,7 @@ a{color:var(--gold2)}
       <p>The map is a 3D model of the elevation data, drawn as a 60 m mesh with no vertical exaggeration. The risk or ATES layer, 100 m contours and hillshade are draped over it at 15 m detail.</p>
       <h2>Terrain layers (pre-computed)</h2>
       <ul>
-        <li><b>Elevation:</b> USGS 3DEP 1 arc-second DEM, resampled to a 30 m grid over about 12.5 × 14.5 km around Mount Temple.</li>
+        <li><b>Elevation:</b> USGS 3DEP 1 arc-second DEM, resampled to a 30 m grid over about 17 × 20.5 km covering Whistler, Blackcomb, the Spearhead Range and Wedgemount.</li>
         <li><b>Release areas:</b> fuzzy slope membership peaking near 40° (about 0.5 at 29° and 51°), reduced on very rough terrain and below treeline.</li>
         <li><b>Runout exposure:</b> energy-line propagation downhill from release areas using a <code>24°</code> travel angle above treeline and <code>28°</code> below (forest friction proxy). This catches valley floors and lakeshores under big slopes.</li>
         <li><b>Terrain traps:</b> gullies (concave curvature), cliffs (&gt;50°), and abrupt flats below steep slopes.</li>
@@ -273,14 +288,14 @@ a{color:var(--gold2)}
       </ul>
       <h2>Last 60 days of weather</h2>
       <ul>
-        <li>For the selected date the app pulls the 61 days of hourly weather before it for Mount Temple from Open-Meteo: current forecast models for recent dates, archived forecast models from 2022, ERA5 reanalysis before that. ERA5 precipitation is also pulled and averaged with the model, because the two disagreed by about three times in autumn 2026 (21 mm against 62 mm). If today's pull fails it uses the snapshot saved in the page and says so.</li>
-        <li>Parks Canada weather stations (via Avalanche Canada, from 2024): snow depth at Bosworth Lower (2210 m, treeline) and Stanley (1930 m, below treeline) replaces the modelled depth and gives daily new snow; ridgetop wind from Bosworth Upper (2745 m, Whymper as backup) replaces the model wind; the model's temperature is shifted by its average error against Bosworth Upper; alpine snowfall is scaled by how far off the model was at treeline.</li>
-        <li>The Parks Canada forecast for the selected date sets the danger ratings and problems when one was issued (archive from 2023). Mountain Information Network reports within 20 km are listed for context but do not change the score.</li>
+        <li>For the selected date the app pulls the hourly weather before it (from 1 October of the season) for a point on Whistler Mountain from Open-Meteo: current forecast models for recent dates, archived forecast models from 2022, ERA5 reanalysis before that. ERA5 precipitation is also pulled and averaged with the model, because the two disagreed by about three times in autumn 2026 (21 mm against 62 mm). If today's pull fails it uses the snapshot saved in the page and says so.</li>
+        <li>No station correction: there is no public weather station on Whistler or Blackcomb. The nearest public stations are highway stations in the valley (Brandywine 496 m, Tantalus 320 m). Instead, one overall snowfall multiplier is tuned against Avalanche Canada's ratings in the accuracy test.</li>
+        <li>The Avalanche Canada forecast for the selected date (Sea-to-Sky region) sets the danger ratings and problems when one was issued (archive from 2022). Mountain Information Network reports within 20 km are listed for context but do not change the score.</li>
         <li>The single weather point is moved to three band elevations (below treeline 1850 m, treeline 2175 m, alpine 2700 m) with a −6.5 °C/km lapse rate and +50 % precipitation per km. Precipitation falls as snow below 0 °C, rain above +2 °C, mixed in between.</li>
         <li>Each day and band: snow depth (new snow at about 1 cm per mm of water, 3 % daily settlement, degree-day melt), snow available for wind transport, and cold dry days on a thin snowpack (faceting).</li>
         <li>For each band and each of 8 aspects a day counts as loading when it reaches a threshold: 30 cm storm snow in 72 h, 20 cm wind-deposited snow on lee aspects (wind over 20 km/h moving recent snow), 10 mm rain on a 30 cm snowpack, or strong warming on sunny aspects.</li>
         <li>Recent loading = strongest loading in the last days, counted 100 % today, 80 % yesterday, 60 % two days ago and so on. It multiplies the hazard on that band and aspect by up to 2.1×. Thin snowpack (under about 20 cm) lowers hazard to about a third, because there is not enough snow to slide.</li>
-        <li>When Parks Canada issued no rating (early or late season, or before 2023) the app models one from the replay and marks it as modelled.</li>
+        <li>When Avalanche Canada issued no rating (early or late season, or before 2022) the app models one from the replay and marks it as modelled.</li>
       </ul>
       <h2>Buried weak layers</h2>
       <ul>
@@ -295,11 +310,11 @@ a{color:var(--gold2)}
       <ul>
         <li>Travel time uses the Munter calculation: 1 km of distance or 100 m of climb or descent is one unit, at 4 units an hour uphill and 6 downhill, or half that in deep snow or on snowshoes.</li>
         <li>Minutes in start zones (release potential above 0.45) and under slopes (runout reach 0.25 or more) are added up. Risk-weighted exposure multiplies each minute by the score at that spot.</li>
-        <li>Warming: on the selected day, when the hourly air temperature at that elevation is above 0 °C and the sun is out, the score on sunny slopes is raised by up to 1.8×. This rule is a simplification; the test checks the daily version against days Parks Canada listed wet avalanche problems.</li>
+        <li>Warming: on the selected day, when the hourly air temperature at that elevation is above 0 °C and the sun is out, the score on sunny slopes is raised by up to 1.8×. This rule is a simplification; the test checks the daily version against days Avalanche Canada listed wet avalanche problems.</li>
       </ul>
       <h2>Conditions model</h2>
       <ul>
-        <li>Danger rating for each elevation band (BTL &lt; 2000 m, TL 2000–2350 m, ALP &gt; 2350 m) scales hazard roughly ×2 per level, following the Avalanche Canada scale.</li>
+        <li>Danger rating for each elevation band (BTL &lt; 1500 m, TL 1500–1900 m, ALP &gt; 1900 m, from the earlier Whistler build) scales hazard roughly ×2 per level, following the Avalanche Canada scale.</li>
         <li>Avalanche problems raise hazard on the listed aspects and bands (likelihood and size) and lower it elsewhere. Persistent and deep persistent problems extend runout weight. Loose problems shorten it. Cornices add hazard on crests.</li>
         <li>Weather now: new snow loads all aspects above the freezing level. Wind over 15 km/h loads lee aspects near ridge crests. Warming above 0 °C adds hazard on sunny aspects and below the freezing level.</li>
       </ul>
@@ -314,13 +329,13 @@ a{color:var(--gold2)}
       <p>A* search over the 30 m grid. Step cost = distance × slope effort + uphill gain + slider weight × distance × (index/100)². Slopes over 48° are treated as impassable. The search finds the path with the lowest total cost.</p>
       <h2>Limitations</h2>
       <ul>
-        <li>One weather point for the whole map. Terrain spreads it by elevation band and aspect only; local wind channelling around Temple is not modelled.</li>
+        <li>One weather point for the whole map. Terrain spreads it by elevation band and aspect only; local wind channelling between the peaks is not modelled.</li>
         <li>No snowpack layering. The faceting count is a rough flag, not a stability test, and buried weak layers from before the 60-day window are not seen.</li>
-        <li>The loading thresholds came from the earlier calibration on a synthetic mountain and have not been checked against Parks Canada observations at Lake Louise.</li>
+        <li>The model is tuned against Avalanche Canada's forecasts, not against observed avalanches.</li>
         <li>No forest-cover data: treeline effects come from elevation bands only.</li>
         <li>Summer trails are scored on their summer line. Winter travel often takes different lines (for example frozen lakes and the valley floor), which can be drawn or loaded as GPX.</li>
-        <li>Trail lines come from OpenStreetMap. The last pitch to the Mount Temple summit has no OSM line and uses a least-effort terrain path.</li>
-        <li>30 m cells miss small features like rolls, cornice edges and short gullies. Glaciers, seracs and crevasses on Temple's north face are not modelled.</li>
+        <li>Trail, run and lift lines come from OpenStreetMap. Where OSM has no line (for example parts of the Spearhead Traverse) a least-effort terrain path joins the waypoints.</li>
+        <li>30 m cells miss small features like rolls, cornice edges and short gullies. Glaciers, seracs and crevasses (Blackcomb, Spearhead and Wedgemount glaciers) are not modelled.</li>
         <li>No station sits in the Moraine Lake or Paradise Valley drainages: the nearest are 16 to 20 km north and west, so local snowfall differences are not captured.</li>
         <li>Station readings only go back to 2024 and the archived forecasts to 2023. Older dates run on the weather model alone.</li>
       </ul>
@@ -328,11 +343,10 @@ a{color:var(--gold2)}
       <ul class="small">
         <li>USGS 3D Elevation Program, 1 arc-second DEM tile n52w117 (public domain)</li>
         <li>Open-Meteo forecast, historical forecast and ERA5 archive APIs (weather, CC BY 4.0)</li>
-        <li>Parks Canada weather stations (Bosworth Upper and Lower, Whymper, Stanley) via the Avalanche Canada weather API</li>
-        <li>Avalanche Canada Mountain Information Network</li>
-        <li>Avalanche Canada public forecast API (Parks Canada forecast for Banff, Yoho and Kootenay) and danger scale</li>
+                <li>Avalanche Canada Mountain Information Network</li>
+        <li>Avalanche Canada public forecast API (Sea-to-Sky forecast region) and danger scale</li>
         <li>Trails and peaks: © OpenStreetMap contributors (ODbL), via the Overpass API</li>
-        <li>Incident history: Avalanche Canada incident reports, Parks Canada and news reports linked in the list</li>
+        <li>Incident history: Avalanche Canada incident reports and news reports linked in the list</li>
         <li>3D rendering: three.js (MIT licence)</li>
         <li>Statham et al. (2018) Conceptual Model of Avalanche Hazard; Larsen et al. (2020) AutoATES; Veitinger et al. (2016) PRA fuzzy model</li>
       </ul>
@@ -344,7 +358,7 @@ a{color:var(--gold2)}
 <script>
 const TERRAIN = /*__TERRAIN__*/null;
 const ROUTEDATA = /*__ROUTES__*/null;
-const RUNDATA = {runs:[],lifts:[]};
+const RUNDATA = /*__RUNS__*/null || {runs:[],lifts:[]};
 const WXSNAP = /*__WXSNAP__*/null;
 const HISTORY = /*__HISTORY__*/null;
 const DIFFS=[
@@ -380,7 +394,7 @@ const S = {
     {type:'wind', bands:{alp:1,tl:1,btl:0}, asp:[1,1,1,0,0,0,0,0], like:2, size:2}],
   wx:{hn24:15, hn72:35, wind:35, windDir:5, temp:-6, fl:900},
   source:'example', dangerFrom:'example', layer:'risk', mode:'inspect',
-  draw:[], start:null, end:null, selected:null, userRoutes:[], safe:null, showRuns:false, preview:false, mtn:'all', runQ:'', runSort:'risk', runShown:25
+  draw:[], start:null, end:null, selected:null, userRoutes:[], safe:null, showRuns:true, preview:false, mtn:'all', runQ:'', runSort:'risk', runShown:25
 };
 
 /* ---------------- data decode ---------------- */
@@ -984,7 +998,7 @@ function buildSTL(widthMM){
   for(let i=nx-2;i>=0;i--)per.push([i,ny-1]); for(let j=ny-2;j>=1;j--)per.push([0,j]);
   const nTop=2*(nx-1)*(ny-1), nPer=per.length, nTri=nTop+2*nPer+nPer;
   const buf=new ArrayBuffer(84+50*nTri), dv=new DataView(buf);
-  const hdr='Avalanche Risk Atlas Mount Temple tactile model'; for(let c=0;c<hdr.length;c++) dv.setUint8(c,hdr.charCodeAt(c));
+  const hdr='Avalanche Risk Atlas Whistler tactile model'; for(let c=0;c<hdr.length;c++) dv.setUint8(c,hdr.charCodeAt(c));
   dv.setUint32(80,nTri,true);
   let o=84;
   const X=i=>i*Wmm/(nx-1), Y=j=>Dtot-j*syp;
@@ -1132,7 +1146,7 @@ function roseSVG(asp){
 }
 function probsUI(){
   const host=document.getElementById('probs'); host.innerHTML='';
-  document.getElementById('probSrc').textContent=S.dangerFrom==='avcan'?'From the Parks Canada forecast.':'Modelled from the 60-day weather.';
+  document.getElementById('probSrc').textContent=S.dangerFrom==='avcan'?'From the Avalanche Canada forecast.':'Modelled from the 60-day weather.';
   if(!S.problems.length) host.innerHTML='<div class="muted small" style="margin-bottom:8px">No problems listed. Hazard follows the danger ratings evenly across aspects.</div>';
   for(const P of S.problems){
     const d=document.createElement('div'); d.className='prob';
@@ -1152,18 +1166,18 @@ function accUI(){
   if(!ACC){ el.textContent='Not run yet.'; return; }
   const p=x=>x==null?'–':Math.round(x*100)+'%';
   const PN={storm:'Storm slab',wind:'Wind slab',persistent:'Persistent slab',deep:'Deep persistent slab',wet:'Wet avalanches'};
-  el.innerHTML=`<p>Compared with Parks Canada's daily ratings for Mount Temple, ${ACC.months}, tested on ${ACC.tested_on} after tuning on the three earlier winters (${ACC.n_band_ratings} band ratings).</p>
+  el.innerHTML=`<p>Compared with Avalanche Canada's daily ratings at Whistler (Sea-to-Sky region), ${ACC.months}, tested on ${ACC.tested_on} after tuning on the three earlier winters (${ACC.n_band_ratings} band ratings).</p>
   <table style="width:100%;border-collapse:collapse;font-size:12px"><tr><td></td><td style="text-align:right">Model</td><td style="text-align:right">Usual rating for the month</td></tr>
   <tr><td>Exact match</td><td style="text-align:right">${p(ACC.exact)}</td><td style="text-align:right">${p(ACC.bench_exact)}</td></tr>
   <tr><td>Within one level</td><td style="text-align:right">${p(ACC.within1)}</td><td style="text-align:right">${p(ACC.bench_within1)}</td></tr>
   <tr><td>Average error (levels)</td><td style="text-align:right">${ACC.mae}</td><td style="text-align:right">${ACC.bench_mae}</td></tr>
   <tr><td>Weighted kappa</td><td style="text-align:right">${ACC.kappa}</td><td style="text-align:right">${ACC.bench_kappa}</td></tr></table>
-  <p style="margin-top:8px">Problems (share of Parks Canada's days the model also flagged, and share of the model's flags Parks Canada did not list):</p>
+  <p style="margin-top:8px">Problems (share of Avalanche Canada's days the model also flagged, and share of the model's flags Avalanche Canada did not list):</p>
   <ul>${Object.entries(ACC.problems).map(([k,v])=>`<li>${PN[k]}: caught ${p(v.hit)} of ${v.parks_days} days, false alarms ${p(v.false_alarm)}</li>`).join('')}</ul>
   <p>By winter (same settings): ${Object.entries(ACC.per_season||{}).map(([k,v])=>`${k} ${v.role==='test'?'(test)':'(tuning)'}: exact ${p(v.exact)}, average error ${v.mae}`).join('; ')}. Across ${ACC.runs} tuning runs the test-winter exact match ranged ${p(ACC.range_exact[0])} to ${p(ACC.range_exact[1])}.</p>
-  <p>Known weaknesses: it rarely rates Low (buried weak layers keep its danger above the Low cut-off), rates too high on average in the test winter, misses about 4 in 10 wind slab days, and over-flags storm, deep persistent and wet problems. Before October 2023 there are no station readings, so an average correction from the tuning winters is used instead.</p>
+  <p>Known weaknesses: it caught none of the wind slab or persistent slab days Avalanche Canada listed, and only about 1 in 5 of the wet avalanche days; storm slab days are caught well. It sometimes rates Extreme where Avalanche Canada rated High. There is no station correction, so snowfall depends on the weather model and one tuned multiplier.</p>
   ${ACC.disclosure?`<p class="muted">${ACC.disclosure}</p>`:''}
-  <p class="muted">Parks Canada's rating is a forecast, not a record of avalanches, so this measures agreement with the forecasters. Full results: build/data/temple/backtest/report.json in the repo.</p>`;
+  <p class="muted">Avalanche Canada's rating is a forecast, not a record of avalanches, so this measures agreement with the forecasters. Full results: build/data/whistler/backtest/report.json in the repo.</p>`;
 }
 function layersUI(){
   const host=document.getElementById('layerList'); if(!host) return; host.innerHTML='';
@@ -1183,22 +1197,22 @@ function wxUI(){
   const w=S.wx; const el=document.getElementById('wxStats');
   const st=(v,l)=>`<div class="stat"><div class="v">${v}</div><div class="l">${l}</div></div>`;
   el.innerHTML=st(w.hn24+' cm','New snow 24 h')+st(w.hn72+' cm','New snow 72 h')+st(w.wind+' km/h','Wind')+st(ASP[w.windDir],'Wind from')+st(w.temp+' °C','Alpine temp')+st(w.fl+' m','Freezing level');
-  document.getElementById('wxSrc').textContent=SEASON?(SEASON.obsUsed?'Treeline snow from Parks Canada stations, wind from Bosworth Upper, the rest from the weather model.':'From the weather model at Mount Temple.'):'';
+  document.getElementById('wxSrc').textContent=SEASON?'From the weather model at Whistler, with no station correction.':'';
 }
 
 /* ---------------- live data ----------------
    Everything is pulled by the reader's browser from public APIs that allow it (CORS).
    For a past date the same sources are queried for that date. */
 const LIVE={};
-const SRC=[['wx','Open-Meteo weather model'],['era','ERA5 reanalysis (precipitation)'],['stn','Parks Canada weather stations'],['av','Parks Canada avalanche forecast'],['min','Mountain Information Network']];
+const SRC=[['wx','Open-Meteo weather model'],['era','ERA5 reanalysis (precipitation)'],['stn','Weather stations'],['av','Avalanche Canada forecast (Sea-to-Sky)'],['min','Mountain Information Network']];
 let REQ=0;
 function srcLabel(){
   const l=document.getElementById('srcLabel');
   l.textContent = S.source==='live'?'Conditions for right now.':S.source==='past'?'Conditions replayed for '+(S.endDate||'')+'.':S.source==='snapshot'?'Weather from the snapshot saved in this page.':'Loading…';
   const ds=document.getElementById('dangerSrc');
   if(ds){
-    if(S.dangerFrom==='avcan') ds.textContent='From the Parks Canada forecast'+(AVC.issued?' issued '+new Date(AVC.issued).toLocaleDateString():'')+'.';
-    else ds.innerHTML='<span style="color:#F79218;font-weight:600">Modelled, not an official rating.</span> No Parks Canada rating was issued for this date. '+(ACC?`In testing on ${ACC.tested_on} (${ACC.months}), the model matched Parks Canada exactly on ${Math.round(ACC.exact*100)}% of band ratings and was within one level on ${Math.round(ACC.within1*100)}%. ${ACC.beats_benchmark?'It did better than simply using the usual rating for the month.':'It did <b>not</b> do better than simply using the usual rating for the month.'} See Method for details.`:'Its accuracy has not been tested yet.');
+    if(S.dangerFrom==='avcan') ds.textContent='From the Avalanche Canada forecast'+(AVC.issued?' issued '+new Date(AVC.issued).toLocaleDateString():'')+'.';
+    else ds.innerHTML='<span style="color:#F79218;font-weight:600">Modelled, not an official rating.</span> No Avalanche Canada rating was issued for this date. '+(ACC?`In testing on ${ACC.tested_on} (${ACC.months}), the model matched Avalanche Canada exactly on ${Math.round(ACC.exact*100)}% of band ratings and was within one level on ${Math.round(ACC.within1*100)}%. ${ACC.beats_benchmark?'It did better than simply using the usual rating for the month.':'It did <b>not</b> do better than simply using the usual rating for the month.'} See Method for details.`:'Its accuracy has not been tested yet.');
   }
 }
 function liveUI(){
@@ -1213,7 +1227,7 @@ async function fetchJSON(url,ms=15000){
   catch(e){ if(e.name==='AbortError') throw new Error('timed out'); if(e instanceof TypeError) throw new Error('blocked or offline'); throw e; }
   finally{clearTimeout(t);}
 }
-const LL='latitude=51.3506&longitude=-116.2067';
+const LL='latitude=50.0640&longitude=-122.9560';
 const WXVARS='temperature_2m,precipitation,rain,snowfall,wind_speed_10m,wind_direction_10m,wind_gusts_10m,freezing_level_height,cloud_cover,shortwave_radiation';
 const TZ='timezone=America%2FEdmonton';
 const ymd=ms=>new Date(ms).toISOString().slice(0,10);
@@ -1267,7 +1281,7 @@ const LKMAP={'unlikely':1,'possible':2,'likely':3,'very-likely':4,'verylikely':4
 function val(x){return (x&&typeof x==='object')?(x.value??x.display??''):x;}
 async function getForecast(endDate,isNow){
   const q=isNow?'':`&date=${endDate}T19:00:00Z`;
-  const j=await fetchJSON('https://api.avalanche.ca/forecasts/en/products/point?lat=51.3506&long=-116.2067'+q);
+  const j=await fetchJSON('https://api.avalanche.ca/forecasts/en/products/point?lat=50.0640&long=-122.9560'+q);
   const rep=j.report||j.product?.report||j;
   for(const k of Object.keys(AVC)) delete AVC[k];
   AVC.issued=rep.dateIssued||null; AVC.url=j.url?('https://avalanche.ca'+(j.url.startsWith('/')?'':'/')+j.url.replace(/^https?:\/\/[^/]+/,'')):'https://avalanche.ca/forecasts';
@@ -1297,7 +1311,7 @@ async function getForecast(endDate,isNow){
 async function getMIN(endDate,isNow){
   const to=isNow?todayLocal():endDate, from=addDays(to,-30);
   const j=await fetchJSON(`https://api.avalanche.ca/min/en/submissions?fromdate=${from}&todate=${to}&pagesize=500`,20000);
-  const items=(j.items?.data||[]).filter(x=>x.location&&Math.hypot((x.location.latitude-51.3506)*111,(x.location.longitude+116.2067)*69.6)<20);
+  const items=(j.items?.data||[]).filter(x=>x.location&&Math.hypot((x.location.latitude-50.0640)*111,(x.location.longitude+122.9560)*71.5)<20);
   return items.sort((a,b)=>b.datetime.localeCompare(a.datetime));
 }
 function minUI(list){
@@ -1321,7 +1335,8 @@ async function loadConditions(endDate){
   S.endDate=endDate; S.source='loading';
   for(const [k] of SRC) LIVE[k]={st:'wait',msg:'Loading…'};
   liveUI();
-  const [m,e,st,fc,mn]=await Promise.allSettled([getModel(endDate,isNow),getERA(endDate),getStations(endDate,isNow),getForecast(endDate,isNow),getMIN(endDate,isNow)]);
+  // Whistler: no public station on the mountain, so no station correction (user choice)
+  const [m,e,st,fc,mn]=await Promise.allSettled([getModel(endDate,isNow),getERA(endDate),Promise.reject(new Error('not used')),getForecast(endDate,isNow),getMIN(endDate,isNow)]);
   if(my!==REQ) return;  // a newer date was picked meanwhile
   const why=r=>r.reason&&r.reason.message||'failed';
   let j=null;
@@ -1332,7 +1347,7 @@ async function loadConditions(endDate){
   else if(S.source==='snapshot'){ LIVE.era={st:'warn',msg:'Using the copy saved with the snapshot'}; }
   else LIVE.era=e.status==='fulfilled'?{st:'ok',msg:'Loaded, averaged with the model precipitation'}:{st:'bad',msg:why(e)};
   const obs=st.status==='fulfilled'?st.value:null;
-  LIVE.stn=obs?{st:'ok',msg:`${obs.count} hourly readings: Bosworth Lower, Stanley, ${obs.ridgeName}`}:{st:'bad',msg:why(st)};
+  LIVE.stn={st:'warn',msg:'Not used. The only public stations nearby are highway stations in the valley (Brandywine 496 m, Tantalus 320 m), which do not represent the slopes.'};
   let avOK=false;
   if(fc.status==='fulfilled'){ avOK=true; LIVE.av={st:'ok',msg:'Rated forecast loaded'}; }
   else LIVE.av={st:AVC.status?'warn':'bad',msg:(AVC.status||why(fc))+'. Danger is modelled from the weather.'};
@@ -1355,7 +1370,7 @@ function tryLive(){ return loadConditions(document.getElementById('endDate').val
 })();
 
 /* ---------------- 60-day weather replay ----------------
-   One weather point (Open-Meteo at Mount Temple) is moved to three band elevations,
+   One weather point (Open-Meteo on Whistler Mountain) is moved to three band elevations,
    then a daily snow and wind-loading model runs per elevation band and aspect sector. */
 let SEASON=null;
 const AVC={};
@@ -1363,7 +1378,7 @@ const BANDZ={btl:1850, tl:2175, alp:2700};
 /* The snowpack and danger model itself lives in build/model.js (inlined below at build time)
    and is shared with the accuracy test, so the page runs exactly the tested code. */
 /*__MODEL__*/
-const TM=globalThis.TempleModel;
+const TM=globalThis.TempleModel; TM.setSite('whistler');
 const TUNED=/*__PARAMS__*/null;
 const ACC=/*__ACCURACY__*/null;
 const MP=Object.assign({},TM.DEFAULT_PARAMS,TUNED||{});
@@ -1408,7 +1423,7 @@ function seasonUI(){
   const tot=b=>nd.reduce((a,d)=>a+d.b[b].hn,0);
   const bits=[Sx.range, Sx.src==='snapshot'?'saved snapshot':'live pull', Sx.eraOnly?'ERA5 reanalysis':Sx.era?'model precipitation averaged with ERA5':'forecast models only'];
   if(Sx.obsUsed) bits.push(`corrected with Parks Canada stations on ${Sx.obsUsed} days (snowfall ×${Sx.kcal.toFixed(2)}, temperature ${Sx.tbias>=0?'+':''}${Sx.tbias.toFixed(1)} °C)`);
-  else bits.push(`no station readings for these dates, so the average correction from the tuning winters is used (snowfall ×${Sx.kcal.toFixed(2)}, temperature +${Sx.tbias.toFixed(1)} °C)`);
+  else bits.push(`no station correction; snowfall scaled ×${(MP.pScale||1).toFixed(2)} as tuned against Avalanche Canada's ratings`);
   if(Sx.seasonStart&&Sx.seasonStart<Sx.days[0].date) bits.push('snowpack and weak layers tracked from '+Sx.seasonStart);
   head.textContent=bits.join(' · ');
   // chart
@@ -1687,7 +1702,7 @@ function drawProfile(A){
 }
 function routeTag(R){
   if(R.kind==='run') return `${DIFFS[R.diff].n} · ${R.mtn}${R.area?' · area':''}`;
-  return R.kind==='gps'?'GPS track':R.kind==='approx'?'Approximate':R.kind==='osm'?(R.season==='winter'?'Winter route':'Summer route')+' · OSM trail':R.kind==='safe'?'Safest route':'Your route';
+  return R.kind==='gps'?'GPS track':R.kind==='approx'?'Approximate line':R.kind==='osm'?(R.group==='uphill'?'Uphill route':(R.season==='winter'?'Winter route':'Summer route'))+' · OSM trail':R.kind==='safe'?'Safest route':'Your route';
 }
 function ritem(R,A){
   const d=document.createElement('div'); d.className='ritem'+(R===S.selected?' on':'');
@@ -1699,11 +1714,32 @@ function ritem(R,A){
 }
 function routeListUI(){
   const host=document.getElementById('routeList'); host.innerHTML='';
-  const all=[...ROUTES,...S.userRoutes,...(S.safe?[S.safe]:[])]; all.forEach(R=>R.A=assessRoute(R));
-  const fixed=all.filter(R=>R.kind==='osm').sort((a,b)=>(b.A?b.A.routeScore:0)-(a.A?a.A.routeScore:0));
-  for(const R of [...fixed,...all.filter(R=>R.kind!=='osm')]) host.appendChild(ritem(R,R.A));
+  const all=[...ROUTES.filter(r=>r.group!=='uphill'),...S.userRoutes,...(S.safe?[S.safe]:[])]; all.forEach(R=>R.A=assessRoute(R));
+  const fixed=all.filter(R=>R.kind==='osm'||R.kind==='approx').sort((a,b)=>(b.A?b.A.routeScore:0)-(a.A?a.A.routeScore:0));
+  for(const R of [...fixed,...all.filter(R=>R.kind!=='osm'&&R.kind!=='approx')]) host.appendChild(ritem(R,R.A));
+  const up=document.getElementById('upList'); up.innerHTML='';
+  for(const R of ROUTES.filter(r=>r.group==='uphill')){ R.A=assessRoute(R); up.appendChild(ritem(R,R.A)); }
   for(const R of RUNS) R.A=assessRoute(R);
+  runListUI();
 }
+function runListUI(){
+  if(typeof printUI==='function') printUI();
+  const q=S.runQ.trim().toLowerCase();
+  let list=RUNS.filter(R=>R.A&&(S.mtn==='all'||R.mtn===S.mtn)&&(!q||R.name.toLowerCase().includes(q))&&(R.name!=='Unnamed run'||q));
+  list.sort(S.runSort==='risk'?(a,b)=>b.A.routeScore-a.A.routeScore:(a,b)=>a.name.localeCompare(b.name));
+  const host=document.getElementById('runList'); host.innerHTML='';
+  list.slice(0,S.runShown).forEach(R=>host.appendChild(ritem(R,R.A)));
+  document.getElementById('runCount').textContent=list.length+' run'+(list.length===1?'':'s');
+  document.getElementById('runMore').style.display=list.length>S.runShown?'inline-block':'none';
+}
+document.querySelectorAll('#mtnSeg button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('#mtnSeg button').forEach(x=>x.classList.toggle('on',x===b)); S.mtn=b.dataset.m; S.runShown=25; runListUI();});
+document.getElementById('runQ').oninput=e=>{S.runQ=e.target.value; S.runShown=25; runListUI();};
+document.getElementById('runSort').onchange=e=>{S.runSort=e.target.value; runListUI();};
+document.getElementById('runMore').onclick=()=>{S.runShown+=25; runListUI();};
+document.getElementById('runsTog').onclick=e=>{
+  S.showRuns=!S.showRuns; e.currentTarget.classList.toggle('on',S.showRuns);
+  if(R3&&R3.groups.runs){R3.groups.runs.visible=S.showRuns&&!S.preview; dirty=true;} renderLegend();};
 function focusRoute(R){
   const pts=(R.parts||[R.g]).flat(); const xs=pts.map(p=>p[0]), ys=pts.map(p=>p[1]);
   const bx0=Math.min(...xs),bx1=Math.max(...xs),by0=Math.min(...ys),by1=Math.max(...ys);
@@ -1736,7 +1772,7 @@ document.getElementById('gpxIn').onchange=async e=>{
     if(ll.length<2) throw new Error('No track points found in that GPX.');
     const R=routeFromLL((doc.querySelector('trk > name, rte > name, metadata > name')?.textContent||f.name.replace(/\.gpx$/i,'')).slice(0,40),'user','Imported from GPX.',ll);
     const inside=R.g.filter(p=>inGrid(p[0],p[1])).length;
-    if(!inside) throw new Error('That track is outside the mapped Mount Temple area.');
+    if(!inside) throw new Error('That track is outside the mapped Whistler area.');
     if(inside<R.g.length) err.textContent=`${R.g.length-inside} of ${R.g.length} points fall outside the mapped area and were skipped.`;
     S.userRoutes.push(R); S.selected=R; routeListUI(); renderAssess(); drawRoutes(); focusRoute(R);
   }catch(ex){err.textContent=ex.message;}

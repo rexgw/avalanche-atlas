@@ -1,0 +1,1422 @@
+{
+ "generated": "2026-11-23T05:28:44.885Z",
+ "design": {
+  "site": "whistler",
+  "compared_against": "Avalanche Canada daily danger ratings and problems at Whistler (Sea-to-Sky forecast region)",
+  "months": "December to March",
+  "tuned_on": [
+   "2022-23",
+   "2023-24",
+   "2024-25"
+  ],
+  "tested_on": [
+   "2025-26"
+  ],
+  "tuning": "8 seeded random-search runs, each 600 samples + 400 refinements; objective = mean absolute rating error + 0.3 x (1 - mean F1 of storm, wind, persistent, deep problems) + 0.1 x (1 - wet problem F1) on the tuning winters; the run with the best tuning score is kept",
+  "disclosure": "The Whistler test winter (2025-26) was scored once, after the model and tuning setup were fixed; nothing was changed after seeing the result.",
+  "note": "Ratings are forecasts, not observed avalanches. Parks Canada days with no numeric rating (early season, spring, no rating) are skipped band by band."
+ },
+ "seasons": [
+  {
+   "season": "2022-23",
+   "forecast_days": 121,
+   "station_days": 0,
+   "snowfall_scale": 1,
+   "temp_bias_c": 0,
+   "station_rows": {}
+  },
+  {
+   "season": "2023-24",
+   "forecast_days": 122,
+   "station_days": 0,
+   "snowfall_scale": 1,
+   "temp_bias_c": 0,
+   "station_rows": {}
+  },
+  {
+   "season": "2024-25",
+   "forecast_days": 121,
+   "station_days": 0,
+   "snowfall_scale": 1,
+   "temp_bias_c": 0,
+   "station_rows": {}
+  },
+  {
+   "season": "2025-26",
+   "forecast_days": 121,
+   "station_days": 0,
+   "snowfall_scale": 1,
+   "temp_bias_c": 0,
+   "station_rows": {}
+  }
+ ],
+ "test": {
+  "tuned_model": {
+   "n_days": 121,
+   "bands": {
+    "alp": {
+     "n": 121,
+     "exact": 0.587,
+     "within1": 0.959,
+     "mae": 0.455,
+     "bias": 0.124,
+     "confusion_official_rows_model_cols": [
+      [
+       13,
+       2,
+       2,
+       0,
+       0
+      ],
+      [
+       2,
+       23,
+       12,
+       1,
+       0
+      ],
+      [
+       0,
+       9,
+       33,
+       3,
+       2
+      ],
+      [
+       0,
+       0,
+       9,
+       2,
+       8
+      ],
+      [
+       0,
+       0,
+       0,
+       0,
+       0
+      ]
+     ]
+    },
+    "tl": {
+     "n": 121,
+     "exact": 0.529,
+     "within1": 0.917,
+     "mae": 0.554,
+     "bias": 0.322,
+     "confusion_official_rows_model_cols": [
+      [
+       9,
+       11,
+       7,
+       0,
+       0
+      ],
+      [
+       0,
+       31,
+       16,
+       1,
+       0
+      ],
+      [
+       0,
+       7,
+       23,
+       4,
+       2
+      ],
+      [
+       0,
+       0,
+       7,
+       1,
+       2
+      ],
+      [
+       0,
+       0,
+       0,
+       0,
+       0
+      ]
+     ]
+    },
+    "btl": {
+     "n": 121,
+     "exact": 0.628,
+     "within1": 0.909,
+     "mae": 0.479,
+     "bias": -0.314,
+     "confusion_official_rows_model_cols": [
+      [
+       62,
+       9,
+       0,
+       0,
+       0
+      ],
+      [
+       22,
+       11,
+       1,
+       0,
+       0
+      ],
+      [
+       9,
+       2,
+       2,
+       0,
+       0
+      ],
+      [
+       2,
+       0,
+       0,
+       1,
+       0
+      ],
+      [
+       0,
+       0,
+       0,
+       0,
+       0
+      ]
+     ]
+    }
+   },
+   "all": {
+    "n": 363,
+    "exact": 0.581,
+    "within1": 0.928,
+    "mae": 0.496,
+    "bias": 0.044,
+    "confusion_official_rows_model_cols": [
+     [
+      84,
+      22,
+      9,
+      0,
+      0
+     ],
+     [
+      24,
+      65,
+      29,
+      2,
+      0
+     ],
+     [
+      9,
+      18,
+      58,
+      7,
+      4
+     ],
+     [
+      2,
+      0,
+      16,
+      4,
+      10
+     ],
+     [
+      0,
+      0,
+      0,
+      0,
+      0
+     ]
+    ],
+    "kappa_quadratic": 0.673
+   },
+   "problems": {
+    "storm": {
+     "parks_listed_days": 61,
+     "model_listed_days": 53,
+     "both": 46,
+     "hit_rate": 0.754,
+     "false_alarm_rate": 0.132,
+     "f1": 0.807
+    },
+    "wind": {
+     "parks_listed_days": 44,
+     "model_listed_days": 0,
+     "both": 0,
+     "hit_rate": 0,
+     "false_alarm_rate": null,
+     "f1": 0
+    },
+    "persistent": {
+     "parks_listed_days": 16,
+     "model_listed_days": 26,
+     "both": 0,
+     "hit_rate": 0,
+     "false_alarm_rate": 1,
+     "f1": 0
+    },
+    "deep": {
+     "parks_listed_days": 0,
+     "model_listed_days": 0,
+     "both": 0,
+     "hit_rate": null,
+     "false_alarm_rate": null,
+     "f1": 0
+    },
+    "wet": {
+     "parks_listed_days": 38,
+     "model_listed_days": 15,
+     "both": 8,
+     "hit_rate": 0.211,
+     "false_alarm_rate": 0.467,
+     "f1": 0.302
+    }
+   },
+   "wet": {
+    "parks_wet_days": 38,
+    "model_warming_flag_days": 15,
+    "both": 8
+   }
+  },
+  "default_model": {
+   "n_days": 121,
+   "bands": {
+    "alp": {
+     "n": 121,
+     "exact": 0.289,
+     "within1": 0.719,
+     "mae": 1.05,
+     "bias": 0.967,
+     "confusion_official_rows_model_cols": [
+      [
+       12,
+       2,
+       1,
+       2,
+       0
+      ],
+      [
+       2,
+       11,
+       11,
+       9,
+       5
+      ],
+      [
+       0,
+       3,
+       9,
+       18,
+       17
+      ],
+      [
+       0,
+       0,
+       0,
+       3,
+       16
+      ],
+      [
+       0,
+       0,
+       0,
+       0,
+       0
+      ]
+     ]
+    },
+    "tl": {
+     "n": 121,
+     "exact": 0.207,
+     "within1": 0.628,
+     "mae": 1.306,
+     "bias": 1.256,
+     "confusion_official_rows_model_cols": [
+      [
+       5,
+       11,
+       3,
+       4,
+       4
+      ],
+      [
+       0,
+       14,
+       13,
+       16,
+       5
+      ],
+      [
+       0,
+       2,
+       6,
+       15,
+       13
+      ],
+      [
+       0,
+       0,
+       1,
+       0,
+       9
+      ],
+      [
+       0,
+       0,
+       0,
+       0,
+       0
+      ]
+     ]
+    },
+    "btl": {
+     "n": 121,
+     "exact": 0.529,
+     "within1": 0.769,
+     "mae": 0.736,
+     "bias": 0.074,
+     "confusion_official_rows_model_cols": [
+      [
+       59,
+       4,
+       6,
+       1,
+       1
+      ],
+      [
+       18,
+       5,
+       3,
+       8,
+       0
+      ],
+      [
+       8,
+       1,
+       0,
+       2,
+       2
+      ],
+      [
+       1,
+       1,
+       0,
+       0,
+       1
+      ],
+      [
+       0,
+       0,
+       0,
+       0,
+       0
+      ]
+     ]
+    }
+   },
+   "all": {
+    "n": 363,
+    "exact": 0.342,
+    "within1": 0.705,
+    "mae": 1.03,
+    "bias": 0.766,
+    "confusion_official_rows_model_cols": [
+     [
+      76,
+      17,
+      10,
+      7,
+      5
+     ],
+     [
+      20,
+      30,
+      27,
+      33,
+      10
+     ],
+     [
+      8,
+      6,
+      15,
+      35,
+      32
+     ],
+     [
+      1,
+      1,
+      1,
+      3,
+      26
+     ],
+     [
+      0,
+      0,
+      0,
+      0,
+      0
+     ]
+    ],
+    "kappa_quadratic": 0.488
+   },
+   "problems": {
+    "storm": {
+     "parks_listed_days": 61,
+     "model_listed_days": 66,
+     "both": 55,
+     "hit_rate": 0.902,
+     "false_alarm_rate": 0.167,
+     "f1": 0.866
+    },
+    "wind": {
+     "parks_listed_days": 44,
+     "model_listed_days": 0,
+     "both": 0,
+     "hit_rate": 0,
+     "false_alarm_rate": null,
+     "f1": 0
+    },
+    "persistent": {
+     "parks_listed_days": 16,
+     "model_listed_days": 31,
+     "both": 0,
+     "hit_rate": 0,
+     "false_alarm_rate": 1,
+     "f1": 0
+    },
+    "deep": {
+     "parks_listed_days": 0,
+     "model_listed_days": 15,
+     "both": 0,
+     "hit_rate": null,
+     "false_alarm_rate": 1,
+     "f1": 0
+    },
+    "wet": {
+     "parks_listed_days": 38,
+     "model_listed_days": 23,
+     "both": 15,
+     "hit_rate": 0.395,
+     "false_alarm_rate": 0.348,
+     "f1": 0.492
+    }
+   },
+   "wet": {
+    "parks_wet_days": 38,
+    "model_warming_flag_days": 23,
+    "both": 15
+   }
+  },
+  "benchmark_climatology": {
+   "n_days": 121,
+   "bands": {
+    "alp": {
+     "n": 121,
+     "exact": 0.256,
+     "within1": 0.868,
+     "mae": 0.876,
+     "bias": -0.331,
+     "confusion_official_rows_model_cols": [
+      [
+       0,
+       16,
+       1,
+       0,
+       0
+      ],
+      [
+       0,
+       23,
+       15,
+       0,
+       0
+      ],
+      [
+       0,
+       39,
+       8,
+       0,
+       0
+      ],
+      [
+       0,
+       15,
+       4,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0,
+       0,
+       0
+      ]
+     ]
+    },
+    "tl": {
+     "n": 121,
+     "exact": 0.397,
+     "within1": 0.917,
+     "mae": 0.686,
+     "bias": -0.24,
+     "confusion_official_rows_model_cols": [
+      [
+       0,
+       27,
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       48,
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       36,
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       10,
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0,
+       0,
+       0
+      ]
+     ]
+    },
+    "btl": {
+     "n": 121,
+     "exact": 0.587,
+     "within1": 0.868,
+     "mae": 0.57,
+     "bias": -0.57,
+     "confusion_official_rows_model_cols": [
+      [
+       71,
+       0,
+       0,
+       0,
+       0
+      ],
+      [
+       34,
+       0,
+       0,
+       0,
+       0
+      ],
+      [
+       13,
+       0,
+       0,
+       0,
+       0
+      ],
+      [
+       3,
+       0,
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0,
+       0,
+       0
+      ]
+     ]
+    }
+   },
+   "all": {
+    "n": 363,
+    "exact": 0.413,
+    "within1": 0.884,
+    "mae": 0.711,
+    "bias": -0.38,
+    "confusion_official_rows_model_cols": [
+     [
+      71,
+      43,
+      1,
+      0,
+      0
+     ],
+     [
+      34,
+      71,
+      15,
+      0,
+      0
+     ],
+     [
+      13,
+      75,
+      8,
+      0,
+      0
+     ],
+     [
+      3,
+      25,
+      4,
+      0,
+      0
+     ],
+     [
+      0,
+      0,
+      0,
+      0,
+      0
+     ]
+    ],
+    "kappa_quadratic": 0.307
+   },
+   "problems": {
+    "storm": {
+     "parks_listed_days": 61,
+     "model_listed_days": 0,
+     "both": 0,
+     "hit_rate": 0,
+     "false_alarm_rate": null,
+     "f1": 0
+    },
+    "wind": {
+     "parks_listed_days": 44,
+     "model_listed_days": 90,
+     "both": 24,
+     "hit_rate": 0.545,
+     "false_alarm_rate": 0.733,
+     "f1": 0.358
+    },
+    "persistent": {
+     "parks_listed_days": 16,
+     "model_listed_days": 31,
+     "both": 2,
+     "hit_rate": 0.125,
+     "false_alarm_rate": 0.935,
+     "f1": 0.085
+    },
+    "deep": {
+     "parks_listed_days": 0,
+     "model_listed_days": 0,
+     "both": 0,
+     "hit_rate": null,
+     "false_alarm_rate": null,
+     "f1": 0
+    },
+    "wet": {
+     "parks_listed_days": 38,
+     "model_listed_days": 0,
+     "both": 0,
+     "hit_rate": 0,
+     "false_alarm_rate": null,
+     "f1": 0
+    }
+   },
+   "wet": {
+    "parks_wet_days": 38,
+    "model_warming_flag_days": 0,
+    "both": 0
+   }
+  }
+ },
+ "train": {
+  "tuned_model": {
+   "n_days": 364,
+   "bands": {
+    "alp": {
+     "n": 364,
+     "exact": 0.552,
+     "within1": 0.964,
+     "mae": 0.486,
+     "bias": -0.113,
+     "confusion_official_rows_model_cols": [
+      [
+       24,
+       9,
+       0,
+       0,
+       0
+      ],
+      [
+       23,
+       100,
+       26,
+       1,
+       1
+      ],
+      [
+       1,
+       42,
+       68,
+       9,
+       5
+      ],
+      [
+       0,
+       5,
+       32,
+       9,
+       9
+      ],
+      [
+       0,
+       0,
+       0,
+       0,
+       0
+      ]
+     ]
+    },
+    "tl": {
+     "n": 364,
+     "exact": 0.621,
+     "within1": 0.967,
+     "mae": 0.415,
+     "bias": 0.102,
+     "confusion_official_rows_model_cols": [
+      [
+       43,
+       36,
+       5,
+       1,
+       0
+      ],
+      [
+       12,
+       110,
+       28,
+       0,
+       0
+      ],
+      [
+       0,
+       20,
+       64,
+       7,
+       5
+      ],
+      [
+       0,
+       1,
+       23,
+       9,
+       0
+      ],
+      [
+       0,
+       0,
+       0,
+       0,
+       0
+      ]
+     ]
+    },
+    "btl": {
+     "n": 364,
+     "exact": 0.646,
+     "within1": 0.953,
+     "mae": 0.404,
+     "bias": -0.25,
+     "confusion_official_rows_model_cols": [
+      [
+       197,
+       28,
+       0,
+       0,
+       0
+      ],
+      [
+       60,
+       32,
+       0,
+       0,
+       0
+      ],
+      [
+       11,
+       21,
+       6,
+       0,
+       0
+      ],
+      [
+       1,
+       5,
+       3,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0,
+       0,
+       0
+      ]
+     ]
+    }
+   },
+   "all": {
+    "n": 1092,
+    "exact": 0.606,
+    "within1": 0.962,
+    "mae": 0.435,
+    "bias": -0.087,
+    "confusion_official_rows_model_cols": [
+     [
+      264,
+      73,
+      5,
+      1,
+      0
+     ],
+     [
+      95,
+      242,
+      54,
+      1,
+      1
+     ],
+     [
+      12,
+      83,
+      138,
+      16,
+      10
+     ],
+     [
+      1,
+      11,
+      58,
+      18,
+      9
+     ],
+     [
+      0,
+      0,
+      0,
+      0,
+      0
+     ]
+    ],
+    "kappa_quadratic": 0.705
+   },
+   "problems": {
+    "storm": {
+     "parks_listed_days": 138,
+     "model_listed_days": 111,
+     "both": 91,
+     "hit_rate": 0.659,
+     "false_alarm_rate": 0.18,
+     "f1": 0.731
+    },
+    "wind": {
+     "parks_listed_days": 189,
+     "model_listed_days": 0,
+     "both": 0,
+     "hit_rate": 0,
+     "false_alarm_rate": null,
+     "f1": 0
+    },
+    "persistent": {
+     "parks_listed_days": 138,
+     "model_listed_days": 168,
+     "both": 87,
+     "hit_rate": 0.63,
+     "false_alarm_rate": 0.482,
+     "f1": 0.569
+    },
+    "deep": {
+     "parks_listed_days": 11,
+     "model_listed_days": 149,
+     "both": 10,
+     "hit_rate": 0.909,
+     "false_alarm_rate": 0.933,
+     "f1": 0.125
+    },
+    "wet": {
+     "parks_listed_days": 69,
+     "model_listed_days": 37,
+     "both": 20,
+     "hit_rate": 0.29,
+     "false_alarm_rate": 0.459,
+     "f1": 0.377
+    }
+   },
+   "wet": {
+    "parks_wet_days": 69,
+    "model_warming_flag_days": 37,
+    "both": 20
+   }
+  },
+  "default_model": {
+   "n_days": 364,
+   "bands": {
+    "alp": {
+     "n": 364,
+     "exact": 0.335,
+     "within1": 0.819,
+     "mae": 0.865,
+     "bias": 0.569,
+     "confusion_official_rows_model_cols": [
+      [
+       22,
+       10,
+       1,
+       0,
+       0
+      ],
+      [
+       28,
+       64,
+       36,
+       16,
+       7
+      ],
+      [
+       1,
+       17,
+       27,
+       40,
+       40
+      ],
+      [
+       0,
+       1,
+       5,
+       9,
+       40
+      ],
+      [
+       0,
+       0,
+       0,
+       0,
+       0
+      ]
+     ]
+    },
+    "tl": {
+     "n": 364,
+     "exact": 0.324,
+     "within1": 0.783,
+     "mae": 0.94,
+     "bias": 0.846,
+     "confusion_official_rows_model_cols": [
+      [
+       31,
+       38,
+       10,
+       2,
+       4
+      ],
+      [
+       8,
+       56,
+       55,
+       24,
+       7
+      ],
+      [
+       0,
+       8,
+       20,
+       36,
+       32
+      ],
+      [
+       0,
+       0,
+       1,
+       11,
+       21
+      ],
+      [
+       0,
+       0,
+       0,
+       0,
+       0
+      ]
+     ]
+    },
+    "btl": {
+     "n": 364,
+     "exact": 0.522,
+     "within1": 0.89,
+     "mae": 0.596,
+     "bias": 0.195,
+     "confusion_official_rows_model_cols": [
+      [
+       158,
+       49,
+       17,
+       1,
+       0
+      ],
+      [
+       44,
+       19,
+       24,
+       5,
+       0
+      ],
+      [
+       10,
+       2,
+       10,
+       11,
+       5
+      ],
+      [
+       2,
+       0,
+       1,
+       3,
+       3
+      ],
+      [
+       0,
+       0,
+       0,
+       0,
+       0
+      ]
+     ]
+    }
+   },
+   "all": {
+    "n": 1092,
+    "exact": 0.394,
+    "within1": 0.831,
+    "mae": 0.8,
+    "bias": 0.537,
+    "confusion_official_rows_model_cols": [
+     [
+      211,
+      97,
+      28,
+      3,
+      4
+     ],
+     [
+      80,
+      139,
+      115,
+      45,
+      14
+     ],
+     [
+      11,
+      27,
+      57,
+      87,
+      77
+     ],
+     [
+      2,
+      1,
+      7,
+      23,
+      64
+     ],
+     [
+      0,
+      0,
+      0,
+      0,
+      0
+     ]
+    ],
+    "kappa_quadratic": 0.603
+   },
+   "problems": {
+    "storm": {
+     "parks_listed_days": 138,
+     "model_listed_days": 152,
+     "both": 112,
+     "hit_rate": 0.812,
+     "false_alarm_rate": 0.263,
+     "f1": 0.772
+    },
+    "wind": {
+     "parks_listed_days": 189,
+     "model_listed_days": 0,
+     "both": 0,
+     "hit_rate": 0,
+     "false_alarm_rate": null,
+     "f1": 0
+    },
+    "persistent": {
+     "parks_listed_days": 138,
+     "model_listed_days": 113,
+     "both": 48,
+     "hit_rate": 0.348,
+     "false_alarm_rate": 0.575,
+     "f1": 0.382
+    },
+    "deep": {
+     "parks_listed_days": 11,
+     "model_listed_days": 179,
+     "both": 11,
+     "hit_rate": 1,
+     "false_alarm_rate": 0.939,
+     "f1": 0.116
+    },
+    "wet": {
+     "parks_listed_days": 69,
+     "model_listed_days": 55,
+     "both": 30,
+     "hit_rate": 0.435,
+     "false_alarm_rate": 0.455,
+     "f1": 0.484
+    }
+   },
+   "wet": {
+    "parks_wet_days": 69,
+    "model_warming_flag_days": 55,
+    "both": 30
+   }
+  }
+ },
+ "per_season_tuned_params": {
+  "2022-23": {
+   "role": "tuning",
+   "n": 363,
+   "exact": 0.636,
+   "within1": 0.983,
+   "mae": 0.38,
+   "bias": 0.028,
+   "kappa": 0.72,
+   "wind_hit": 0,
+   "persistent_hit": 0.733
+  },
+  "2023-24": {
+   "role": "tuning",
+   "n": 366,
+   "exact": 0.585,
+   "within1": 0.937,
+   "mae": 0.484,
+   "bias": -0.068,
+   "kappa": 0.678,
+   "wind_hit": 0,
+   "persistent_hit": 0.52
+  },
+  "2024-25": {
+   "role": "tuning",
+   "n": 363,
+   "exact": 0.598,
+   "within1": 0.964,
+   "mae": 0.441,
+   "bias": -0.22,
+   "kappa": 0.722,
+   "wind_hit": 0,
+   "persistent_hit": 0.651
+  },
+  "2025-26": {
+   "role": "test",
+   "n": 363,
+   "exact": 0.581,
+   "within1": 0.928,
+   "mae": 0.496,
+   "bias": 0.044,
+   "kappa": 0.673,
+   "wind_hit": 0,
+   "persistent_hit": 0
+  }
+ },
+ "per_season_benchmark": {
+  "2022-23": {
+   "exact": 0.523,
+   "within1": 0.926,
+   "mae": 0.551
+  },
+  "2023-24": {
+   "exact": 0.505,
+   "within1": 0.847,
+   "mae": 0.664
+  },
+  "2024-25": {
+   "exact": 0.419,
+   "within1": 0.862,
+   "mae": 0.727
+  },
+  "2025-26": {
+   "exact": 0.413,
+   "within1": 0.884,
+   "mae": 0.711
+  }
+ },
+ "params_at_range_edge": [
+  "windCm",
+  "wPers",
+  "wDeep"
+ ],
+ "tuning_runs": [
+  {
+   "seed": 1,
+   "tuning_score": 0.6944,
+   "kept": false,
+   "test_exact": 0.59,
+   "test_within1": 0.928,
+   "test_mae": 0.488,
+   "test_kappa": 0.659
+  },
+  {
+   "seed": 2,
+   "tuning_score": 0.6933,
+   "kept": false,
+   "test_exact": 0.573,
+   "test_within1": 0.923,
+   "test_mae": 0.51,
+   "test_kappa": 0.647
+  },
+  {
+   "seed": 3,
+   "tuning_score": 0.7127,
+   "kept": false,
+   "test_exact": 0.601,
+   "test_within1": 0.937,
+   "test_mae": 0.468,
+   "test_kappa": 0.685
+  },
+  {
+   "seed": 4,
+   "tuning_score": 0.7048,
+   "kept": false,
+   "test_exact": 0.529,
+   "test_within1": 0.926,
+   "test_mae": 0.554,
+   "test_kappa": 0.595
+  },
+  {
+   "seed": 5,
+   "tuning_score": 0.6978,
+   "kept": false,
+   "test_exact": 0.543,
+   "test_within1": 0.904,
+   "test_mae": 0.562,
+   "test_kappa": 0.611
+  },
+  {
+   "seed": 6,
+   "tuning_score": 0.7001,
+   "kept": false,
+   "test_exact": 0.631,
+   "test_within1": 0.942,
+   "test_mae": 0.43,
+   "test_kappa": 0.707
+  },
+  {
+   "seed": 7,
+   "tuning_score": 0.6958,
+   "kept": false,
+   "test_exact": 0.567,
+   "test_within1": 0.923,
+   "test_mae": 0.515,
+   "test_kappa": 0.641
+  },
+  {
+   "seed": 8,
+   "tuning_score": 0.6904,
+   "kept": true,
+   "test_exact": 0.579,
+   "test_within1": 0.928,
+   "test_mae": 0.499,
+   "test_kappa": 0.671
+  }
+ ],
+ "params_default": {
+  "stormCm": 30,
+  "windCm": 20,
+  "rainMm": 10,
+  "decay": 0.2,
+  "windMin": 20,
+  "windSpan": 40,
+  "clearCloud": 20,
+  "shWind": 10,
+  "shTmin": -8,
+  "nsfTmin": -12,
+  "grad": 10,
+  "basalDays": 7,
+  "basalMaxHS": 100,
+  "buryCm": 5,
+  "surfLife": 10,
+  "pMin": 30,
+  "pMax": 100,
+  "life": 60,
+  "windLife": 10,
+  "wPers": 0.45,
+  "wDeep": 0.35,
+  "c2": 0.25,
+  "c3": 0.6,
+  "c4": 1,
+  "c5": 1.6,
+  "supMin": 20,
+  "supSpan": 60,
+  "probStorm": 0.6,
+  "probWind": 0.4,
+  "probPers": 0.5,
+  "probDeep": 0.5,
+  "probWet": 0.5,
+  "meltT": 1,
+  "meltSpan": 6
+ },
+ "params_tuned": {
+  "stormCm": 31.548,
+  "windCm": 35,
+  "rainMm": 10,
+  "decay": 0.213,
+  "windMin": 28.641,
+  "windSpan": 40,
+  "clearCloud": 20,
+  "shWind": 10,
+  "shTmin": -8,
+  "nsfTmin": -12,
+  "grad": 10,
+  "basalDays": 7,
+  "basalMaxHS": 100,
+  "buryCm": 5,
+  "surfLife": 10,
+  "pMin": 30,
+  "pMax": 100,
+  "life": 60,
+  "windLife": 7.826,
+  "wPers": 0.1,
+  "wDeep": 0.1,
+  "c2": 0.102,
+  "c3": 0.534,
+  "c4": 1.403,
+  "c5": 1.886,
+  "supMin": 20,
+  "supSpan": 60,
+  "probStorm": 0.6,
+  "probWind": 0.4,
+  "probPers": 0.5,
+  "probDeep": 0.5,
+  "probWet": 0.5,
+  "meltT": 3.015,
+  "meltSpan": 6,
+  "pScale": 0.679
+ }
+}

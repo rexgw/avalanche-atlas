@@ -1,0 +1,1831 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Avalanche Risk Atlas: Mount Temple</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --navy:#0B1F3A; --navy2:#10294D; --navy3:#173663; --line:#25466f;
+  --gold:#C9A227; --gold2:#E3C463; --ink:#EEF2F7; --ink2:#B8C4D6; --ink3:#7F90AA;
+  --low:#52BA4A; --mod:#FFF300; --con:#F79218; --high:#EF1C29; --ext:#1A1A1A;
+  --map:#e9edf2;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--navy);color:var(--ink);font-family:Inter,system-ui,sans-serif;font-size:14px}
+button,select,input{font:inherit;color:inherit}
+header{display:flex;align-items:center;gap:12px;padding:10px 16px;border-bottom:1px solid var(--line);background:var(--navy)}
+header .mark{width:28px;height:28px;flex:none}
+header h1{font-size:16px;margin:0;font-weight:700;letter-spacing:.2px}
+header h1 span{color:var(--gold)}
+header .sub{color:var(--ink3);font-size:12px}
+.disclaimer{background:#2a1d05;color:#f3dfa4;border-bottom:1px solid #5b4510;padding:6px 16px;font-size:12px;line-height:1.4}
+.app{display:grid;grid-template-columns:1fr 410px;height:calc(100vh - 86px);min-height:520px}
+.mapwrap{position:relative;background:var(--map);overflow:hidden;touch-action:none}
+#map{position:absolute;inset:0;width:100%;height:100%;display:block;cursor:grab;touch-action:none}
+#map.drawing{cursor:crosshair}
+#ov{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.compass svg{transition:none}
+.help{position:absolute;right:10px;bottom:10px;transition:opacity .4s;background:rgba(11,31,58,.85);color:var(--ink2);border:1px solid var(--line);border-radius:8px;padding:5px 8px;font-size:11px;pointer-events:none}
+.lsw{width:18px;height:0;display:inline-block;border-top:3px solid #fff;box-shadow:0 0 0 1px rgba(11,31,58,.5)}
+.lsw.lift{border-top:2px dashed #0B1F3A;box-shadow:none}
+.lsw.route{border-top-color:#0B1F3A;box-shadow:0 0 0 1px #fff}
+.seg.toggle button.on{background:var(--navy3);color:var(--gold2)}
+.diff{display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;flex:none}
+.searchin{flex:1;min-width:120px;background:var(--navy);border:1px solid var(--line);border-radius:6px;padding:5px 8px}
+.probe.act{pointer-events:auto}
+.pvbar{position:absolute;top:10px;left:10px;display:none;align-items:center;gap:10px;background:rgba(11,31,58,.92);border:1px solid var(--line);border-radius:10px;padding:6px 6px 6px 12px;font-size:12px;font-weight:600;color:var(--gold2);max-width:calc(100% - 70px)}
+#mapwrap.pv .pvbar{display:flex}
+#mapwrap.pv .maptools,#mapwrap.pv .legend,#mapwrap.pv .help,#mapwrap.pv .modehint{display:none}
+.help .hm{display:none}
+.maptools{position:absolute;top:10px;left:10px;display:flex;gap:6px;flex-wrap:wrap}
+.seg{display:inline-flex;background:var(--navy);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{background:none;border:0;padding:6px 10px;cursor:pointer;color:var(--ink2);font-size:12px;font-weight:600}
+.seg button.on{background:var(--gold);color:var(--navy)}
+.zoom{position:absolute;right:10px;top:10px;display:flex;flex-direction:column;gap:4px}
+.zoom button{width:32px;height:32px;border-radius:8px;border:1px solid var(--line);background:var(--navy);cursor:pointer;font-size:16px}
+.legend{position:absolute;left:10px;bottom:10px;background:rgba(11,31,58,.92);border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-size:11px;max-width:calc(100% - 20px)}
+.legend .t{color:var(--ink3);margin-bottom:5px;font-weight:600;letter-spacing:.3px;text-transform:uppercase;font-size:10px}
+.legend .row{display:flex;gap:10px;flex-wrap:wrap}
+.legend .k{display:flex;align-items:center;gap:5px;white-space:nowrap}
+.sw{width:12px;height:12px;border-radius:3px;display:inline-block;border:1px solid rgba(255,255,255,.35)}
+.probe{position:absolute;pointer-events:none;background:rgba(11,31,58,.96);border:1px solid var(--gold);border-radius:8px;padding:8px 10px;font-size:12px;line-height:1.45;min-width:170px;display:none;z-index:5}
+.probe b{color:var(--gold2)}
+.modehint{position:absolute;left:50%;transform:translateX(-50%);top:52px;background:var(--gold);color:var(--navy);font-weight:600;font-size:12px;padding:6px 12px;border-radius:999px;display:none;white-space:nowrap}
+aside{background:var(--navy2);border-left:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+.tabs{display:flex;border-bottom:1px solid var(--line)}
+.tabs button{flex:1;background:none;border:0;padding:11px 6px;cursor:pointer;color:var(--ink3);font-weight:600;border-bottom:2px solid transparent}
+.tabs button.on{color:var(--gold2);border-bottom-color:var(--gold)}
+.pane{display:none;overflow:auto;padding:14px 16px 28px;flex:1}
+.pane.on{display:block}
+h2{font-size:13px;margin:18px 0 8px;color:var(--gold2);text-transform:uppercase;letter-spacing:.6px}
+h2:first-child{margin-top:2px}
+.card{background:var(--navy3);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:10px}
+.muted{color:var(--ink3)} .small{font-size:12px}
+.status{display:flex;flex-direction:column;gap:4px;font-size:12px}
+.status .s{display:flex;gap:6px;align-items:flex-start}
+.dot{width:8px;height:8px;border-radius:50%;margin-top:4px;flex:none;background:var(--ink3)}
+.dot.ok{background:#4cd07d}.dot.bad{background:#e36a6a}.dot.wait{background:var(--gold)}.dot.warn{background:#F79218}
+.btn{background:var(--gold);color:var(--navy);border:0;border-radius:8px;padding:7px 12px;font-weight:700;cursor:pointer}
+.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+.btn.sm{padding:5px 9px;font-size:12px}
+.btn:disabled{opacity:.45;cursor:default}
+.rowf{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.danger-row{display:grid;grid-template-columns:96px 1fr;gap:8px;align-items:center;margin:6px 0}
+.dsel{display:flex;gap:3px}
+.dsel button{flex:1;border:1px solid var(--line);background:var(--navy);border-radius:6px;padding:5px 0;cursor:pointer;font-size:11px;font-weight:700;color:var(--ink2)}
+.dsel button.on{color:#111;border-color:transparent}
+.prob{background:var(--navy);border:1px solid var(--line);border-radius:10px;padding:10px;margin-bottom:8px}
+.prob .top{display:flex;gap:6px;align-items:center}
+.prob select{flex:1}
+select,input[type=number]{background:var(--navy);border:1px solid var(--line);border-radius:6px;padding:5px 6px}
+input[type=number]{width:74px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px 10px}
+.field label{display:block;font-size:11px;color:var(--ink3);margin-bottom:3px}
+.chips{display:flex;gap:4px;flex-wrap:wrap}
+.chip{border:1px solid var(--line);background:var(--navy);border-radius:999px;padding:3px 9px;font-size:11px;cursor:pointer;color:var(--ink2)}
+.chip.on{background:var(--gold);color:var(--navy);border-color:var(--gold);font-weight:700}
+.rose{width:92px;height:92px;flex:none;cursor:pointer}
+.rose path{stroke:var(--navy2);stroke-width:1.5}
+.x{background:none;border:0;color:var(--ink3);cursor:pointer;font-size:16px}
+.rlist{display:flex;flex-direction:column;gap:6px}
+.ritem{display:flex;align-items:center;gap:8px;border:1px solid var(--line);background:var(--navy);border-radius:9px;padding:8px 10px;cursor:pointer}
+.ritem.on{border-color:var(--gold);box-shadow:inset 3px 0 0 var(--gold)}
+.ritem .nm{flex:1;font-weight:600;font-size:13px}
+.ritem .tag{font-size:10px;color:var(--ink3);text-transform:uppercase;letter-spacing:.4px}
+.badge{font-size:11px;font-weight:700;padding:3px 8px;border-radius:999px;color:#111;white-space:nowrap}
+.score{display:flex;align-items:center;gap:12px}
+.score .big{font-size:34px;font-weight:700;font-family:'JetBrains Mono',monospace}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:10px}
+.stat{background:var(--navy);border-radius:8px;padding:6px 8px}
+.stat .v{font-weight:700;font-size:14px}
+.stat .l{font-size:10px;color:var(--ink3);text-transform:uppercase;letter-spacing:.3px}
+.bar{display:flex;height:14px;border-radius:4px;overflow:hidden;margin:8px 0 4px;gap:2px;background:var(--navy)}
+.bar div{height:100%}
+.crux{border-left:3px solid var(--gold);padding:4px 0 4px 9px;margin:6px 0;cursor:pointer;font-size:12px;line-height:1.45}
+.crux:hover{background:rgba(201,162,39,.08)}
+#profile{width:100%;height:170px;display:block;background:var(--navy);border-radius:8px}
+.ptip{font-size:12px;min-height:18px;margin-top:4px;color:var(--ink2)}
+input[type=range]{width:100%;accent-color:var(--gold)}
+.method p,.method li{line-height:1.55;color:var(--ink2)}
+.method code{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--gold2)}
+a{color:var(--gold2)}
+.err{color:#ffb4b4;font-size:12px;margin-top:6px}
+.loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--navy);font-weight:600;background:var(--map)}
+@media (max-width: 860px){
+  .app{grid-template-columns:1fr;height:auto}
+  .mapwrap{height:62vh;min-height:380px}
+  aside{border-left:0;border-top:1px solid var(--line)}
+  .pane{overflow:visible}
+  .help{bottom:auto;top:52px;left:10px;right:auto;max-width:calc(100% - 64px)}
+  .help .hd{display:none} .help .hm{display:inline}
+  header .sub{display:none}
+}
+</style>
+</head>
+<body>
+<header>
+  <svg class="mark" viewBox="0 0 32 32" aria-hidden="true"><path d="M2 27 L12 10 L17 18 L21 13 L30 27 Z" fill="#C9A227"/><path d="M12 10 L14.5 14.2 L12.6 13.4 L10.6 14.8 Z" fill="#EEF2F7"/></svg>
+  <div><h1>Avalanche Risk <span>Atlas</span></h1><div class="sub">Mount Temple · Larch Valley · Paradise Valley · Lake Louise · Banff National Park</div></div>
+</header>
+<div class="disclaimer"><b>Educational model only.</b> Not a substitute for the <a href="https://avalanche.ca/forecasts" target="_blank" rel="noopener">Parks Canada avalanche forecast</a> (Banff, Yoho and Kootenay), AST training, or field observations. Never make go/no-go decisions from this map.</div>
+<div class="app">
+  <div class="mapwrap" id="mapwrap">
+    <canvas id="map"></canvas>
+    <canvas id="ov"></canvas>
+    <div class="loading" id="loading">Loading terrain…</div>
+    <div class="maptools">
+      <div class="seg" id="layerSeg"><button data-l="risk" class="on">Risk heat map</button><button data-l="ates">ATES terrain</button></div>
+    </div>
+    <div class="zoom"><button id="zin" aria-label="Zoom in">+</button><button id="zout" aria-label="Zoom out">−</button><button id="zfit" aria-label="Reset view" style="font-size:12px">⤢</button><button id="znorth" class="compass" aria-label="Face north"><svg id="needle" viewBox="-10 -10 20 20" width="18" height="18"><path d="M0 -8 L4 3 L0 1 L-4 3 Z" fill="#C9A227"/><path d="M0 8 L4 3 L0 1 L-4 3 Z" fill="#7F90AA"/></svg></button></div>
+    <div class="help" id="help"><span class="hd">Drag to rotate · scroll to zoom · right-drag to pan</span><span class="hm">Drag to rotate · pinch to zoom · two fingers to pan</span></div>
+    <div class="modehint" id="modehint"></div>
+    <div class="probe" id="probe"></div>
+    <div class="legend" id="legend"></div>
+    <div class="pvbar" id="pvbar"><span id="pvInfo">Print preview</span><button class="btn sm" id="pvExit">Exit preview</button></div>
+  </div>
+  <aside>
+    <div class="tabs"><button data-t="cond" class="on">Conditions</button><button data-t="routes">Routes</button><button data-t="print">3D print</button><button data-t="method">Method</button></div>
+
+    <div class="pane on" id="pane-cond">
+      <h2>Date</h2>
+      <div class="card">
+        <div class="rowf">
+          <input type="date" id="endDate" aria-label="Assessment date" style="background:var(--navy);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:6px 8px;font:inherit">
+          <button class="btn sm" id="todayBtn">Today</button>
+          <button class="btn ghost sm" id="liveBtn">Reload data</button>
+        </div>
+        <div class="muted small" style="margin-top:6px">Risk uses the 60 days of weather before this date. Official Parks Canada ratings are available from 2023, station readings from 2024, weather back to 1940.</div>
+      </div>
+
+      <h2>Live data sources</h2>
+      <div class="card">
+        <div class="status" id="liveStatus"></div>
+        <div class="muted small" id="srcLabel" style="margin-top:6px"></div>
+      </div>
+
+      <h2>60 days before the selected date</h2>
+      <div class="card">
+        <div class="muted small" id="seasonHead">Waiting for weather…</div>
+        <canvas id="seasonCv" style="width:100%;height:190px;display:block;margin-top:8px"></canvas>
+        <div class="small" id="seasonLegend" style="margin-top:6px"></div>
+        <div class="small muted" style="margin-top:10px">Recent loading by elevation band and aspect (0 none, 1 = at a trigger threshold)</div>
+        <div id="seasonGrid" style="margin-top:4px"></div>
+        <div class="small" id="seasonText" style="margin-top:8px"></div>
+      </div>
+
+      <h2>Danger ratings</h2>
+      <div class="muted small" id="dangerSrc" style="margin:-4px 0 6px"></div>
+      <div id="dangerRows"></div>
+
+      <h2>Avalanche problems</h2>
+      <div class="muted small" id="probSrc" style="margin:-4px 0 6px"></div>
+      <div id="probs"></div>
+
+      <h2>Buried weak layers (modelled)</h2>
+      <div class="muted small" style="margin:-4px 0 6px">Layers the model tracks from 1 October: surface hoar and near-surface facets formed on clear, cold nights, crusts from rain or sun, and facets near the ground in a thin, cold snowpack. Not observed; Parks Canada's forecast is the reference.</div>
+      <div class="rlist" id="layerList"></div>
+
+      <h2>Weather at the selected time</h2>
+      <div class="muted small" style="margin:-4px 0 6px" id="wxSrc"></div>
+      <div class="stats" id="wxStats"></div>
+
+      <h2>Field reports near Temple</h2>
+      <div class="muted small" style="margin:-4px 0 6px">Avalanche Canada Mountain Information Network (MIN) reports within 20 km, in the 31 days before the selected date.</div>
+      <div class="rlist" id="minList"></div>
+
+      <h2>Avalanche history near Temple</h2>
+      <div class="rlist" id="histList"></div>
+      <div class="muted small" style="margin-top:6px">Recorded incidents and accidents in the map area. Locations are approximate. Full records: <a href="https://incidents.avalanche.ca" target="_blank" rel="noopener">Avalanche Canada fatal incidents database</a>.</div>
+    </div>
+
+    <div class="pane" id="pane-routes">
+      <h2>Trip timing</h2>
+      <div class="card">
+        <div class="rowf">
+          <div class="field"><label for="startTime">Start time</label><input type="time" id="startTime" value="07:00" style="background:var(--navy);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:6px 8px;font:inherit"></div>
+          <div class="field"><label for="paceSel">Pace</label><select id="paceSel"><option value="normal">Normal (Munter 4 up, 6 down)</option><option value="deep">Deep snow or snowshoe (2 up, 3 down)</option></select></div>
+        </div>
+        <div class="muted small" style="margin-top:6px">Used for travel time and exposure on the selected date. Warming on sunny slopes follows the hourly forecast for that day.</div>
+      </div>
+
+      <h2>Existing routes</h2>
+      <div class="muted small" style="margin:-4px 0 6px">Summer and winter routes, all scored in the current winter conditions. Sorted by score, highest first.</div>
+      <div class="rlist" id="routeList"></div>
+
+      <h2>New route</h2>
+      <div class="card">
+        <div class="rowf">
+          <button class="btn sm" id="drawBtn">Draw on map</button>
+          <label class="btn ghost sm" style="cursor:pointer">Upload GPX<input type="file" id="gpxIn" accept=".gpx,application/gpx+xml,text/xml" hidden></label>
+        </div>
+        <div class="rowf" id="drawCtl" style="margin-top:8px;display:none">
+          <span class="muted small" id="drawCount">0 points</span>
+          <button class="btn ghost sm" id="drawUndo">Undo</button>
+          <button class="btn ghost sm" id="drawClear">Clear</button>
+          <button class="btn sm" id="drawDone">Assess route</button>
+        </div>
+        <div class="err" id="routeErr"></div>
+      </div>
+
+      <h2>Ideal safest route</h2>
+      <div class="card">
+        <div class="muted small" style="margin-bottom:8px">Pick start and end on the map, or open an existing route and use “Find a safer line”.</div>
+        <div class="rowf"><button class="btn ghost sm" id="setStart">Set start</button><button class="btn ghost sm" id="setEnd">Set end</button><span class="muted small" id="seLabel">Tap the map after each button</span></div>
+        <div style="margin-top:10px" class="small"><div class="rowf" style="justify-content:space-between"><span>Shortest</span><span id="wVal" class="muted"></span><span>Safest</span></div>
+        <input type="range" id="wSlider" min="0" max="100" value="75"></div>
+        <div class="rowf" style="margin-top:6px"><button class="btn sm" id="findBtn" disabled>Find route</button><span class="muted small" id="findMsg"></span></div>
+      </div>
+
+      <div id="assess"></div>
+    </div>
+
+    <div class="pane" id="pane-print">
+      <h2>Tactile 3D print</h2>
+      <p class="small">Download an STL of the mountain to print and explore by touch. Routes stand up as smooth, rounded ridges. Each risk class has its own sharp-edged pattern so it never feels like the natural terrain: Low is smooth, Moderate has diagonal ribs, Considerable has round flat-topped studs, High has square pyramids and Extreme has tall, tightly packed spikes. The texture follows the conditions set in the Conditions tab at the moment you download. Preview print shows the exact model on the map before you download it.</p>
+      <p class="small">A touch legend runs along the south edge. From west to east it has five texture patches from Low to Extreme, marked with one to five raised dots, then a smooth ridge showing how a route feels.</p>
+      <div class="card">
+        <div class="rowf"><label class="small" for="printW">Width</label>
+          <select id="printW"><option value="100">100 mm</option><option value="150" selected>150 mm</option><option value="200">200 mm</option></select></div>
+        <div class="muted small" id="printDims" style="margin-top:6px"></div>
+        <div class="muted small" style="margin-top:6px">Heights are exaggerated 1.5 times on a 3 mm base. Route ridges are 2.2 mm wide and 2.2 mm tall, above the tallest texture. Print with a 0.4 mm nozzle at 0.12 to 0.16 mm layers so the texture survives.</div>
+        <div class="small" style="margin-top:10px;color:var(--gold2)">Raised routes</div>
+        <div id="printList" style="margin-top:4px"></div>
+        <div class="muted small" style="margin-top:6px">Select a route in the Routes tab to add it. Your drawn routes and the safest route are included when they exist.</div>
+        <div class="rowf" style="margin-top:12px"><button class="btn" id="printBtn">Download STL</button><button class="btn ghost" id="pvBtn">Preview print</button></div>
+        <div class="small" id="printMsg" style="margin-top:8px"></div>
+      </div>
+    </div>
+
+    <div class="pane method" id="pane-method">
+      <h2>What the map shows</h2>
+      <p>Each 30 m cell gets a relative <b>risk index from 0 to 100</b>. It combines how likely an avalanche is to start there or reach there (terrain), how unstable the snowpack is (conditions), and how bad the outcome would be (consequence). It is a comparison tool, not a probability.</p>
+      <p>The map is a 3D model of the elevation data, drawn as a 60 m mesh with no vertical exaggeration. The risk or ATES layer, 100 m contours and hillshade are draped over it at 15 m detail.</p>
+      <h2>Terrain layers (pre-computed)</h2>
+      <ul>
+        <li><b>Elevation:</b> USGS 3DEP 1 arc-second DEM, resampled to a 30 m grid over about 12.5 × 14.5 km around Mount Temple.</li>
+        <li><b>Release areas:</b> fuzzy slope membership peaking near 40° (about 0.5 at 29° and 51°), reduced on very rough terrain and below treeline.</li>
+        <li><b>Runout exposure:</b> energy-line propagation downhill from release areas using a <code>24°</code> travel angle above treeline and <code>28°</code> below (forest friction proxy). This catches valley floors and lakeshores under big slopes.</li>
+        <li><b>Terrain traps:</b> gullies (concave curvature), cliffs (&gt;50°), and abrupt flats below steep slopes.</li>
+        <li><b>ATES class:</b> simplified AutoATES-style rules: Simple, Challenging, Complex, Extreme from slope angle, release areas, runout overlap and cliffs.</li>
+      </ul>
+      <h2>Last 60 days of weather</h2>
+      <ul>
+        <li>For the selected date the app pulls the 61 days of hourly weather before it for Mount Temple from Open-Meteo: current forecast models for recent dates, archived forecast models from 2022, ERA5 reanalysis before that. ERA5 precipitation is also pulled and averaged with the model, because the two disagreed by about three times in autumn 2026 (21 mm against 62 mm). If today's pull fails it uses the snapshot saved in the page and says so.</li>
+        <li>Parks Canada weather stations (via Avalanche Canada, from 2024): snow depth at Bosworth Lower (2210 m, treeline) and Stanley (1930 m, below treeline) replaces the modelled depth and gives daily new snow; ridgetop wind from Bosworth Upper (2745 m, Whymper as backup) replaces the model wind; the model's temperature is shifted by its average error against Bosworth Upper; alpine snowfall is scaled by how far off the model was at treeline.</li>
+        <li>The Parks Canada forecast for the selected date sets the danger ratings and problems when one was issued (archive from 2023). Mountain Information Network reports within 20 km are listed for context but do not change the score.</li>
+        <li>The single weather point is moved to three band elevations (below treeline 1850 m, treeline 2175 m, alpine 2700 m) with a −6.5 °C/km lapse rate and +50 % precipitation per km. Precipitation falls as snow below 0 °C, rain above +2 °C, mixed in between.</li>
+        <li>Each day and band: snow depth (new snow at about 1 cm per mm of water, 3 % daily settlement, degree-day melt), snow available for wind transport, and cold dry days on a thin snowpack (faceting).</li>
+        <li>For each band and each of 8 aspects a day counts as loading when it reaches a threshold: 30 cm storm snow in 72 h, 20 cm wind-deposited snow on lee aspects (wind over 20 km/h moving recent snow), 10 mm rain on a 30 cm snowpack, or strong warming on sunny aspects.</li>
+        <li>Recent loading = strongest loading in the last days, counted 100 % today, 80 % yesterday, 60 % two days ago and so on. It multiplies the hazard on that band and aspect by up to 2.1×. Thin snowpack (under about 20 cm) lowers hazard to about a third, because there is not enough snow to slide.</li>
+        <li>When Parks Canada issued no rating (early or late season, or before 2023) the app models one from the replay and marks it as modelled.</li>
+      </ul>
+      <h2>Buried weak layers</h2>
+      <ul>
+        <li>The model runs day by day from 1 October of the season (or 61 days back in summer) so layers buried before the 60-day window are kept.</li>
+        <li>Surface hoar: a clear night (Open-Meteo cloud cover under 20 %), light wind and a cold night at that elevation, with no new snow. Near-surface facets: a clear, cold night with little recent snow. Crusts: rain on snow, or melting on sunny slopes. Facets near the ground: a strong temperature gradient (ground at 0 °C) through a thin, cold snowpack for several days.</li>
+        <li>A layer is buried once enough new snow falls on it, then settles with the snowpack. It counts as a persistent slab problem between two burial depths and as deep persistent beyond, and fades with age or after a warm spell.</li>
+        <li>These rules are fixed, not tuned, to limit overfitting. Surface hoar uses night wind under 10 km/h (2.8 m/s) and night air below −8 °C, and faceting a gradient above 10 °C per m, from published sources (UBC ATSC 113 course notes; a 2026 Copernicus surface hoar study). The burial depths (persistent at 30–100 cm, deep beyond 100 cm), layer life (60 days) and the other thresholds are starting guesses without a source. The layers are modelled, not observed.</li>
+      </ul>
+      <h2>Accuracy test</h2>
+      <div class="small" id="accBox"></div>
+      <h2>Exposure time</h2>
+      <ul>
+        <li>Travel time uses the Munter calculation: 1 km of distance or 100 m of climb or descent is one unit, at 4 units an hour uphill and 6 downhill, or half that in deep snow or on snowshoes.</li>
+        <li>Minutes in start zones (release potential above 0.45) and under slopes (runout reach 0.25 or more) are added up. Risk-weighted exposure multiplies each minute by the score at that spot.</li>
+        <li>Warming: on the selected day, when the hourly air temperature at that elevation is above 0 °C and the sun is out, the score on sunny slopes is raised by up to 1.8×. This rule is a simplification; the test checks the daily version against days Parks Canada listed wet avalanche problems.</li>
+      </ul>
+      <h2>Conditions model</h2>
+      <ul>
+        <li>Danger rating for each elevation band (BTL &lt; 2000 m, TL 2000–2350 m, ALP &gt; 2350 m) scales hazard roughly ×2 per level, following the Avalanche Canada scale.</li>
+        <li>Avalanche problems raise hazard on the listed aspects and bands (likelihood and size) and lower it elsewhere. Persistent and deep persistent problems extend runout weight. Loose problems shorten it. Cornices add hazard on crests.</li>
+        <li>Weather now: new snow loads all aspects above the freezing level. Wind over 15 km/h loads lee aspects near ridge crests. Warming above 0 °C adds hazard on sunny aspects and below the freezing level.</li>
+      </ul>
+      <h2>Formula</h2>
+      <p><code>terrain = 1 − (1 − release) × (1 − 0.85 × runout)</code><br><code>season = (1 + 0.7 × recent loading + 0.35 × facets) × (0.35 + 0.65 × snowpack support)</code><br><code>raw = terrain × danger × problem × weather × season × (1 + 0.6 × trap)</code><br><code>index = 100 × (1 − e^(−1.4 × raw))</code></p>
+      <p>Classes: Low &lt; 14, Moderate 14–31, Considerable 31–55, High 55–78, Extreme ≥ 78.</p>
+      <h2>3D print</h2>
+      <p>The STL is built in the browser from the same elevation data at about 0.4 mm spacing, with heights exaggerated 1.5 times. The risk class, from the index smoothed over 150 m, sets a geometric texture with hard edges: diagonal ribs 0.6 mm tall for Moderate, flat-topped studs 0.9 mm tall on a 3.2 mm grid for Considerable, square pyramids 1.2 mm tall for High and staggered spikes 1.5 mm tall on a 2.4 mm grid for Extreme. Low is left smooth. Routes are smooth rounded ridges 2.2 mm tall, so a finger can follow them through the textured ground. The model is watertight with a flat base. A legend strip along the south edge holds one patch for each risk class, textured with that class's pattern and marked with one to five dots, plus a sample route ridge.</p>
+      <h2>Route scoring</h2>
+      <p>Routes are sampled every 15 m. <b>Route score = 0.55 × 90th percentile + 0.45 × maximum</b>, so one serious crux can't be averaged away by long safe sections. Cruxes are continuous stretches at Considerable or above.</p>
+      <h2>Safest route</h2>
+      <p>A* search over the 30 m grid. Step cost = distance × slope effort + uphill gain + slider weight × distance × (index/100)². Slopes over 48° are treated as impassable. The search finds the path with the lowest total cost.</p>
+      <h2>Limitations</h2>
+      <ul>
+        <li>One weather point for the whole map. Terrain spreads it by elevation band and aspect only; local wind channelling around Temple is not modelled.</li>
+        <li>No snowpack layering. The faceting count is a rough flag, not a stability test, and buried weak layers from before the 60-day window are not seen.</li>
+        <li>The loading thresholds came from the earlier calibration on a synthetic mountain and have not been checked against Parks Canada observations at Lake Louise.</li>
+        <li>No forest-cover data: treeline effects come from elevation bands only.</li>
+        <li>Summer trails are scored on their summer line. Winter travel often takes different lines (for example frozen lakes and the valley floor), which can be drawn or loaded as GPX.</li>
+        <li>Trail lines come from OpenStreetMap. The last pitch to the Mount Temple summit has no OSM line and uses a least-effort terrain path.</li>
+        <li>30 m cells miss small features like rolls, cornice edges and short gullies. Glaciers, seracs and crevasses on Temple's north face are not modelled.</li>
+        <li>No station sits in the Moraine Lake or Paradise Valley drainages: the nearest are 16 to 20 km north and west, so local snowfall differences are not captured.</li>
+        <li>Station readings only go back to 2024 and the archived forecasts to 2023. Older dates run on the weather model alone.</li>
+      </ul>
+      <h2>Sources</h2>
+      <ul class="small">
+        <li>USGS 3D Elevation Program, 1 arc-second DEM tile n52w117 (public domain)</li>
+        <li>Open-Meteo forecast, historical forecast and ERA5 archive APIs (weather, CC BY 4.0)</li>
+        <li>Parks Canada weather stations (Bosworth Upper and Lower, Whymper, Stanley) via the Avalanche Canada weather API</li>
+        <li>Avalanche Canada Mountain Information Network</li>
+        <li>Avalanche Canada public forecast API (Parks Canada forecast for Banff, Yoho and Kootenay) and danger scale</li>
+        <li>Trails and peaks: © OpenStreetMap contributors (ODbL), via the Overpass API</li>
+        <li>Incident history: Avalanche Canada incident reports, Parks Canada and news reports linked in the list</li>
+        <li>3D rendering: three.js (MIT licence)</li>
+        <li>Statham et al. (2018) Conceptual Model of Avalanche Hazard; Larsen et al. (2020) AutoATES; Veitinger et al. (2016) PRA fuzzy model</li>
+      </ul>
+    </div>
+  </aside>
+</div>
+
+<script>/*__THREE__*/</script>
+<script>
+const TERRAIN = /*__TERRAIN__*/null;
+const ROUTEDATA = /*__ROUTES__*/null;
+const RUNDATA = {runs:[],lifts:[]};
+const WXSNAP = /*__WXSNAP__*/null;
+const HISTORY = /*__HISTORY__*/null;
+const DIFFS=[
+  {n:'Easy', i:'<svg class="diff" viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="#2E9E48"/></svg>'},
+  {n:'Intermediate', i:'<svg class="diff" viewBox="0 0 14 14"><rect x="2" y="2" width="10" height="10" fill="#2F6FD8"/></svg>'},
+  {n:'Advanced', i:'<svg class="diff" viewBox="0 0 14 14"><path d="M7 1 L13 7 L7 13 L1 7Z" fill="#111" stroke="#EEF2F7" stroke-width=".8"/></svg>'},
+  {n:'Expert', i:'<svg class="diff" viewBox="0 0 20 14" style="width:20px"><path d="M5.5 1.5 L10 7 L5.5 12.5 L1 7Z M14.5 1.5 L19 7 L14.5 12.5 L10 7Z" fill="#111" stroke="#EEF2F7" stroke-width=".8"/></svg>'},
+  {n:'Freeride', i:'<svg class="diff" viewBox="0 0 14 14"><path d="M7 1.5 L12.5 7 L7 12.5 L1.5 7Z" fill="none" stroke="#F79218" stroke-width="1.6"/></svg>'},
+  {n:'Unrated', i:'<svg class="diff" viewBox="0 0 14 14"><circle cx="7" cy="7" r="3" fill="#7F90AA"/></svg>'}];
+
+/* ---------------- constants ---------------- */
+const CLS = [
+  {n:'Low', c:'#52BA4A'}, {n:'Moderate', c:'#FFF300'}, {n:'Considerable', c:'#F79218'},
+  {n:'High', c:'#EF1C29'}, {n:'Extreme', c:'#1A1A1A'}];
+const CUT = [14,31,55,78];
+const ATES = [{n:'Non-avalanche', c:null},{n:'Simple',c:'#3FA34D'},{n:'Challenging',c:'#2F6FD8'},{n:'Complex',c:'#111111'},{n:'Extreme',c:'#B0122B'}];
+const DANGER = ['Low','Moderate','Considerable','High','Extreme'];
+const DFACT = [0.08,0.2,0.42,0.72,1.0];
+const ASP = ['N','NE','E','SE','S','SW','W','NW'];
+const PTYPES = [
+  ['storm','Storm slab'],['wind','Wind slab'],['persistent','Persistent slab'],['deep','Deep persistent slab'],
+  ['wetslab','Wet slab'],['wetloose','Loose wet'],['dryloose','Loose dry'],['cornice','Cornices']];
+const LIKE = ['Unlikely','Possible','Likely','Very likely','Almost certain'];
+const SIZES = [1,1.5,2,2.5,3,3.5,4];
+const BANDS = [['alp','Alpine'],['tl','Treeline'],['btl','Below treeline']];
+const clsOf = s => s>=CUT[3]?4:s>=CUT[2]?3:s>=CUT[1]?2:s>=CUT[0]?1:0;
+
+/* ---------------- state ---------------- */
+const S = {
+  danger:{alp:3, tl:2, btl:1},
+  problems:[
+    {type:'storm', bands:{alp:1,tl:1,btl:0}, asp:[1,1,1,1,1,1,1,1], like:2, size:1.5},
+    {type:'wind', bands:{alp:1,tl:1,btl:0}, asp:[1,1,1,0,0,0,0,0], like:2, size:2}],
+  wx:{hn24:15, hn72:35, wind:35, windDir:5, temp:-6, fl:900},
+  source:'example', dangerFrom:'example', layer:'risk', mode:'inspect',
+  draw:[], start:null, end:null, selected:null, userRoutes:[], safe:null, showRuns:false, preview:false, mtn:'all', runQ:'', runSort:'risk', runShown:25
+};
+
+/* ---------------- data decode ---------------- */
+let G; // grid
+function b64bytes(b64){const bin=atob(b64);const u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);return u;}
+async function gunzip(b64){
+  const bytes=b64bytes(b64);
+  if('DecompressionStream' in window){
+    const st=new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
+    return new Uint8Array(await new Response(st).arrayBuffer());
+  }
+  throw new Error('This browser cannot decompress the terrain data. Use a recent Chrome, Edge, Firefox or Safari.');
+}
+async function loadTerrain(){
+  const m=TERRAIN.meta;
+  const out={...m, N:m.W*m.H};
+  const keys=['elev','slope','aspect','pra','runout','trap','crest','ates','hill'];
+  for(const k of keys){
+    const u=await gunzip(TERRAIN[k]);
+    out[k]= k==='elev' ? new Int16Array(u.buffer, u.byteOffset, u.byteLength/2) : u;
+  }
+  return out;
+}
+const toGrid=(lat,lon)=>[(lon-G.lonW)*G.mx/G.res,(G.latN-lat)*G.my/G.res];
+const toLL=(x,y)=>[G.latN-y*G.res/G.my, G.lonW+x*G.res/G.mx];
+const inGrid=(x,y)=>x>=0&&y>=0&&x<G.W&&y<G.H;
+const cellIdx=(x,y)=>Math.min(G.H-1,Math.max(0,Math.floor(y)))*G.W+Math.min(G.W-1,Math.max(0,Math.floor(x)));
+
+/* ---------------- risk model ---------------- */
+let SCORE, CLASS;
+function factorsAt(i){
+  const z=G.elev[i], s=G.slope[i], a=G.aspect[i]*360/256;
+  const p=G.pra[i]/255, r=G.runout[i]/255, t=G.trap[i]/255, c=G.crest[i]/255;
+  const band = z<G.btlTop?'btl':z<G.tlTop?'tl':'alp';
+  const sec = Math.round(a/45)%8;
+  const D = S.danger[band];
+  let f=1, rw=1, corn=0, matched=null;
+  if(S.problems.length){
+    f=0.6;
+    for(const P of S.problems){
+      if(!P.bands[band] || !P.asp[sec]) continue;
+      const pf = 1 + 0.12*(P.like-3) + 0.15*(P.size-2) + 0.0;
+      if(matched===null || pf>f){f=pf; matched=P;}
+      if(P.type==='persistent'||P.type==='deep') rw=Math.max(rw,1.25);
+      if((P.type==='wetloose'||P.type==='dryloose') && rw===1) rw=0.6;
+      if(P.type==='cornice') corn=Math.max(corn,c*(s>25?0.6:0.3));
+    }
+  }
+  const has = t=>S.problems.some(P=>P.type===t);
+  const W=S.wx;
+  // new snow (only where it falls as snow)
+  const snowF = z>=W.fl-100 ? 1 : 0.35;
+  let wSnow = 1 + (0.5*Math.min(1,W.hn24/30) + 0.3*Math.min(1,W.hn72/60))*snowF*(has('storm')?1.2:1);
+  // wind loading on lee slopes near crests
+  const downwind = (W.windDir*45+180)%360;
+  const align = Math.max(0,Math.cos((a-downwind)*Math.PI/180));
+  const avail = 0.4+0.6*Math.min(1,W.hn72/30);
+  const windLoad = align*(0.4+0.6*c)*Math.max(0,Math.min(1,(W.wind-15)/40))*(band==='btl'?0.3:band==='tl'?0.7:1)*avail;
+  const wWind = 1 + 0.6*windLoad*(has('wind')?1.3:1);
+  // warming
+  const solar = Math.max(0,Math.cos((a-180)*Math.PI/180));
+  const warm = Math.max(0,Math.min(1,(W.temp+2)/8));
+  const belowFL = z < W.fl ? 1 : 0.3;
+  const wWarm = 1 + 0.5*warm*(0.4+0.6*solar)*belowFL*((has('wetloose')||has('wetslab'))?1.3:1);
+  const Wx = Math.min(2.5, wSnow*wWind*wWarm);
+  let T = 1-(1-p)*(1-0.85*Math.min(1,r*rw));
+  T = Math.max(T, corn);
+  // 60-day weather replay: recent loading on this band and aspect, and whether there is enough snow to slide
+  let wSea=1, sup=1, Lsea=0;
+  if(SEASON){ Lsea=SEASON.L[band][sec]; sup=SEASON.sup[band]; wSea=1+0.7*Math.min(1.6,Lsea)+0.35*SEASON.pers[band]; }
+  const raw = T*DFACT[D-1]*f*Wx*(1+0.6*t)*wSea*(0.35+0.65*sup);
+  const score = 100*(1-Math.exp(-1.4*raw));
+  return {z,s,a,p,r,t,c,band,sec,D,f,matched,windLoad,warm:warm*solar*belowFL,Wx,T,raw,score,Lsea,sup};
+}
+function computeScores(){
+  const N=G.N; SCORE=SCORE||new Float32Array(N); CLASS=CLASS||new Uint8Array(N);
+  for(let i=0;i<N;i++){const sc=factorsAt(i).score; SCORE[i]=sc; CLASS[i]=clsOf(sc);}
+}
+
+/* ---------------- base texture ---------------- */
+const SS=2;           // texture pixels per 30 m cell
+const STEP=2;         // mesh vertex spacing in cells (60 m)
+const KM=0.001;       // scene units are km
+const hex2rgb=h=>[parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)];
+const RISKSTOPS=[[0,'#52BA4A'],[14,'#52BA4A'],[24,'#FFF300'],[40,'#F79218'],[62,'#EF1C29'],[82,'#1A1A1A'],[100,'#1A1A1A']].map(([v,h])=>[v,hex2rgb(h)]);
+function riskRGB(s){
+  for(let k=1;k<RISKSTOPS.length;k++){
+    if(s<=RISKSTOPS[k][0]){const [v0,c0]=RISKSTOPS[k-1],[v1,c1]=RISKSTOPS[k];const u=(s-v0)/((v1-v0)||1);
+      return [c0[0]+(c1[0]-c0[0])*u,c0[1]+(c1[1]-c0[1])*u,c0[2]+(c1[2]-c0[2])*u];}
+  }
+  return RISKSTOPS[RISKSTOPS.length-1][1];
+}
+const clamp=(v,a,b)=>v<a?a:v>b?b:v;
+function bil(arr,gx,gy){
+  const x=clamp(gx-0.5,0,G.W-1.001), y=clamp(gy-0.5,0,G.H-1.001);
+  const x0=x|0,y0=y|0,u=x-x0,v=y-y0,i=y0*G.W+x0;
+  return arr[i]*(1-u)*(1-v)+arr[i+1]*u*(1-v)+arr[i+G.W]*(1-u)*v+arr[i+G.W+1]*u*v;
+}
+const texCv=document.createElement('canvas'); let texCtx, texImg, baseL;
+function prepTexture(){
+  const TW=G.W*SS, TH=G.H*SS; texCv.width=TW; texCv.height=TH;
+  texCtx=texCv.getContext('2d'); texImg=texCtx.createImageData(TW,TH);
+  const z=new Float32Array(TW*TH), L=new Float32Array(TW*TH);
+  for(let py=0;py<TH;py++)for(let px=0;px<TW;px++){
+    const gx=(px+0.5)/SS, gy=(py+0.5)/SS, o=py*TW+px;
+    z[o]=bil(G.elev,gx,gy); L[o]=150+bil(G.hill,gx,gy)/255*95;
+  }
+  baseL=new Uint8ClampedArray(TW*TH);
+  for(let py=0;py<TH;py++)for(let px=0;px<TW;px++){
+    const o=py*TW+px; let l=L[o];
+    if(px<TW-1&&py<TH-1){
+      const a=z[o], r=z[o+1], d=z[o+TW];
+      const c100=Math.floor(a/100)!==Math.floor(r/100)||Math.floor(a/100)!==Math.floor(d/100);
+      if(c100) l-= (Math.floor(a/500)!==Math.floor(r/500)||Math.floor(a/500)!==Math.floor(d/500))?42:20;
+    }
+    baseL[o]=l;
+  }
+}
+function renderBase(){
+  const TW=texCv.width, TH=texCv.height, d=texImg.data;
+  const atesRGB=ATES.map(a=>a.c?hex2rgb(a.c):null);
+  for(let py=0;py<TH;py++){
+    const gy=(py+0.5)/SS, cy=Math.min(G.H-1,gy|0);
+    for(let px=0;px<TW;px++){
+      const o=py*TW+px, q=o*4, gx=(px+0.5)/SS;
+      const L=baseL[o]; let r=L*0.94,g=L*0.965,b=L, col=null, al=0;
+      if(S.layer==='risk'){
+        const s=bil(SCORE,gx,gy);
+        if(s>=2){col=riskRGB(s); al=0.22+0.5*Math.min(1,s/45);}
+      } else {
+        const k=G.ates[cy*G.W+Math.min(G.W-1,gx|0)]; if(atesRGB[k]){col=atesRGB[k]; al=k===3?0.55:0.5;}
+      }
+      if(col){r=r*(1-al)+col[0]*al; g=g*(1-al)+col[1]*al; b=b*(1-al)+col[2]*al;}
+      d[q]=r; d[q+1]=g; d[q+2]=b; d[q+3]=255;
+    }
+  }
+  texCtx.putImageData(texImg,0,0);
+  if(R3){R3.tex.needsUpdate=true; dirty=true;}
+}
+
+/* ---------------- 3D map ---------------- */
+const mapwrap=document.getElementById('mapwrap');
+const cv=document.getElementById('map'), ov=document.getElementById('ov'), octx=ov.getContext('2d');
+let R3=null, dirty=true, dpr=1, NX, NY, HV, hoverPt=null;
+const LMATS=[];
+const wx=gx=>gx*G.res*KM, wz=gy=>gy*G.res*KM;
+// height of the rendered mesh surface at grid coords (matches the triangles exactly)
+function meshH(gx,gy){
+  const fx=clamp(gx/G.W*(NX-1),0,NX-1.0001), fy=clamp(gy/G.H*(NY-1),0,NY-1.0001);
+  const i=fx|0, j=fy|0, u=fx-i, v=fy-j, a=j*NX+i;
+  const ha=HV[a], hb=HV[a+1], hc=HV[a+NX], hd=HV[a+NX+1];
+  return (u+v<=1) ? ha+u*(hb-ha)+v*(hc-ha) : hd+(1-u)*(hc-hd)+(1-v)*(hb-hd);
+}
+function buildTerrain(){
+  NX=Math.round(G.W/STEP)+1; NY=Math.round(G.H/STEP)+1; HV=new Float32Array(NX*NY);
+  const pos=new Float32Array(NX*NY*3), uv=new Float32Array(NX*NY*2);
+  let zmin=1e9, zmax=-1e9;
+  for(let j=0;j<NY;j++)for(let i=0;i<NX;i++){
+    const gx=i*G.W/(NX-1), gy=j*G.H/(NY-1), k=j*NX+i, h=bil(G.elev,gx,gy);
+    HV[k]=h; zmin=Math.min(zmin,h); zmax=Math.max(zmax,h);
+    pos[k*3]=wx(gx); pos[k*3+1]=h*KM; pos[k*3+2]=wz(gy);
+    uv[k*2]=gx/G.W; uv[k*2+1]=1-gy/G.H;
+  }
+  const idx=new Uint32Array((NX-1)*(NY-1)*6); let n=0;
+  for(let j=0;j<NY-1;j++)for(let i=0;i<NX-1;i++){
+    const a=j*NX+i,b=a+1,c=a+NX,d=c+1;
+    idx[n++]=a;idx[n++]=c;idx[n++]=b; idx[n++]=b;idx[n++]=c;idx[n++]=d;
+  }
+  const geo=new T3.BufferGeometry();
+  geo.setAttribute('position',new T3.BufferAttribute(pos,3)); geo.setAttribute('uv',new T3.BufferAttribute(uv,2));
+  geo.setIndex(new T3.BufferAttribute(idx,1)); geo.computeBoundingSphere();
+  const mat=new T3.MeshBasicMaterial({map:R3.tex, polygonOffset:true, polygonOffsetFactor:1, polygonOffsetUnits:1});
+  R3.terrain=new T3.Mesh(geo,mat); R3.scene.add(R3.terrain);
+  // side walls so the model reads as a block
+  const base=(zmin-350)*KM, wpos=[], wcol=[];
+  const edge=[]; for(let i=0;i<NX;i++)edge.push(i); for(let j=1;j<NY;j++)edge.push(j*NX+NX-1);
+  for(let i=NX-2;i>=0;i--)edge.push((NY-1)*NX+i); for(let j=NY-2;j>=0;j--)edge.push(j*NX);
+  for(let k=0;k<edge.length-1;k++){
+    const a=edge[k], b=edge[k+1];
+    const ax=pos[a*3],ay=pos[a*3+1],az=pos[a*3+2],bx=pos[b*3],by=pos[b*3+1],bz=pos[b*3+2];
+    wpos.push(ax,ay,az, ax,base,az, bx,by,bz,  bx,by,bz, ax,base,az, bx,base,bz);
+  }
+  const wg=new T3.BufferGeometry(); wg.setAttribute('position',new T3.BufferAttribute(new Float32Array(wpos),3));
+  const wallM=new T3.Mesh(wg,new T3.MeshBasicMaterial({color:0x173663, side:T3.DoubleSide})); R3.scene.add(wallM);
+  const bg=new T3.BufferGeometry(); const X=wx(G.W), Z=wz(G.H);
+  bg.setAttribute('position',new T3.BufferAttribute(new Float32Array([0,base,0, X,base,0, 0,base,Z, X,base,0, X,base,Z, 0,base,Z]),3));
+  const baseM=new T3.Mesh(bg,new T3.MeshBasicMaterial({color:0x0B1F3A, side:T3.DoubleSide})); R3.scene.add(baseM);
+  R3.terrainParts=[R3.terrain,wallM,baseM];
+  R3.zmin=zmin; R3.zmax=zmax;
+}
+function initGL(){
+  let renderer;
+  try{ renderer=new T3.WebGLRenderer({canvas:cv, antialias:true, alpha:false}); }
+  catch(e){ throw new Error('This browser cannot show the 3D map (WebGL is unavailable).'); }
+  renderer.setClearColor(0xdfe5ec,1);
+  const scene=new T3.Scene();
+  const camera=new T3.PerspectiveCamera(42,1,0.03,400);
+  const tex=new T3.CanvasTexture(texCv); tex.colorSpace=T3.SRGBColorSpace;
+  tex.anisotropy=Math.min(8,renderer.capabilities.getMaxAnisotropy()); tex.minFilter=T3.LinearMipmapLinearFilter; tex.magFilter=T3.LinearFilter;
+  const controls=new T3.OrbitControls(camera,cv);
+  controls.enableDamping=true; controls.dampingFactor=0.14; controls.screenSpacePanning=false;
+  controls.minDistance=0.35; controls.maxDistance=60; controls.maxPolarAngle=1.38; controls.zoomToCursor=true;
+  controls.touches={ONE:T3.TOUCH.ROTATE, TWO:T3.TOUCH.DOLLY_PAN};
+  controls.mouseButtons={LEFT:T3.MOUSE.ROTATE, MIDDLE:T3.MOUSE.DOLLY, RIGHT:T3.MOUSE.PAN};
+  controls.addEventListener('change',()=>{dirty=true;});
+  R3={renderer,scene,camera,controls,tex,groups:{}};
+  buildTerrain();
+  const loop=()=>{
+    requestAnimationFrame(loop);
+    if(R3.anim) stepAnim();
+    const moved=controls.update();
+    if(moved||dirty){ clampTarget(); renderer.render(scene,camera); drawOverlay(); dirty=false; }
+  };
+  loop();
+}
+function clampTarget(){
+  const t=R3.controls.target, X=wx(G.W), Z=wz(G.H)*1.15;
+  const cx=clamp(t.x,0,X), cz=clamp(t.z,0,Z);
+  if(cx!==t.x||cz!==t.z){const dx=cx-t.x, dz=cz-t.z; t.x=cx; t.z=cz; R3.camera.position.x+=dx; R3.camera.position.z+=dz;}
+}
+function resize(){
+  if(!R3) return;
+  const r=mapwrap.getBoundingClientRect(); dpr=Math.min(2,window.devicePixelRatio||1);
+  R3.renderer.setPixelRatio(dpr); R3.renderer.setSize(r.width,r.height,false);
+  R3.camera.aspect=r.width/Math.max(1,r.height); R3.camera.updateProjectionMatrix();
+  ov.width=Math.round(r.width*dpr); ov.height=Math.round(r.height*dpr);
+  LMATS.forEach(m=>m.resolution.set(r.width,r.height));
+  dirty=true;
+}
+/* camera moves */
+function viewFor(target,dist,polar,az){
+  const s=Math.sin(polar);
+  return {t:target.clone(), p:new T3.Vector3(target.x+dist*s*Math.sin(az), target.y+dist*Math.cos(polar), target.z+dist*s*Math.cos(az))};
+}
+function animateTo(v,ms=550){ R3.anim={t0:performance.now(),ms,ft:R3.controls.target.clone(),fp:R3.camera.position.clone(),tt:v.t,tp:v.p}; dirty=true; }
+function stepAnim(){
+  const A=R3.anim, u=Math.min(1,(performance.now()-A.t0)/A.ms), e=u<.5?2*u*u:1-Math.pow(-2*u+2,2)/2;
+  R3.controls.target.lerpVectors(A.ft,A.tt,e); R3.camera.position.lerpVectors(A.fp,A.tp,e);
+  if(u>=1) R3.anim=null; dirty=true;
+}
+function fitBox(t,x0,x1,z0,z1,y0,y1,polar,az,margin){
+  // distance at which the box just fills the view
+  const cam=R3.camera.clone(), pts=[];
+  for(const x of [x0,x1])for(const y of [y0,y1])for(const z of [z0,z1]) pts.push(new T3.Vector3(x,y,z));
+  let lo=0.3, hi=80;
+  for(let k=0;k<18;k++){
+    const m=(lo+hi)/2, v=viewFor(t,m,polar,az); cam.position.copy(v.p); cam.lookAt(t); cam.updateMatrixWorld(); cam.updateProjectionMatrix();
+    const ok=pts.every(p=>{const q=p.clone().project(cam); return q.z<1&&Math.abs(q.x)<=margin&&Math.abs(q.y)<=margin;});
+    if(ok) hi=m; else lo=m;
+  }
+  return hi;
+}
+function fit(animate){
+  const X=wx(G.W), Z=wz(G.H), t=new T3.Vector3(X/2,1.2,Z/2);
+  const v=viewFor(t,fitBox(t,0,X,0,Z,(R3.zmin-350)*KM,R3.zmax*KM,0.85,0,0.94),0.85,0);
+  if(animate) animateTo(v); else {R3.controls.target.copy(v.t); R3.camera.position.copy(v.p); dirty=true;}
+}
+function curAz(){ const o=R3.camera.position.clone().sub(R3.controls.target); return Math.atan2(o.x,o.z); }
+function curPolar(){ const o=R3.camera.position.clone().sub(R3.controls.target); return Math.acos(clamp(o.y/o.length(),-1,1)); }
+function zoomBy(k){ const t=R3.controls.target, o=R3.camera.position.clone().sub(t); const d=clamp(o.length()*k,R3.controls.minDistance,R3.controls.maxDistance); animateTo({t:t.clone(),p:t.clone().add(o.setLength(d))},300); }
+function lookAtGrid(gx,gy,dist){
+  const t=new T3.Vector3(wx(gx),meshH(gx,gy)*KM,wz(gy));
+  const d=dist||Math.min(R3.camera.position.distanceTo(R3.controls.target),3);
+  animateTo(viewFor(t,d,Math.min(curPolar(),1.0),curAz()));
+}
+document.getElementById('zin').onclick=()=>zoomBy(1/1.6);
+document.getElementById('zout').onclick=()=>zoomBy(1.6);
+document.getElementById('zfit').onclick=()=>S.preview&&PV?fitPreview():fit(true);
+document.getElementById('znorth').onclick=()=>{const t=R3.controls.target; animateTo(viewFor(t,R3.camera.position.distanceTo(t),curPolar(),0),450);};
+
+/* ---------------- lines draped on the terrain ---------------- */
+function drape(g,lift){
+  const out=[];
+  for(let k=0;k<g.length;k++){
+    if(k){
+      const [x0,y0]=g[k-1],[x1,y1]=g[k]; const n=Math.max(1,Math.ceil(Math.hypot(x1-x0,y1-y0)/(STEP*0.5)));
+      for(let j=1;j<=n;j++){const x=x0+(x1-x0)*j/n, y=y0+(y1-y0)*j/n; out.push(wx(x),(meshH(x,y)+lift)*KM,wz(y));}
+    } else out.push(wx(g[0][0]),(meshH(g[0][0],g[0][1])+lift)*KM,wz(g[0][1]));
+  }
+  return out;
+}
+function lineMat(color,width,o={}){
+  const m=new T3.LineMaterial({color,linewidth:width,worldUnits:false,transparent:o.opacity!==undefined,opacity:o.opacity??1,
+    dashed:!!o.dash,dashSize:o.dash||0,gapSize:o.gap||0,dashScale:1,depthTest:true,depthWrite:o.depthWrite??true});
+  const r=mapwrap.getBoundingClientRect(); m.resolution.set(r.width,r.height); LMATS.push(m); return m;
+}
+function mkLine(pos,mat,order){
+  const geo=new T3.LineGeometry(); geo.setPositions(pos);
+  const l=new T3.Line2(geo,mat); if(mat.dashed) l.computeLineDistances(); l.renderOrder=order||0; return l;
+}
+function mkSegs(segs,mat,order){
+  const geo=new T3.LineSegmentsGeometry(); geo.setPositions(segs);
+  const l=new T3.LineSegments2(geo,mat); if(mat.dashed) l.computeLineDistances(); l.renderOrder=order||0; return l;
+}
+function disposeGroup(name){
+  const g=R3.groups[name]; if(!g) return;
+  g.traverse(o=>{ if(o.geometry) o.geometry.dispose(); if(o.material){ const i=LMATS.indexOf(o.material); if(i>=0) LMATS.splice(i,1); o.material.dispose(); } });
+  R3.scene.remove(g); delete R3.groups[name];
+}
+function setGroup(name,objs){ disposeGroup(name); const g=new T3.Group(); objs.forEach(o=>g.add(o)); R3.groups[name]=g; g.visible=!S.preview; R3.scene.add(g); dirty=true; return g; }
+function segsOf(pos){ const s=[]; for(let k=3;k<pos.length;k+=3) s.push(pos[k-3],pos[k-2],pos[k-1],pos[k],pos[k+1],pos[k+2]); return s; }
+function buildRunLayer(){
+  if(!RUNS.length) return;
+  const runSeg=[], liftSeg=[];
+  for(const R of RUNS){ R.w=R.parts.map(p=>drape(R.area?[...p,p[0]]:p,4)); R.w.forEach(w=>runSeg.push(...segsOf(w))); }
+  for(const L of LIFTS){ L.w=drape(L.g,9); liftSeg.push(...segsOf(L.w)); }
+  setGroup('runs',[
+    mkSegs(runSeg,lineMat(0xffffff,1.6,{opacity:0.9}),1),
+    mkSegs(liftSeg,lineMat(0x0B1F3A,1.6,{dash:0.05,gap:0.035}),1)]);
+  R3.groups.runs.visible=S.showRuns;
+}
+function routeWorld(R){ if(!R.w) R.w=(R.parts||[R.g]).map(p=>drape(R.area?[...p,p[0]]:p,R.kind==='run'?4:6)); return R.w; }
+function drawRoutes(){
+  const objs=[];
+  const add=(R,color,width,casing,cw,order,dash)=>{
+    for(const w of routeWorld(R)){
+      if(casing) objs.push(mkLine(w,lineMat(casing,width+cw,{depthWrite:false}),order));
+      objs.push(mkLine(w,lineMat(color,width,dash?{dash:0.08,gap:0.05}:{}),order+1));
+    }
+  };
+  for(const R of [...ROUTES,...S.userRoutes]) if(R!==S.selected) add(R,0x0B1F3A,2.4,0xffffff,2.6,2);
+  if(S.safe&&S.safe!==S.selected) add(S.safe,0x0E8FA3,3,0xffffff,2.6,2,true);
+  if(S.selected) add(S.selected,S.selected===S.safe?0x0E8FA3:0xC9A227,4.2,0x0B1F3A,3,4);
+  if(S.draw.length>1) objs.push(mkLine(drape(S.draw,6),lineMat(0x7B2CBF,3),6));
+  setGroup('routes',objs);
+}
+
+/* ---------------- overlay: labels and markers ---------------- */
+const _v=new T3.Vector3();
+function toScreen(x,y,z){
+  _v.set(x,y,z).project(R3.camera);
+  if(_v.z>1||_v.z<-1) return null;
+  const r=mapwrap.getBoundingClientRect(); return [(_v.x+1)/2*r.width,(1-_v.y)/2*r.height];
+}
+const gridScreen=(gx,gy,lift=6)=>toScreen(wx(gx),(meshH(gx,gy)+lift)*KM,wz(gy));
+function drawOverlay(){
+  const r=mapwrap.getBoundingClientRect();
+  octx.setTransform(dpr,0,0,dpr,0,0); octx.clearRect(0,0,r.width,r.height);
+  if(S.preview){ const t=R3.controls.target, a=toScreen(t.x,t.y,t.z), b=toScreen(t.x,t.y,t.z-1);
+    if(a&&b) document.getElementById('needle').style.transform=`rotate(${Math.atan2(b[0]-a[0],a[1]-b[1])}rad)`; return; }
+  const dist=R3.camera.position.distanceTo(R3.controls.target);
+  octx.font='600 11px Inter, sans-serif';
+  const placed=[];
+  for(const l of ROUTEDATA.landmarks){
+    const [gx,gy]=toGrid(l.lat,l.lon); const s=gridScreen(gx,gy,0); if(!s) continue;
+    const [sx,sy]=s; if(sx<-50||sy<-20||sx>r.width+50||sy>r.height+20) continue;
+    octx.fillStyle='#0B1F3A'; octx.beginPath(); octx.moveTo(sx,sy-6); octx.lineTo(sx+4.5,sy+1.5); octx.lineTo(sx-4.5,sy+1.5); octx.closePath(); octx.fill();
+    const tw=octx.measureText(l.name).width, box=[sx+5,sy-9,sx+8+tw,sy+5];
+    const clash=placed.some(b=>!(box[2]<b[0]||box[0]>b[2]||box[3]<b[1]||box[1]>b[3]));
+    if(!clash&&dist<48){placed.push(box); octx.lineWidth=3; octx.strokeStyle='rgba(255,255,255,.88)'; octx.strokeText(l.name,sx+6,sy+2); octx.fillText(l.name,sx+6,sy+2);}
+  }
+  const dot=(g,fill,rad,stroke)=>{const s=gridScreen(g[0],g[1]); if(!s)return; octx.beginPath(); octx.arc(s[0],s[1],rad,0,7); octx.fillStyle=fill; octx.fill(); if(stroke){octx.strokeStyle=stroke; octx.lineWidth=2; octx.stroke();}};
+  if(S.mode==='draw'||S.draw.length) S.draw.forEach(p=>dot(p,'#7B2CBF',4.5,'#fff'));
+  if(S.start) dot(S.start,'#2bb673',7,'#fff');
+  if(S.end) dot(S.end,'#C9A227',7,'#0B1F3A');
+  if(hoverPt) dot(hoverPt,'#fff',6,'#0B1F3A');
+  // compass needle points to north on screen
+  const t=R3.controls.target, a=toScreen(t.x,t.y,t.z), b=toScreen(t.x,t.y,t.z-1);
+  if(a&&b) document.getElementById('needle').style.transform=`rotate(${Math.atan2(b[0]-a[0],a[1]-b[1])}rad)`;
+}
+
+/* ---------------- picking ---------------- */
+function rayFrom(sx,sy){
+  const r=mapwrap.getBoundingClientRect();
+  const v=new T3.Vector3(sx/r.width*2-1, -(sy/r.height)*2+1, 0.5).unproject(R3.camera);
+  const o=R3.camera.position.clone(); return {o, d:v.sub(o).normalize()};
+}
+function terrainHit(o,d,maxT=200){
+  const X=wx(G.W), Z=wz(G.H), y0=R3.zmin*KM-0.01, y1=R3.zmax*KM+0.01;
+  let t0=0, t1=maxT;
+  for(const [oo,dd,lo,hi] of [[o.x,d.x,0,X],[o.y,d.y,y0,y1],[o.z,d.z,0,Z]]){
+    if(Math.abs(dd)<1e-9){ if(oo<lo||oo>hi) return null; continue; }
+    let a=(lo-oo)/dd, b=(hi-oo)/dd; if(a>b){const s=a;a=b;b=s;}
+    t0=Math.max(t0,a); t1=Math.min(t1,b); if(t0>t1) return null;
+  }
+  const gap=t=>{const x=(o.x+d.x*t)/(G.res*KM), y=(o.z+d.z*t)/(G.res*KM); return (o.y+d.y*t)-meshH(x,y)*KM;};
+  let t=t0, prev=t0;
+  for(let n=0;n<6000&&t<=t1;n++){
+    const g=gap(t);
+    if(g<=0){
+      let a=prev,b=t; for(let k=0;k<16;k++){const m=(a+b)/2; if(gap(m)>0)a=m; else b=m;}
+      return {gx:(o.x+d.x*b)/(G.res*KM), gy:(o.z+d.z*b)/(G.res*KM), t:b};
+    }
+    prev=t; t+=Math.max(0.003,Math.min(0.3,g*0.45));
+  }
+  return null;
+}
+function pickTerrain(sx,sy){ const {o,d}=rayFrom(sx,sy); const h=terrainHit(o,d); return h&&inGrid(h.gx,h.gy)?[h.gx,h.gy]:null; }
+function segDist(px,py,a,b){const dx=b[0]-a[0],dy=b[1]-a[1],L=dx*dx+dy*dy; let u=L?((px-a[0])*dx+(py-a[1])*dy)/L:0; u=clamp(u,0,1); return Math.hypot(px-a[0]-u*dx,py-a[1]-u*dy);}
+function pickLine(sx,sy,tol){
+  const cands=[...ROUTES,...S.userRoutes,...(S.safe?[S.safe]:[]),...(S.showRuns?RUNS:[])];
+  const hits=[];
+  for(const R of cands){
+    let best=1e9, bw=null;
+    for(const w of routeWorld(R)){
+      let prev=null;
+      for(let k=0;k<w.length;k+=3){
+        const s=toScreen(w[k],w[k+1],w[k+2]);
+        if(s&&prev){const dd=segDist(sx,sy,prev,s); if(dd<best){best=dd; bw=[w[k],w[k+1],w[k+2]];}}
+        prev=s;
+      }
+    }
+    if(best<tol) hits.push({R,d:best+(R.kind==='run'?3:0),p:bw});
+  }
+  hits.sort((a,b)=>a.d-b.d);
+  for(const h of hits.slice(0,4)){
+    const o=R3.camera.position, p=new T3.Vector3(...h.p), d=p.clone().sub(o), L=d.length(); d.normalize();
+    const th=terrainHit(o,d,L); if(th&&th.t<L-0.06) continue; // hidden behind terrain
+    return h.R;
+  }
+  return null;
+}
+
+/* pointer interaction: taps on the canvas (rotation, zoom and pan come from OrbitControls) */
+let downAt=null, nPtr=0, multi=false, hoverReq=null;
+const helpEl=document.getElementById('help'); let helpT=setTimeout(()=>helpEl.style.opacity=0,9000);
+cv.addEventListener('pointerdown',e=>{helpEl.style.opacity=0; nPtr++; if(nPtr>1) multi=true; if(nPtr===1){multi=false; downAt={x:e.offsetX,y:e.offsetY,t:Date.now()};} R3&&(R3.anim=null); hideProbe();});
+const ptrUp=e=>{
+  nPtr=Math.max(0,nPtr-1);
+  if(e.type==='pointerup'&&!multi&&downAt&&Math.hypot(e.offsetX-downAt.x,e.offsetY-downAt.y)<7&&Date.now()-downAt.t<600&&e.button<=0) onTap(e.offsetX,e.offsetY,e.pointerType);
+  if(!nPtr) downAt=null;
+};
+cv.addEventListener('pointerup',ptrUp); cv.addEventListener('pointercancel',ptrUp);
+cv.addEventListener('pointermove',e=>{
+  if(e.pointerType!=='mouse'||nPtr||S.mode!=='inspect'||S.preview) return;
+  const x=e.offsetX,y=e.offsetY; if(hoverReq) return;
+  hoverReq=requestAnimationFrame(()=>{hoverReq=null; const g=pickTerrain(x,y); if(g) showProbe(x,y,describeCell(cellIdx(g[0],g[1])),false); else hideProbe();});
+});
+cv.addEventListener('pointerleave',e=>{if(e.pointerType==='mouse'&&!nPtr&&!probe.classList.contains('act'))hideProbe();});
+cv.addEventListener('contextmenu',e=>e.preventDefault());
+
+const probe=document.getElementById('probe');
+function describeCell(i){
+  const F=factorsAt(i);
+  return `<b>${CLS[clsOf(F.score)].n}</b> · index ${F.score.toFixed(0)}<br>`+
+    `${F.z} m · ${F.s}° · ${ASP[F.sec]} aspect · ${F.band.toUpperCase()}<br>`+
+    `ATES: ${ATES[G.ates[i]].n}<br>`+
+    `<span class="muted">Release ${(F.p*100|0)}% · Runout ${(F.r*100|0)}% · Trap ${(F.t*100|0)}%</span>`;
+}
+function showProbe(sx,sy,html,active){
+  probe.innerHTML=html; probe.style.display='block'; probe.classList.toggle('act',!!active);
+  const r=mapwrap.getBoundingClientRect(); const w=probe.offsetWidth,h=probe.offsetHeight;
+  probe.style.left=clamp(sx+14,8,r.width-w-8)+'px'; probe.style.top=clamp(sy-h-10,8,r.height-h-8)+'px';
+}
+function hideProbe(){probe.style.display='none'; probe.classList.remove('act');}
+function onTap(sx,sy,ptype){
+  if(!R3||S.preview) return;
+  if(S.mode!=='inspect'){
+    const g=pickTerrain(sx,sy); if(!g) return;
+    if(S.mode==='draw'){S.draw.push(g); updDraw(); drawRoutes(); return;}
+    if(S.mode==='start'){S.start=g; setMode('inspect'); updSE(); dirty=true; return;}
+    if(S.mode==='end'){S.end=g; setMode('inspect'); updSE(); dirty=true; return;}
+  }
+  const R=pickLine(sx,sy,ptype==='mouse'?8:16);
+  if(R){
+    S.selected=R; drawRoutes(); routeListUI(); renderAssess();
+    const A=R.A;
+    showProbe(sx,sy,`<b>${R.name}</b><br><span class="muted">${routeTag(R)}</span><br>${A?badge(A.routeScore)+' score '+A.routeScore.toFixed(0):''}${R.kind==='run'?'<br><span class="muted small">Scored as uncontrolled terrain</span>':''}<div style="margin-top:6px"><button class="btn sm" id="probeOpen">Full assessment</button></div>`,true);
+    document.getElementById('probeOpen').onclick=()=>{hideProbe(); openAssess();};
+    return;
+  }
+  const g=pickTerrain(sx,sy); if(g) showProbe(sx,sy,describeCell(cellIdx(g[0],g[1])),false); else hideProbe();
+}
+function openAssess(){
+  document.querySelector('.tabs button[data-t="routes"]').click();
+  const el=document.getElementById('assess'); if(el) el.scrollIntoView({behavior:'smooth',block:'start'});
+}
+function setMode(m){
+  S.mode=m; cv.classList.toggle('drawing',m!=='inspect');
+  const hint=document.getElementById('modehint');
+  const msg={draw:'Tap the terrain to add route points',start:'Tap the terrain to set the start',end:'Tap the terrain to set the end'}[m];
+  hint.style.display=msg?'block':'none'; hint.textContent=msg||'';
+  hideProbe();
+  document.getElementById('drawCtl').style.display = m==='draw'?'flex':'none';
+  document.getElementById('drawBtn').textContent = m==='draw'?'Cancel drawing':'Draw on map';
+  dirty=true;
+}
+function draw(){ if(R3){ drawRoutes(); } }
+
+/* ---------------- legend ---------------- */
+function renderLegend(){
+  const el=document.getElementById('legend');
+  if(S.layer==='risk'){
+    el.innerHTML=`<div class="t">Risk index (relative)</div><div class="row">${CLS.map((c,k)=>`<span class="k"><span class="sw" style="background:${c.c}"></span>${c.n}</span>`).join('')}</div>`;
+  } else {
+    el.innerHTML=`<div class="t">ATES terrain class</div><div class="row">${ATES.slice(1).map(c=>`<span class="k"><span class="sw" style="background:${c.c}"></span>${c.n}</span>`).join('')}</div>`;
+  }
+  el.innerHTML+=`<div class="row" style="margin-top:6px">${S.showRuns?'<span class="k"><span class="lsw"></span>Ski run</span><span class="k"><span class="lsw lift"></span>Lift</span>':''}<span class="k"><span class="lsw route"></span>Route</span></div>`;
+}
+document.querySelectorAll('#layerSeg button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('#layerSeg button').forEach(x=>x.classList.toggle('on',x===b));
+  S.layer=b.dataset.l; renderBase(); renderLegend();});
+
+
+/* ---------------- tabs ---------------- */
+document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('.tabs button').forEach(x=>x.classList.toggle('on',x===b));
+  document.querySelectorAll('.pane').forEach(p=>p.classList.toggle('on',p.id==='pane-'+b.dataset.t));
+  if(b.dataset.t==='routes' && S.selected && S.selected.A && !S.selected.A.area) drawProfile(S.selected.A);
+  if(b.dataset.t==='print') printUI();
+});
+/* ---------------- 3D print (STL) ---------------- */
+const PRINT={vex:1.5, base:3, ridgeH:2.2, ridgeR:1.1, fade:1.0};
+function printRoutes(){
+  const list=[...ROUTES,...S.userRoutes,...(S.safe?[S.safe]:[])];
+  if(S.selected&&S.selected.kind==='run') list.push(S.selected);
+  return list;
+}
+function printUI(){
+  const host=document.getElementById('printList'); if(!host) return;
+  schedulePreview();
+  host.innerHTML=printRoutes().map(R=>`<div class="small">· ${R.name}${R.kind==='run'?' (selected run)':''}</div>`).join('');
+  const w=+document.getElementById('printW').value;
+  if(!G.zr){let lo=1e9,hi=-1e9; for(const e of G.elev){if(e<lo)lo=e; if(e>hi)hi=e;} G.zr=hi-lo;}
+  document.getElementById('printDims').textContent=`${w} × ${Math.round(w*G.H/G.W+legendDepth(w))} mm footprint, up to about ${Math.round(PRINT.base+G.zr*w/(G.W*G.res)*PRINT.vex+PRINT.ridgeH)} mm tall`;
+}
+function legendDepth(w){ return Math.max(13,Math.round(w*0.1)); }
+function blurScore(){
+  const W=G.W,H=G.H,out=new Float32Array(W*H),tmp=new Float32Array(W*H);
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++){let s=0,n=0;for(let d=-2;d<=2;d++){const xx=x+d;if(xx>=0&&xx<W){s+=SCORE[y*W+xx];n++;}}tmp[y*W+x]=s/n;}
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++){let s=0,n=0;for(let d=-2;d<=2;d++){const yy=y+d;if(yy>=0&&yy<H){s+=tmp[yy*W+x];n++;}}out[y*W+x]=s/n;}
+  return out;
+}
+function buildPrintGrid(widthMM){
+  const P=PRINT, Wmm=widthMM, Dmm=widthMM*G.H/G.W;
+  const sp=Math.max(0.4,Math.sqrt(Wmm*Dmm/260000));
+  const nx=Math.round(Wmm/sp)+1, nyT=Math.round(Dmm/sp)+1, syp=Dmm/(nyT-1);
+  const Lmm=legendDepth(Wmm), nL=Math.round(Lmm/syp), ny=nyT+nL, Dtot=(ny-1)*syp;
+  const mmPerM=Wmm/(G.W*G.res), SC=blurScore();
+  const Z=new Float32Array(nx*ny), TX=new Float32Array(nx*ny), D=new Float32Array(nx*ny).fill(1e9);
+  let zmin=1e9;
+  for(let k=0;k<G.elev.length;k++) zmin=Math.min(zmin,G.elev[k]);
+  const TAU=Math.PI*2;
+  // one geometric pattern per risk class, with hard edges so it never reads as terrain
+  const md=(v,p)=>((v%p)+p)%p;
+  const texAt=(px,py,c)=>{
+    if(c<=0) return 0;                                   // Low: smooth
+    if(c===1){ const u=md((px+py)/Math.SQRT2,2.2)/2.2;   // Moderate: diagonal ribs
+      return 0.6*Math.max(0,1-Math.abs(2*u-1)*1.25); }
+    if(c===2){ const u=md(px,3.2)-1.6, v=md(py,3.2)-1.6, r=Math.hypot(u,v); // Considerable: flat-topped studs
+      return r<0.75?0.9:r<1.05?0.9*(1.05-r)/0.3:0; }
+    if(c===3){ const u=Math.abs(md(px,3.2)-1.6)/1.6, v=Math.abs(md(py,3.2)-1.6)/1.6; // High: square pyramids
+      return 1.2*Math.max(0,1-Math.max(u,v)*1.1); }
+    const q=2.4, sx=md(px,q)-q/2, sy=md(py+(Math.floor(px/q)%2?q/2:0),q)-q/2;    // Extreme: tall staggered spikes
+    return 1.5*Math.max(0,1-Math.hypot(sx,sy)/(q*0.48));
+  };
+  const clsP=s=>s<14?0:s<31?1:s<55?2:s<78?3:4;
+  for(let j=0;j<nyT;j++)for(let i=0;i<nx;i++){
+    const k=j*nx+i, gx=i/(nx-1)*G.W, gy=j/(nyT-1)*G.H, px=i*Wmm/(nx-1), py=j*syp;
+    Z[k]=P.base+(bil(G.elev,gx,gy)-zmin)*mmPerM*P.vex;
+    TX[k]=texAt(px,py,clsP(bil(SC,gx,gy)));
+  }
+  // touch legend along the south edge: 5 risk patches (1 to 5 dots) and a route sample
+  const mX=3, gapX=1.2, cellW=(Wmm-2*mX-5*gapX)/6, groove=1.2, plate=P.base+1.0;
+  const patchTop=groove+1.0, dotRow=Lmm-2.4, patchBot=dotRow-1.8;
+  for(let j=nyT;j<ny;j++)for(let i=0;i<nx;i++){
+    const k=j*nx+i, px=i*Wmm/(nx-1), ly=(j-(nyT-1))*syp;
+    let z=plate;
+    if(ly<groove) z=P.base;
+    else {
+      const rel=px-mX, c=Math.floor(rel/(cellW+gapX)), cx=rel-c*(cellW+gapX);
+      const inCell=c>=0&&c<6&&cx<=cellW;
+      if(!inCell&&ly>=patchTop&&ly<=patchBot&&px>mX&&px<Wmm-mX) z=P.base+0.3; // groove between patches
+      if(inCell&&ly>=patchTop&&ly<=patchBot){
+        if(c<5) z=plate+0.3+texAt(px,ly,c);
+        else { const q=Math.abs(ly-(patchTop+patchBot)/2)/P.ridgeR; z=plate+0.3+(q<1?P.ridgeH*Math.sqrt(1-q*q):0); }
+      }
+      if(inCell&&c<5){
+        const n=c+1, dsp=2.5, x0=cellW/2-(n-1)*dsp/2;
+        for(let d=0;d<n;d++){const rr=Math.hypot(cx-(x0+d*dsp),ly-dotRow)/0.75; if(rr<1) z=Math.max(z,plate+0.8*Math.sqrt(1-rr*rr));}
+      }
+    }
+    Z[k]=z;
+  }
+  // distance from each vertex to the nearest route, in mm
+  const reach=P.ridgeR+P.fade, gxmm=Wmm/G.W, gymm=Dmm/G.H;
+  for(const R of printRoutes()) for(const g of (R.parts||[R.g])) for(let s=1;s<g.length;s++){
+    const ax=g[s-1][0]*gxmm, ay=g[s-1][1]*gymm, bx=g[s][0]*gxmm, by=g[s][1]*gymm;
+    const i0=Math.max(0,Math.floor((Math.min(ax,bx)-reach)/Wmm*(nx-1))), i1=Math.min(nx-1,Math.ceil((Math.max(ax,bx)+reach)/Wmm*(nx-1)));
+    const j0=Math.max(0,Math.floor((Math.min(ay,by)-reach)/syp)), j1=Math.min(nyT-1,Math.ceil((Math.max(ay,by)+reach)/syp));
+    for(let j=j0;j<=j1;j++)for(let i=i0;i<=i1;i++){
+      const d=segDist(i*Wmm/(nx-1),j*syp,[ax,ay],[bx,by]), k=j*nx+i; if(d<D[k]) D[k]=d;
+    }
+  }
+  for(let k=0;k<Z.length;k++){
+    const d=D[k], w=clamp((P.ridgeR+P.fade-d)/P.fade,0,1), q=d/P.ridgeR;
+    Z[k]+=TX[k]*(1-w)+(q<1?P.ridgeH*Math.sqrt(1-q*q):0);
+  }
+  let hmax=0; for(let k=0;k<Z.length;k++) if(Z[k]>hmax) hmax=Z[k];
+  return {Z,nx,ny,syp,Wmm,Dmm:Dtot,hmax};
+}
+function printPerimeter(nx,ny){
+  const per=[]; for(let i=0;i<nx;i++)per.push([i,0]); for(let j=1;j<ny;j++)per.push([nx-1,j]);
+  for(let i=nx-2;i>=0;i--)per.push([i,ny-1]); for(let j=ny-2;j>=1;j--)per.push([0,j]);
+  return per;
+}
+function buildSTL(widthMM){
+  const M=buildPrintGrid(widthMM), {Z,nx,ny,syp,Wmm}=M, Dtot=M.Dmm;
+  // binary STL: top surface, side walls, bottom fan
+  const per=[]; for(let i=0;i<nx;i++)per.push([i,0]); for(let j=1;j<ny;j++)per.push([nx-1,j]);
+  for(let i=nx-2;i>=0;i--)per.push([i,ny-1]); for(let j=ny-2;j>=1;j--)per.push([0,j]);
+  const nTop=2*(nx-1)*(ny-1), nPer=per.length, nTri=nTop+2*nPer+nPer;
+  const buf=new ArrayBuffer(84+50*nTri), dv=new DataView(buf);
+  const hdr='Avalanche Risk Atlas Mount Temple tactile model'; for(let c=0;c<hdr.length;c++) dv.setUint8(c,hdr.charCodeAt(c));
+  dv.setUint32(80,nTri,true);
+  let o=84;
+  const X=i=>i*Wmm/(nx-1), Y=j=>Dtot-j*syp;
+  function tri(a,b,c){
+    const ux=b[0]-a[0],uy=b[1]-a[1],uz=b[2]-a[2],vx=c[0]-a[0],vy=c[1]-a[1],vz=c[2]-a[2];
+    let nx_=uy*vz-uz*vy, ny_=uz*vx-ux*vz, nz_=ux*vy-uy*vx; const L=Math.hypot(nx_,ny_,nz_)||1;
+    for(const v of [nx_/L,ny_/L,nz_/L,...a,...b,...c]){dv.setFloat32(o,v,true); o+=4;}
+    dv.setUint16(o,0,true); o+=2;
+  }
+  const V=(i,j)=>[X(i),Y(j),Z[j*nx+i]];
+  for(let j=0;j<ny-1;j++)for(let i=0;i<nx-1;i++){
+    const a=V(i,j),b=V(i+1,j),c=V(i,j+1),d=V(i+1,j+1);
+    tri(a,c,b); tri(b,c,d);
+  }
+  for(let k=0;k<nPer;k++){
+    const [ia,ja]=per[k],[ib,jb]=per[(k+1)%nPer];
+    const A=V(ia,ja),B=V(ib,jb),A0=[A[0],A[1],0],B0=[B[0],B[1],0];
+    tri(A,B,A0); tri(B,B0,A0);
+  }
+  const C=[Wmm/2,Dtot/2,0];
+  for(let k=0;k<nPer;k++){
+    const [ia,ja]=per[k],[ib,jb]=per[(k+1)%nPer];
+    tri(C,[X(ia),Y(ja),0],[X(ib),Y(jb),0]);
+  }
+  return {buf,nTri,Wmm,Dmm:Dtot,hmax:M.hmax};
+}
+/* zip with one deflated (or stored) entry, for viewers that only accept .zip */
+const CRCT=(()=>{const t=new Uint32Array(256);for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0;}return t;})();
+function crc32(u8){let c=0xFFFFFFFF;for(let i=0;i<u8.length;i++)c=CRCT[(c^u8[i])&255]^(c>>>8);return (c^0xFFFFFFFF)>>>0;}
+async function zipOne(name,u8){
+  let data=u8, method=0;
+  if(typeof CompressionStream!=='undefined'){
+    try{ data=new Uint8Array(await new Response(new Blob([u8]).stream().pipeThrough(new CompressionStream('deflate-raw'))).arrayBuffer()); method=8; }catch(e){ data=u8; method=0; }
+  }
+  const nm=new TextEncoder().encode(name), crc=crc32(u8);
+  const lh=new DataView(new ArrayBuffer(30)); lh.setUint32(0,0x04034b50,true); lh.setUint16(4,20,true); lh.setUint16(8,method,true);
+  lh.setUint32(14,crc,true); lh.setUint32(18,data.length,true); lh.setUint32(22,u8.length,true); lh.setUint16(26,nm.length,true);
+  const ch=new DataView(new ArrayBuffer(46)); ch.setUint32(0,0x02014b50,true); ch.setUint16(4,20,true); ch.setUint16(6,20,true); ch.setUint16(10,method,true);
+  ch.setUint32(16,crc,true); ch.setUint32(20,data.length,true); ch.setUint32(24,u8.length,true); ch.setUint16(28,nm.length,true);
+  const cdOff=30+nm.length+data.length, cdLen=46+nm.length;
+  const eo=new DataView(new ArrayBuffer(22)); eo.setUint32(0,0x06054b50,true); eo.setUint16(8,1,true); eo.setUint16(10,1,true);
+  eo.setUint32(12,cdLen,true); eo.setUint32(16,cdOff,true);
+  return new Blob([lh,nm,data,ch,nm,eo],{type:'application/zip'});
+}
+let dlCap=null;
+if(window.claude&&typeof window.claude.use==='function'){ window.claude.use('downloads').then(d=>{dlCap=d;}).catch(()=>{}); }
+document.getElementById('printW').onchange=printUI;
+/* print preview: the STL surface shown in the 3D view, lit so texture and ridges read */
+let PV=null, pvT=null;
+function buildPreview(){
+  const w=+document.getElementById('printW').value;
+  const M=buildPrintGrid(w), {Z,nx,ny,syp,Wmm}=M, D=M.Dmm, s=wx(G.W)/Wmm;
+  if(PV){ PV.group.traverse(o=>{if(o.geometry)o.geometry.dispose(); if(o.material)o.material.dispose();}); R3.scene.remove(PV.group); }
+  const pos=new Float32Array(nx*ny*3);
+  for(let j=0;j<ny;j++)for(let i=0;i<nx;i++){const k=j*nx+i; pos[k*3]=i*Wmm/(nx-1)*s; pos[k*3+1]=Z[k]*s; pos[k*3+2]=j*syp*s;}
+  const idx=new Uint32Array((nx-1)*(ny-1)*6); let n=0;
+  for(let j=0;j<ny-1;j++)for(let i=0;i<nx-1;i++){const a=j*nx+i,b=a+1,c=a+nx,d=c+1; idx[n++]=a;idx[n++]=c;idx[n++]=b; idx[n++]=b;idx[n++]=c;idx[n++]=d;}
+  const geo=new T3.BufferGeometry(); geo.setAttribute('position',new T3.BufferAttribute(pos,3)); geo.setIndex(new T3.BufferAttribute(idx,1)); geo.computeVertexNormals();
+  const mat=new T3.MeshStandardMaterial({color:0xE9E3D3, roughness:0.8, metalness:0, side:T3.DoubleSide, flatShading:false});
+  const group=new T3.Group(); group.add(new T3.Mesh(geo,mat));
+  const wp=[]; const per=printPerimeter(nx,ny);
+  for(let k=0;k<per.length;k++){
+    const [ia,ja]=per[k],[ib,jb]=per[(k+1)%per.length], a=(ja*nx+ia)*3, b=(jb*nx+ib)*3;
+    wp.push(pos[a],pos[a+1],pos[a+2], pos[b],pos[b+1],pos[b+2], pos[a],0,pos[a+2],  pos[b],pos[b+1],pos[b+2], pos[b],0,pos[b+2], pos[a],0,pos[a+2]);
+  }
+  const X=Wmm*s, Zd=D*s;
+  wp.push(0,0,0, X,0,0, 0,0,Zd, X,0,0, X,0,Zd, 0,0,Zd);
+  const wg=new T3.BufferGeometry(); wg.setAttribute('position',new T3.BufferAttribute(new Float32Array(wp),3)); wg.computeVertexNormals();
+  group.add(new T3.Mesh(wg,mat));
+  group.add(new T3.HemisphereLight(0xffffff,0x4a5a70,0.9));
+  const sun=new T3.DirectionalLight(0xffffff,2.4); sun.position.set(X/2-16,11,Zd/2-11); sun.target.position.set(X/2,0,Zd/2);
+  group.add(sun); group.add(sun.target);
+  group.visible=S.preview; R3.scene.add(group);
+  PV={group,X,Zd,H:M.hmax*s,w,M};
+  document.getElementById('pvInfo').textContent=`Print preview · ${Wmm} × ${D.toFixed(0)} × ${M.hmax.toFixed(0)} mm`;
+  dirty=true;
+}
+function schedulePreview(){ if(!S.preview) return; clearTimeout(pvT); pvT=setTimeout(buildPreview,200); }
+function fitPreview(){
+  const t=new T3.Vector3(PV.X/2,PV.H*0.35,PV.Zd/2);
+  animateTo(viewFor(t,fitBox(t,0,PV.X,0,PV.Zd,0,PV.H,0.95,0.5,0.98),0.95,0.5),600);
+}
+function setPreview(on){
+  if(!R3) return;
+  S.preview=on;
+  if(on) buildPreview();
+  R3.terrainParts.forEach(m=>m.visible=!on);
+  if(R3.groups.runs) R3.groups.runs.visible=!on&&S.showRuns;
+  if(R3.groups.routes) R3.groups.routes.visible=!on;
+  if(PV) PV.group.visible=on;
+  R3.renderer.setClearColor(on?0xd5dbe3:0xdfe5ec,1);
+  mapwrap.classList.toggle('pv',on); hideProbe(); hoverPt=null;
+  document.getElementById('pvBtn').textContent=on?'Exit preview':'Preview print';
+  if(on){
+    fitPreview();
+    if(window.innerWidth<=860) mapwrap.scrollIntoView({behavior:'smooth'});
+  } else fit(true);
+  dirty=true;
+}
+document.getElementById('pvBtn').onclick=()=>setPreview(!S.preview);
+document.getElementById('pvExit').onclick=()=>setPreview(false);
+
+document.getElementById('printBtn').onclick=async()=>{
+  const msg=document.getElementById('printMsg'), btn=document.getElementById('printBtn'), w=+document.getElementById('printW').value;
+  btn.disabled=true; msg.textContent='Building the model…';
+  await new Promise(r=>setTimeout(r,30));
+  try{
+    const M=buildSTL(w), base=`mount-temple-avalanche-model-${w}mm`;
+    const info=`${(M.nTri/1000).toFixed(0)}k triangles, ${M.Wmm.toFixed(0)} × ${M.Dmm.toFixed(0)} × ${M.hmax.toFixed(0)} mm`;
+    if(dlCap){
+      msg.textContent='Compressing…';
+      const z=await zipOne(base+'.stl',new Uint8Array(M.buf));
+      try{ await dlCap.save({filename:base+'.zip',data:z}); msg.textContent=`Saved ${base}.zip (${info}). Unzip it to get the STL.`; }
+      catch(e){ msg.textContent=e&&e.code==='declined'?'Download cancelled.':'Downloads are not available in this view. Open the GitHub Pages site to get the STL.'; }
+    } else {
+      const url=URL.createObjectURL(new Blob([M.buf],{type:'model/stl'}));
+      const a=document.createElement('a'); a.href=url; a.download=base+'.stl'; document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(()=>URL.revokeObjectURL(url),60000);
+      msg.textContent=`Downloaded ${base}.stl (${info}, ${(M.buf.byteLength/1048576).toFixed(0)} MB).`;
+    }
+  }catch(e){ console.error(e); msg.textContent='Could not build the model: '+e.message; }
+  btn.disabled=false;
+};
+
+
+/* ---------------- conditions UI ---------------- */
+function dangerUI(){
+  const host=document.getElementById('dangerRows'); host.innerHTML='';
+  for(const [k,label] of BANDS){
+    const v=S.danger[k];
+    const row=document.createElement('div'); row.className='danger-row';
+    row.innerHTML=`<div class="small">${label}</div><div class="rowf"><span class="badge" style="background:${CLS[v-1].c};color:${v===5?'#fff':'#111'}">${v} · ${DANGER[v-1]}</span></div>`;
+    host.appendChild(row);
+  }
+}
+function roseSVG(asp){
+  let s='<svg class="rose" viewBox="-50 -50 100 100">';
+  for(let k=0;k<8;k++){
+    const a0=(k*45-22.5-90)*Math.PI/180, a1=(k*45+22.5-90)*Math.PI/180, R=44, r=10;
+    const p=`M${r*Math.cos(a0)} ${r*Math.sin(a0)} L${R*Math.cos(a0)} ${R*Math.sin(a0)} A${R} ${R} 0 0 1 ${R*Math.cos(a1)} ${R*Math.sin(a1)} L${r*Math.cos(a1)} ${r*Math.sin(a1)} A${r} ${r} 0 0 0 ${r*Math.cos(a0)} ${r*Math.sin(a0)}Z`;
+    s+=`<path data-k="${k}" d="${p}" fill="${asp[k]?'#C9A227':'#0B1F3A'}"><title>${ASP[k]}</title></path>`;
+    const am=(k*45-90)*Math.PI/180; s+=`<text x="${30*Math.cos(am)}" y="${30*Math.sin(am)+3}" text-anchor="middle" font-size="9" font-weight="700" fill="${asp[k]?'#0B1F3A':'#7F90AA'}" pointer-events="none">${ASP[k]}</text>`;
+  }
+  return s+'</svg>';
+}
+function probsUI(){
+  const host=document.getElementById('probs'); host.innerHTML='';
+  document.getElementById('probSrc').textContent=S.dangerFrom==='avcan'?'From the Parks Canada forecast.':'Modelled from the 60-day weather.';
+  if(!S.problems.length) host.innerHTML='<div class="muted small" style="margin-bottom:8px">No problems listed. Hazard follows the danger ratings evenly across aspects.</div>';
+  for(const P of S.problems){
+    const d=document.createElement('div'); d.className='prob';
+    d.innerHTML=`<div class="top"><b>${PTYPES.find(p=>p[0]===P.type)?.[1]||P.type}</b></div>
+      <div class="rowf" style="margin-top:8px;align-items:flex-start;flex-wrap:nowrap">${roseSVG(P.asp)}
+        <div style="flex:1;min-width:0" class="small">
+          <div><span class="muted">Bands</span> ${BANDS.filter(([k])=>P.bands[k]).map(([k])=>k.toUpperCase()).join(', ')||'none'}</div>
+          <div style="margin-top:4px"><span class="muted">Likelihood</span> ${LIKE[P.like-1]||''}</div>
+          <div style="margin-top:4px"><span class="muted">Expected size</span> ${P.size}</div>
+        </div></div>`;
+    host.appendChild(d);
+  }
+}
+const LTYPE={sh:'Surface hoar',nsf:'Near-surface facets',crust:'Crust',basal:'Facets near the ground'};
+function accUI(){
+  const el=document.getElementById('accBox'); if(!el) return;
+  if(!ACC){ el.textContent='Not run yet.'; return; }
+  const p=x=>x==null?'–':Math.round(x*100)+'%';
+  const PN={storm:'Storm slab',wind:'Wind slab',persistent:'Persistent slab',deep:'Deep persistent slab',wet:'Wet avalanches'};
+  el.innerHTML=`<p>Compared with Parks Canada's daily ratings for Mount Temple, ${ACC.months}, tested on ${ACC.tested_on} after tuning on the three earlier winters (${ACC.n_band_ratings} band ratings).</p>
+  <table style="width:100%;border-collapse:collapse;font-size:12px"><tr><td></td><td style="text-align:right">Model</td><td style="text-align:right">Usual rating for the month</td></tr>
+  <tr><td>Exact match</td><td style="text-align:right">${p(ACC.exact)}</td><td style="text-align:right">${p(ACC.bench_exact)}</td></tr>
+  <tr><td>Within one level</td><td style="text-align:right">${p(ACC.within1)}</td><td style="text-align:right">${p(ACC.bench_within1)}</td></tr>
+  <tr><td>Average error (levels)</td><td style="text-align:right">${ACC.mae}</td><td style="text-align:right">${ACC.bench_mae}</td></tr>
+  <tr><td>Weighted kappa</td><td style="text-align:right">${ACC.kappa}</td><td style="text-align:right">${ACC.bench_kappa}</td></tr></table>
+  <p style="margin-top:8px">Problems (share of Parks Canada's days the model also flagged, and share of the model's flags Parks Canada did not list):</p>
+  <ul>${Object.entries(ACC.problems).map(([k,v])=>`<li>${PN[k]}: caught ${p(v.hit)} of ${v.parks_days} days, false alarms ${p(v.false_alarm)}</li>`).join('')}</ul>
+  <p>By winter (same settings): ${Object.entries(ACC.per_season||{}).map(([k,v])=>`${k} ${v.role==='test'?'(test)':'(tuning)'}: exact ${p(v.exact)}, average error ${v.mae}`).join('; ')}. Across ${ACC.runs} tuning runs the test-winter exact match ranged ${p(ACC.range_exact[0])} to ${p(ACC.range_exact[1])}.</p>
+  <p>Known weaknesses: it rarely rates Low (buried weak layers keep its danger above the Low cut-off), rates too high on average in the test winter, misses about 4 in 10 wind slab days, and over-flags storm, deep persistent and wet problems. Before October 2023 there are no station readings, so an average correction from the tuning winters is used instead.</p>
+  ${ACC.disclosure?`<p class="muted">${ACC.disclosure}</p>`:''}
+  <p class="muted">Parks Canada's rating is a forecast, not a record of avalanches, so this measures agreement with the forecasters. Full results: build/data/temple/backtest/report.json in the repo.</p>`;
+}
+function layersUI(){
+  const host=document.getElementById('layerList'); if(!host) return; host.innerHTML='';
+  if(!SEASON){host.innerHTML='<div class="muted small">No weather loaded.</div>';return;}
+  const rows=[];
+  for(const [b,lab] of BANDS){ for(const L of (SEASON.layers[b]||[])){ rows.push({b,lab,L}); } }
+  if(!rows.length){host.innerHTML='<div class="muted small">No buried weak layers in the model for this date.</div>';return;}
+  rows.sort((a,b)=>a.L.date.localeCompare(b.L.date));
+  for(const {lab,L} of rows){
+    const kind=L.type==='basal'?'deep persistent':L.depth>MP.pMax?'deep persistent':L.depth>=MP.pMin?'persistent':'shallow, not yet a slab problem';
+    const d=document.createElement('div'); d.className='ritem';
+    d.innerHTML=`<div style="flex:1;min-width:0"><div class="nm">${LTYPE[L.type]} · ${lab}</div><div class="tag">Formed ${new Date(L.date+'T12:00').toLocaleDateString([], {month:'short',day:'numeric'})} · about ${Math.round(L.depth)} cm deep · ${kind}</div></div>`;
+    host.appendChild(d);
+  }
+}
+function wxUI(){
+  const w=S.wx; const el=document.getElementById('wxStats');
+  const st=(v,l)=>`<div class="stat"><div class="v">${v}</div><div class="l">${l}</div></div>`;
+  el.innerHTML=st(w.hn24+' cm','New snow 24 h')+st(w.hn72+' cm','New snow 72 h')+st(w.wind+' km/h','Wind')+st(ASP[w.windDir],'Wind from')+st(w.temp+' °C','Alpine temp')+st(w.fl+' m','Freezing level');
+  document.getElementById('wxSrc').textContent=SEASON?(SEASON.obsUsed?'Treeline snow from Parks Canada stations, wind from Bosworth Upper, the rest from the weather model.':'From the weather model at Mount Temple.'):'';
+}
+
+/* ---------------- live data ----------------
+   Everything is pulled by the reader's browser from public APIs that allow it (CORS).
+   For a past date the same sources are queried for that date. */
+const LIVE={};
+const SRC=[['wx','Open-Meteo weather model'],['era','ERA5 reanalysis (precipitation)'],['stn','Parks Canada weather stations'],['av','Parks Canada avalanche forecast'],['min','Mountain Information Network']];
+let REQ=0;
+function srcLabel(){
+  const l=document.getElementById('srcLabel');
+  l.textContent = S.source==='live'?'Conditions for right now.':S.source==='past'?'Conditions replayed for '+(S.endDate||'')+'.':S.source==='snapshot'?'Weather from the snapshot saved in this page.':'Loading…';
+  const ds=document.getElementById('dangerSrc');
+  if(ds){
+    if(S.dangerFrom==='avcan') ds.textContent='From the Parks Canada forecast'+(AVC.issued?' issued '+new Date(AVC.issued).toLocaleDateString():'')+'.';
+    else ds.innerHTML='<span style="color:#F79218;font-weight:600">Modelled, not an official rating.</span> No Parks Canada rating was issued for this date. '+(ACC?`In testing on ${ACC.tested_on} (${ACC.months}), the model matched Parks Canada exactly on ${Math.round(ACC.exact*100)}% of band ratings and was within one level on ${Math.round(ACC.within1*100)}%. ${ACC.beats_benchmark?'It did better than simply using the usual rating for the month.':'It did <b>not</b> do better than simply using the usual rating for the month.'} See Method for details.`:'Its accuracy has not been tested yet.');
+  }
+}
+function liveUI(){
+  const el=document.getElementById('liveStatus');
+  el.innerHTML=SRC.map(([k,name])=>{const o=LIVE[k]||{st:'wait',msg:'Waiting…'}; return `<div class="s"><span class="dot ${o.st}"></span><div><b>${name}</b> <span class="muted">${o.msg}</span></div></div>`;}).join('')+
+    `<div class="muted small" style="margin-top:4px">Official forecast: <a href="${AVC.url||'https://avalanche.ca/forecasts'}" target="_blank" rel="noopener">Banff, Yoho &amp; Kootenay</a>.</div>`;
+  srcLabel();
+}
+async function fetchJSON(url,ms=15000){
+  const c=new AbortController(); const t=setTimeout(()=>c.abort(),ms);
+  try{const r=await fetch(url,{signal:c.signal}); if(!r.ok) throw new Error('HTTP '+r.status); return await r.json();}
+  catch(e){ if(e.name==='AbortError') throw new Error('timed out'); if(e instanceof TypeError) throw new Error('blocked or offline'); throw e; }
+  finally{clearTimeout(t);}
+}
+const LL='latitude=51.3506&longitude=-116.2067';
+const WXVARS='temperature_2m,precipitation,rain,snowfall,wind_speed_10m,wind_direction_10m,wind_gusts_10m,freezing_level_height,cloud_cover,shortwave_radiation';
+const TZ='timezone=America%2FEdmonton';
+const ymd=ms=>new Date(ms).toISOString().slice(0,10);
+const addDays=(d,n)=>ymd(Date.parse(d+'T12:00:00Z')+n*864e5);
+function todayLocal(){ return ymd(Date.now()-7*3600e3); }
+// The model runs from 1 October of the season (so weak layers buried earlier are tracked),
+// or from 61 days back if that is earlier. The chart still shows the last 60 days.
+function startOf(endDate){
+  const y=+endDate.slice(0,4), m=+endDate.slice(5,7);
+  const oct=(m>=10?y:y-1)+'-10-01';
+  const back=addDays(endDate,-61);
+  return (m>=10||m<=5)&&oct<back?oct:back;
+}
+function mergeHourly(a,b){ // append hours from b that a does not have
+  if(!b||!b.hourly) return a; const have=new Set(a.hourly.time);
+  b.hourly.time.forEach((t,k)=>{ if(have.has(t)) return; for(const key of Object.keys(a.hourly)) a.hourly[key].push(b.hourly[key]?.[k]??null); });
+  return a;
+}
+async function getModel(endDate,isNow){
+  const start=startOf(endDate);
+  if(start>='2022-01-01'){
+    const j=await fetchJSON(`https://historical-forecast-api.open-meteo.com/v1/forecast?${LL}&hourly=${WXVARS}&start_date=${start}&end_date=${isNow?endDate:addDays(endDate,1)}&${TZ}`,30000);
+    if(isNow){ try{ mergeHourly(j,await fetchJSON(`https://api.open-meteo.com/v1/forecast?${LL}&hourly=${WXVARS}&past_days=1&forecast_days=2&${TZ}`)); }catch(e){} }
+    return {j, name:'archived forecast models from '+start};
+  }
+  const j=await fetchJSON(`https://archive-api.open-meteo.com/v1/archive?${LL}&hourly=temperature_2m,precipitation,rain,snowfall,wind_speed_10m,wind_direction_10m,wind_gusts_10m,cloud_cover,shortwave_radiation&start_date=${start}&end_date=${addDays(endDate,1)}&${TZ}`,30000);
+  j.eraOnly=true; return {j, name:'ERA5 only (before 2022), from '+start};
+}
+async function getERA(endDate){
+  const last=addDays(todayLocal(),-5); const end=endDate<last?addDays(endDate,1):last;
+  return fetchJSON(`https://archive-api.open-meteo.com/v1/archive?${LL}&hourly=precipitation&start_date=${startOf(endDate)}&end_date=${end}&${TZ}`,30000);
+}
+const mergeERA=(j,e)=>TM.mergeERA(j,e);
+// Parks Canada stations via Avalanche Canada: snow depth (Bosworth Lower = treeline, Stanley = below treeline),
+// ridgetop wind and temperature (Bosworth Upper, Whymper as backup). At most ~31 days per request.
+const STATIONS={tl:110, btl:108, ridge:111, ridge2:109};
+async function getStations(endDate,isNow){
+  const endMs=isNow?Date.now():Date.parse(endDate+'T19:00:00Z');
+  const startMs=Date.parse(startOf(endDate)+'T07:00:00Z');
+  const iso=ms=>new Date(ms).toISOString().slice(0,19)+'Z';
+  const chunks=[]; for(let a=startMs;a<endMs;a+=30*864e5) chunks.push([a,Math.min(endMs,a+30*864e5)]);
+  const get=async id=>{ const parts=await Promise.all(chunks.map(([a,b])=>fetchJSON(`https://weather.prod.avalanche.ca/stations/${id}/measurements?fromDate=${iso(a)}&toDate=${iso(b)}`,20000).catch(()=>[]))); return parts.flat(); };
+  const [tl,btl,ridge,ridge2]=await Promise.all([get(STATIONS.tl),get(STATIONS.btl),get(STATIONS.ridge),get(STATIONS.ridge2)]);
+  const r=TM.stationDays(tl,btl,ridge,ridge2,-7);
+  if(!r.count) throw new Error('no readings for these dates');
+  return r;
+}
+const AVMAP={low:1,moderate:2,considerable:3,high:4,extreme:5};
+const PTMAP={'storm-slab':'storm','stormslab':'storm','wind-slab':'wind','windslab':'wind','persistent-slab':'persistent','persistentslab':'persistent','deep-persistent-slab':'deep','deeppersistentslab':'deep','wet-slab':'wetslab','wetslab':'wetslab','loose-wet':'wetloose','loosewet':'wetloose','loose-dry':'dryloose','loosedry':'dryloose','cornice':'cornice','cornices':'cornice'};
+const LKMAP={'unlikely':1,'possible':2,'likely':3,'very-likely':4,'verylikely':4,'certain':5,'almost-certain':5,'almostcertain':5};
+function val(x){return (x&&typeof x==='object')?(x.value??x.display??''):x;}
+async function getForecast(endDate,isNow){
+  const q=isNow?'':`&date=${endDate}T19:00:00Z`;
+  const j=await fetchJSON('https://api.avalanche.ca/forecasts/en/products/point?lat=51.3506&long=-116.2067'+q);
+  const rep=j.report||j.product?.report||j;
+  for(const k of Object.keys(AVC)) delete AVC[k];
+  AVC.issued=rep.dateIssued||null; AVC.url=j.url?('https://avalanche.ca'+(j.url.startsWith('/')?'':'/')+j.url.replace(/^https?:\/\/[^/]+/,'')):'https://avalanche.ca/forecasts';
+  if(/^https?:/.test(j.url||'')) AVC.url=j.url;
+  const dr=(rep.dangerRatings||[])[0];
+  if(!dr||!rep.dateIssued){ AVC.status=isNow?'No forecast published right now':'No forecast archived for this date'; throw new Error(AVC.status); }
+  const rt=dr.ratings||dr;
+  const pick=k=>AVMAP[String(val(rt[k]?.rating)||'').toLowerCase()];
+  const d={alp:pick('alp'), tl:pick('tln')||pick('tl'), btl:pick('btl')};
+  if(!d.alp||!d.tl||!d.btl){
+    const raw=['alp','tln','btl'].map(k=>String(val(rt[k]?.rating)||'')).join(' ');
+    AVC.status=/early/i.test(raw)?'Early season: no danger rating issued':/spring|off/i.test(raw)?'Spring or off season: no danger rating issued':'No danger rating issued';
+    throw new Error(AVC.status);
+  }
+  const probs=[];
+  for(const p of (rep.problems||[]).slice(0,3)){
+    const type=PTMAP[String(val(p.type)).toLowerCase()]; if(!type) continue;
+    const data=p.data||p;
+    const bands={alp:0,tl:0,btl:0}; (data.elevations||[]).forEach(e=>{const v=String(val(e)).toLowerCase(); if(v==='alp')bands.alp=1; if(v==='tln'||v==='tl')bands.tl=1; if(v==='btl')bands.btl=1;});
+    const asp=[0,0,0,0,0,0,0,0]; (data.aspects||[]).forEach(a=>{const k=ASP.indexOf(String(val(a)).toUpperCase()); if(k>=0)asp[k]=1;});
+    const like=LKMAP[String(val(data.likelihood)).toLowerCase()]||2;
+    const es=data.expectedSize||{}; const sz=parseFloat(es.max||es.min||2);
+    probs.push({type,bands,asp,like,size:SIZES.reduce((a,b)=>Math.abs(b-sz)<Math.abs(a-sz)?b:a,2)});
+  }
+  return {danger:d, problems:probs, issued:rep.dateIssued};
+}
+async function getMIN(endDate,isNow){
+  const to=isNow?todayLocal():endDate, from=addDays(to,-30);
+  const j=await fetchJSON(`https://api.avalanche.ca/min/en/submissions?fromdate=${from}&todate=${to}&pagesize=500`,20000);
+  const items=(j.items?.data||[]).filter(x=>x.location&&Math.hypot((x.location.latitude-51.3506)*111,(x.location.longitude+116.2067)*69.6)<20);
+  return items.sort((a,b)=>b.datetime.localeCompare(a.datetime));
+}
+function minUI(list){
+  const host=document.getElementById('minList'); host.innerHTML='';
+  if(!list){host.innerHTML='<div class="muted small">Not loaded.</div>';return;}
+  if(!list.length){host.innerHTML='<div class="muted small">No reports in this period.</div>';return;}
+  for(const x of list.slice(0,12)){
+    const ob=x.observations||{}; const tags=[ob.avalanche?'avalanche':'',ob.incident?'incident':'',ob.snowpack?'snowpack':'',ob.weather?'weather':''].filter(Boolean).join(', ');
+    const d=document.createElement('div'); d.className='ritem';
+    d.innerHTML=`<div style="flex:1;min-width:0"><div class="nm"></div><div class="tag">${new Date(x.datetime).toLocaleDateString()}${tags?' · '+tags:''}</div></div><a class="small" target="_blank" rel="noopener" href="https://avalanche.ca/mountain-information-network/submissions/${encodeURIComponent(x.id)}" onclick="event.stopPropagation()">Open</a>`;
+    d.querySelector('.nm').textContent=x.title||'Report';
+    if(ob.avalanche||ob.incident){ const b=document.createElement('span'); b.className='badge'; b.style.cssText='background:#F79218;color:#111;margin-left:6px'; b.textContent=ob.incident?'Incident':'Avalanche seen'; d.querySelector('.nm').appendChild(b); }
+    d.onclick=()=>{ const g=toGrid(x.location.latitude,x.location.longitude); if(!inGrid(g[0],g[1])) return; hoverPt=g; dirty=true; focusRoute({g:[[g[0]-15,g[1]-15],[g[0]+15,g[1]+15]]}); };
+    host.appendChild(d);
+  }
+}
+async function loadConditions(endDate){
+  const my=++REQ;
+  const isNow=!endDate||endDate>=todayLocal();
+  if(isNow) endDate=todayLocal();
+  S.endDate=endDate; S.source='loading';
+  for(const [k] of SRC) LIVE[k]={st:'wait',msg:'Loading…'};
+  liveUI();
+  const [m,e,st,fc,mn]=await Promise.allSettled([getModel(endDate,isNow),getERA(endDate),getStations(endDate,isNow),getForecast(endDate,isNow),getMIN(endDate,isNow)]);
+  if(my!==REQ) return;  // a newer date was picked meanwhile
+  const why=r=>r.reason&&r.reason.message||'failed';
+  let j=null;
+  if(m.status==='fulfilled'&&m.value.j.hourly){ j=m.value.j; LIVE.wx={st:'ok',msg:'Loaded, '+m.value.name}; S.source=isNow?'live':'past'; }
+  else if(isNow&&WXSNAP){ j=structuredClone(WXSNAP); LIVE.wx={st:'warn',msg:'Live pull '+why(m)+'. Using the snapshot saved in this page.'}; S.source='snapshot'; }
+  else LIVE.wx={st:'bad',msg:why(m)};
+  if(j&&j.eraOnly) LIVE.era={st:'ok',msg:'Used for all weather (dates before 2022)'};
+  else if(S.source==='snapshot'){ LIVE.era={st:'warn',msg:'Using the copy saved with the snapshot'}; }
+  else LIVE.era=e.status==='fulfilled'?{st:'ok',msg:'Loaded, averaged with the model precipitation'}:{st:'bad',msg:why(e)};
+  const obs=st.status==='fulfilled'?st.value:null;
+  LIVE.stn=obs?{st:'ok',msg:`${obs.count} hourly readings: Bosworth Lower, Stanley, ${obs.ridgeName}`}:{st:'bad',msg:why(st)};
+  let avOK=false;
+  if(fc.status==='fulfilled'){ avOK=true; LIVE.av={st:'ok',msg:'Rated forecast loaded'}; }
+  else LIVE.av={st:AVC.status?'warn':'bad',msg:(AVC.status||why(fc))+'. Danger is modelled from the weather.'};
+  LIVE.min=mn.status==='fulfilled'?{st:'ok',msg:`${mn.value.length} report${mn.value.length===1?'':'s'} within 20 km`}:{st:'bad',msg:why(mn)};
+  if(j){
+    const refMs=isNow?Date.now():Date.parse(endDate+'T19:00:00Z');
+    SEASON=seasonModel(mergeERA(j,S.source==='snapshot'?WXSNAP.era5:(e.status==='fulfilled'?e.value:null)),S.source,obs,refMs);
+    applySeason(!avOK);
+  }
+  if(avOK){ S.danger=fc.value.danger; S.problems=fc.value.problems; S.dangerFrom='avcan'; }
+  dangerUI(); probsUI(); wxUI(); seasonUI(); layersUI(); minUI(mn.status==='fulfilled'?mn.value:null); recompute(); liveUI();
+}
+function tryLive(){ return loadConditions(document.getElementById('endDate').value||null); }
+['startTime','paceSel'].forEach(id=>document.getElementById(id).addEventListener('change',()=>{ if(SEASON) SEASON._hm=null; renderAssess(); if(typeof routeListUI==='function') routeListUI(); }));
+(function(){
+  const inp=document.getElementById('endDate'); inp.max=todayLocal(); inp.min='1950-01-01'; inp.value=todayLocal();
+  inp.onchange=()=>{ if(inp.value) loadConditions(inp.value); };
+  document.getElementById('todayBtn').onclick=()=>{ inp.value=todayLocal(); loadConditions(null); };
+  document.getElementById('liveBtn').onclick=tryLive;
+})();
+
+/* ---------------- 60-day weather replay ----------------
+   One weather point (Open-Meteo at Mount Temple) is moved to three band elevations,
+   then a daily snow and wind-loading model runs per elevation band and aspect sector. */
+let SEASON=null;
+const AVC={};
+const BANDZ={btl:1850, tl:2175, alp:2700};
+/* The snowpack and danger model itself lives in build/model.js (inlined below at build time)
+   and is shared with the accuracy test, so the page runs exactly the tested code. */
+/*__MODEL__*/
+const TM=globalThis.TempleModel;
+const TUNED=/*__PARAMS__*/null;
+const ACC=/*__ACCURACY__*/null;
+const MP=Object.assign({},TM.DEFAULT_PARAMS,TUNED||{});
+function seasonModel(j,src,obs,refMs){
+  const I=TM.prepare(j,obs), R=TM.simulate(I,MP), h=j.hourly, zref=I.zref, off=(j.utc_offset_seconds||0)*1000;
+  const now=refMs||Date.now();
+  const todayStr=new Date(now+off).toISOString().slice(0,10);
+  let endI=I.days.findIndex(d=>d.date===todayStr); if(endI<0) endI=I.days.length-1;
+  const A=TM.assess(I,R,endI,MP);
+  const startI=Math.max(0,endI-60);
+  const bands=TM.BANDS;
+  const out={src, zref, bands, I, label:''};
+  out.days=I.days.slice(startI).map((D,k)=>{ const r=R[startI+k]; return {date:D.date, forecast:D.date>todayStr, today:D.date===todayStr, wind:D.wind, windDir:D.windDir, obsWind:!!D.obsWind,
+    b:Object.fromEntries(bands.map(b=>[b,{hn:r.b[b].hn, rain:r.b[b].rain, tmax:r.b[b].tmax, tmean:r.b[b].tmean, HS:r.b[b].HS, asp:r.b[b].asp}]))}; });
+  const nowI=endI-startI;
+  Object.assign(out,{L:A.L, main:A.main, sup:A.sup, pers:A.pers, deep:A.deep, danger:A.danger, problems:A.problems.slice(0,3), layers:A.layers, seasonStart:I.days[0].date});
+  // weather at the selected time
+  const tms=h.time.map(t=>Date.parse(t+'Z')-off);
+  const nk=tms.findIndex(t=>t>now); const kk=nk<0?tms.length:Math.max(1,nk);
+  const sumD=(nd,b)=>{ let s=0; for(let i=Math.max(0,nowI-nd+1);i<=nowI;i++) s+=out.days[i].b[b].hn; return s; };
+  let ws=h.wind_speed_10m.slice(Math.max(0,kk-12),kk), wd=h.wind_direction_10m.slice(Math.max(0,kk-12),kk);
+  if(out.days[nowI].obsWind){ ws=[out.days[nowI].wind]; wd=[out.days[nowI].windDir]; }
+  const sx=wd.reduce((a,d,k)=>a+Math.sin(d*Math.PI/180)*(ws[k]||1),0), sy=wd.reduce((a,d,k)=>a+Math.cos(d*Math.PI/180)*(ws[k]||1),0);
+  out.wx={hn24:Math.round(sumD(1,'tl')), hn72:Math.round(sumD(3,'tl')),
+    wind:Math.round(ws.reduce((a,b)=>a+(b||0),0)/Math.max(1,ws.length)), windDir:Math.round((((Math.atan2(sx,sy)*180/Math.PI)+360)%360)/45)%8,
+    temp:Math.round((h.temperature_2m[kk-1]??0)+I.tbias-0.0065*(BANDZ.alp-zref)), fl:Math.round((h.freezing_level_height?.[kk-1]??Math.max(0,zref+((h.temperature_2m[kk-1]??0)+I.tbias)/0.0065))/50)*50};
+  out.nowI=nowI; out.era=j.era||0; out.obsUsed=I.obsDays; out.kcal=I.kcal; out.tbias=I.tbias; out.eraOnly=!!j.eraOnly;
+  out.label=new Date(tms[Math.min(tms.length-1,kk-1)]).toLocaleString([], {month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+  out.range=out.days[0].date+' to '+out.days[nowI].date;
+  out.endDate=todayStr;
+  return out;
+}
+function applySeason(useDanger){
+  if(!SEASON) return;
+  S.wx={...SEASON.wx};
+  if(useDanger){ S.danger={...SEASON.danger}; S.problems=SEASON.problems.map(p=>({...p,bands:{...p.bands},asp:[...p.asp]})); S.dangerFrom='model'; }
+}
+function seasonUI(){
+  const Sx=SEASON; const head=document.getElementById('seasonHead');
+  if(!Sx){head.textContent='No weather loaded. Enter conditions by hand below.'; return;}
+  const nd=Sx.days.slice(0,Sx.nowI+1);
+  const tot=b=>nd.reduce((a,d)=>a+d.b[b].hn,0);
+  const bits=[Sx.range, Sx.src==='snapshot'?'saved snapshot':'live pull', Sx.eraOnly?'ERA5 reanalysis':Sx.era?'model precipitation averaged with ERA5':'forecast models only'];
+  if(Sx.obsUsed) bits.push(`corrected with Parks Canada stations on ${Sx.obsUsed} days (snowfall ×${Sx.kcal.toFixed(2)}, temperature ${Sx.tbias>=0?'+':''}${Sx.tbias.toFixed(1)} °C)`);
+  else bits.push(`no station readings for these dates, so the average correction from the tuning winters is used (snowfall ×${Sx.kcal.toFixed(2)}, temperature +${Sx.tbias.toFixed(1)} °C)`);
+  if(Sx.seasonStart&&Sx.seasonStart<Sx.days[0].date) bits.push('snowpack and weak layers tracked from '+Sx.seasonStart);
+  head.textContent=bits.join(' · ');
+  // chart
+  const c=document.getElementById('seasonCv'), pr=window.devicePixelRatio||1, Wc=c.clientWidth||320, Hc=190;
+  c.width=Wc*pr; c.height=Hc*pr; const x=c.getContext('2d'); x.setTransform(pr,0,0,pr,0,0); x.clearRect(0,0,Wc,Hc);
+  const P={l:30,r:30,t:8,b:20}, w=Wc-P.l-P.r, hh=Hc-P.t-P.b, n=Sx.days.length;
+  const X=i=>P.l+(i+0.5)*w/n;
+  const maxHS=Math.max(40,...Sx.days.map(d=>d.b.alp.HS))*1.1, maxHN=Math.max(10,...Sx.days.map(d=>d.b.tl.hn))*1.2;
+  x.strokeStyle='rgba(238,242,247,.12)'; x.lineWidth=1; x.font='10px system-ui'; x.fillStyle='#9FB0C8';
+  for(let k=0;k<=4;k++){const yy=P.t+hh*k/4; x.beginPath(); x.moveTo(P.l,yy); x.lineTo(P.l+w,yy); x.stroke();}
+  x.textAlign='right'; x.fillText(Math.round(maxHS)+'',P.l-4,P.t+8); x.fillText('0',P.l-4,P.t+hh);
+  x.textAlign='left'; x.fillText(Math.round(maxHN)+'',P.l+w+4,P.t+8); x.fillText('0',P.l+w+4,P.t+hh);
+  x.save(); x.translate(10,P.t+hh/2); x.rotate(-Math.PI/2); x.textAlign='center'; x.fillText('snow depth cm',0,0); x.restore();
+  x.save(); x.translate(Wc-6,P.t+hh/2); x.rotate(Math.PI/2); x.textAlign='center'; x.fillText('new snow cm/day',0,0); x.restore();
+  // forecast shading
+  if(Sx.nowI<n-1){x.fillStyle='rgba(201,162,39,.10)'; x.fillRect(X(Sx.nowI+1)-w/n/2,P.t,w*(n-1-Sx.nowI)/n,hh);}
+  // trigger days
+  Sx.days.forEach((d,i)=>{ const I=Math.max(...['alp','tl'].map(b=>Math.max(...d.b[b].asp.map(a=>a.I)))); if(I>=1){x.fillStyle='rgba(239,28,41,.18)'; x.fillRect(X(i)-w/n/2,P.t,w/n,hh);} });
+  // new snow bars (treeline)
+  x.fillStyle='#7FB2E5'; Sx.days.forEach((d,i)=>{const v=d.b.tl.hn/maxHN*hh; x.fillRect(X(i)-w/n*0.35,P.t+hh-v,w/n*0.7,v);});
+  // snow depth lines
+  const line=(b,col,dash)=>{x.strokeStyle=col; x.lineWidth=2; x.setLineDash(dash); x.beginPath(); Sx.days.forEach((d,i)=>{const yy=P.t+hh-d.b[b].HS/maxHS*hh; i?x.lineTo(X(i),yy):x.moveTo(X(i),yy);}); x.stroke(); x.setLineDash([]);};
+  line('alp','#C9A227',[]); line('tl','#EEF2F7',[5,3]); line('btl','#7F90AA',[2,3]);
+  // today marker
+  x.strokeStyle='#C9A227'; x.lineWidth=1; x.beginPath(); x.moveTo(X(Sx.nowI),P.t); x.lineTo(X(Sx.nowI),P.t+hh); x.stroke();
+  x.fillStyle='#9FB0C8'; x.textAlign='center';
+  [0,Math.floor(Sx.nowI/2),Sx.nowI].forEach(i=>{const d=Sx.days[i].date; x.fillText(new Date(d+'T12:00').toLocaleDateString([], {month:'short',day:'numeric'}),Math.min(Wc-P.r-14,Math.max(P.l+14,X(i))),Hc-5);});
+  document.getElementById('seasonLegend').innerHTML=`<span style="margin-right:10px"><span class="sw" style="background:#7FB2E5;width:9px;height:9px"></span> New snow (treeline)</span><span style="margin-right:10px;color:#C9A227">━ Alpine depth</span><span style="margin-right:10px">┅ Treeline</span><span style="margin-right:10px;color:#7F90AA">┈ Below treeline</span><span style="margin-right:10px"><span class="sw" style="background:rgba(239,28,41,.45);width:9px;height:9px"></span> Loading day</span><span><span class="sw" style="background:rgba(201,162,39,.35);width:9px;height:9px"></span> Forecast</span>`;
+  // aspect grid
+  const g=document.getElementById('seasonGrid');
+  const cell=v=>{const k=v>=1?3:v>=0.6?2:v>=0.25?1:0; const col=['rgba(238,242,247,.06)','#FFF300','#F79218','#EF1C29'][k]; return `<td style="background:${col};color:${k?'#111':'#9FB0C8'};text-align:center;padding:3px 0;border-radius:3px;font-size:11px">${v.toFixed(1)}</td>`;};
+  g.innerHTML=`<table style="width:100%;border-collapse:separate;border-spacing:2px;font-size:11px"><tr><td></td>${ASP.map(a=>`<td style="text-align:center;color:#9FB0C8">${a}</td>`).join('')}<td style="text-align:right;color:#9FB0C8">Depth</td></tr>`+
+    [['alp','Alpine'],['tl','Treeline'],['btl','Below TL']].map(([b,lab])=>`<tr><td style="color:#9FB0C8;white-space:nowrap;padding-right:4px">${lab}</td>${Sx.L[b].map(cell).join('')}<td style="text-align:right">${Math.round(Sx.days[Sx.nowI].b[b].HS)} cm</td></tr>`).join('')+'</table>';
+  // text summary
+  const trigDays=nd.filter(d=>['alp','tl'].some(b=>d.b[b].asp.some(a=>a.I>=1))).length;
+  const parts=[`New snow over the period: about ${Math.round(tot('alp'))} cm alpine, ${Math.round(tot('tl'))} cm treeline, ${Math.round(tot('btl'))} cm below treeline.`,
+    `${trigDays} day${trigDays===1?'':'s'} reached a loading threshold (30 cm storm snow, 20 cm wind loading, 10 mm rain on snow, or strong warming).`];
+  if(Sx.pers.alp>=0.5||Sx.pers.tl>=0.5) parts.push('Long cold, dry spells on a thin snowpack point to weak faceted layers near the ground, a persistent slab concern once it is buried.');
+  if(Sx.days[Sx.nowI].b.tl.HS<30) parts.push('The treeline snowpack is still thin, so most low terrain does not yet have enough snow to avalanche, and rocks and shrubs anchor what is there.');
+  document.getElementById('seasonText').textContent=parts.join(' ');
+}
+function histUI(){
+  const host=document.getElementById('histList'); if(!host||!HISTORY) return; host.innerHTML='';
+  for(const H of HISTORY){
+    const d=document.createElement('div'); d.className='ritem';
+    d.innerHTML=`<div style="flex:1;min-width:0"><div class="nm">${H.date} · ${H.place}</div><div class="tag">${H.what}</div></div><a class="small" href="${H.url}" target="_blank" rel="noopener" onclick="event.stopPropagation()">Source</a>`;
+    d.onclick=()=>{ const g=toGrid(H.lat,H.lon); hoverPt=g; dirty=true; focusRoute({g:[[g[0]-15,g[1]-15],[g[0]+15,g[1]+15]]}); if(window.innerWidth<=860) mapwrap.scrollIntoView({behavior:'smooth'}); };
+    host.appendChild(d);
+  }
+}
+window.addEventListener('resize',()=>{ if(SEASON) seasonUI(); });
+
+/* ---------------- routes ---------------- */
+let ROUTES=[];
+function routeFromLL(name,kind,note,ll){
+  const g=ll.map(([a,b])=>toGrid(a,b)); return {id:Math.random().toString(36).slice(2),name,kind,note,ll,g};
+}
+function resample(g,stepCells=0.5){
+  const out=[g[0]];
+  for(let k=1;k<g.length;k++){
+    const [x0,y0]=g[k-1],[x1,y1]=g[k]; const L=Math.hypot(x1-x0,y1-y0); const n=Math.max(1,Math.ceil(L/stepCells));
+    for(let j=1;j<=n;j++) out.push([x0+(x1-x0)*j/n, y0+(y1-y0)*j/n]);
+  }
+  return out;
+}
+function assessArea(R){
+  const ring=R.g; const xs=ring.map(p=>p[0]), ys=ring.map(p=>p[1]);
+  const cells=[];
+  for(let y=Math.max(0,Math.floor(Math.min(...ys)));y<=Math.min(G.H-1,Math.ceil(Math.max(...ys)));y++)
+    for(let x=Math.max(0,Math.floor(Math.min(...xs)));x<=Math.min(G.W-1,Math.ceil(Math.max(...xs)));x++){
+      const px=x+0.5, py=y+0.5; let inside=false;
+      for(let i=0,j=ring.length-1;i<ring.length;j=i++){const [xi,yi]=ring[i],[xj,yj]=ring[j]; if((yi>py)!==(yj>py)&&px<(xj-xi)*(py-yi)/(yj-yi)+xi) inside=!inside;}
+      if(inside) cells.push(y*G.W+x);
+    }
+  if(!cells.length) resample(ring).forEach(p=>{if(inGrid(p[0],p[1]))cells.push(cellIdx(p[0],p[1]));});
+  if(!cells.length) return null;
+  const lenByCls=[0,0,0,0,0]; let maxScore=0,maxS=0,maxA=0,zmin=1e9,zmax=-1e9,mi=cells[0];
+  const sc=cells.map(i=>{const s=SCORE[i]; lenByCls[clsOf(s)]+=G.res*G.res/1e4; if(s>maxScore){maxScore=s;mi=i;} maxS=Math.max(maxS,G.slope[i]); maxA=Math.max(maxA,G.ates[i]); zmin=Math.min(zmin,G.elev[i]); zmax=Math.max(zmax,G.elev[i]); return s;}).sort((a,b)=>a-b);
+  const p90=sc[Math.floor(0.9*(sc.length-1))];
+  return {area:true, ha:cells.length*G.res*G.res/1e4, zmin, zmax, maxS, maxA, maxScore, p90, routeScore:0.55*p90+0.45*maxScore, lenByCls, mi, dist:0};
+}
+/* ---------------- exposure time (Munter pace + hourly warming) ----------------
+   Munter: 1 km horizontal or 100 m up/down = 1 unit; units per hour = 4 up, 6 down (normal), half that in deep snow.
+   Start zone = release potential > 0.45 and runout = runout reach >= 0.25: the same cut-offs the terrain build uses. */
+const PACE={normal:{up:4,down:6}, deep:{up:2,down:3}};
+function hourIndexMap(){
+  if(!SEASON||!SEASON.I) return null;
+  if(SEASON._hm) return SEASON._hm;
+  const m={}; SEASON.I.h.time.forEach((t,k)=>m[t.slice(0,13)]=k); SEASON._hm=m; return m;
+}
+function exposure(sm){
+  const pace=PACE[document.getElementById('paceSel')?.value||'normal'];
+  const st=(document.getElementById('startTime')?.value||'07:00').split(':').map(Number);
+  const date=(SEASON&&SEASON.endDate)||S.endDate||todayLocal();
+  const t0=Date.parse(date+'T00:00:00Z')+(st[0]*60+st[1])*60e3; // wall-clock time in Mountain time, kept as a UTC-style label
+  const hm=hourIndexMap();
+  let tH=0, startMin=0, runMin=0, wExp=0, warmMax=1, peak={v:0,t:0,k:0};
+  const times=[0], warm=[1], scw=[sm[0].sc];
+  for(let k=1;k<sm.length;k++){
+    const dd=sm[k].d-sm[k-1].d, dz=sm[k].z-sm[k-1].z;
+    const units=dd/1000+Math.abs(dz)/100;
+    const dt=units/(dz>=0?pace.up:pace.down);
+    tH+=dt; times.push(tH);
+    const i=sm[k].i;
+    const clock=new Date(t0+tH*3600e3).toISOString().slice(0,13);
+    const hk=hm?hm[clock]:undefined;
+    const wf=hk!=null?TM.warming(SEASON.I,hk,sm[k].z,G.aspect[i]*360/256,MP):1;
+    warm.push(wf); warmMax=Math.max(warmMax,wf);
+    const raw=-Math.log(Math.max(1e-6,1-sm[k].sc/100))/1.4, sc=100*(1-Math.exp(-1.4*raw*wf)); scw.push(sc);
+    const inStart=G.pra[i]/255>0.45, inRun=G.runout[i]/255>=0.25;
+    const min=dt*60;
+    if(inStart) startMin+=min; else if(inRun) runMin+=min;
+    if(inStart||inRun){ wExp+=min*sc/100; if(sc>peak.v) peak={v:sc,t:tH,k}; }
+  }
+  const clockOf=h=>{const m=Math.round((st[0]*60+st[1])+h*60); return String(Math.floor(m/60)%24).padStart(2,'0')+':'+String(m%60).padStart(2,'0');};
+  return {hours:tH, startMin, runMin, wExp, warmMax, peak, end:clockOf(tH), peakAt:clockOf(peak.t), times, warm, scw, hasHourly:!!hm, date};
+}
+function assessRoute(R){
+  if(R.area) return assessArea(R);
+  const parts=(R.parts||[R.g]).map(p=>resample(p).filter(q=>inGrid(q[0],q[1]))).filter(p=>p.length);
+  if(!parts.length||parts.reduce((a,p)=>a+p.length,0)<2) return null;
+  const sm=[]; let dist=0, gain=0, loss=0, maxS=0, maxA=0, maxScore=0, maxIdx=0;
+  const lenByCls=[0,0,0,0,0];
+  for(const pts of parts){
+    for(let k=0;k<pts.length;k++){
+      const i=cellIdx(pts[k][0],pts[k][1]);
+      const z=G.elev[i], sc=SCORE[i];
+      if(k){const dd=Math.hypot(pts[k][0]-pts[k-1][0],pts[k][1]-pts[k-1][1])*G.res; dist+=dd; const dz=z-sm[sm.length-1].z; if(dz>0)gain+=dz; else loss-=dz; lenByCls[clsOf(sc)]+=dd;}
+      sm.push({d:dist,z,sc,i,g:pts[k]});
+      if(sc>maxScore){maxScore=sc;maxIdx=sm.length-1;}
+      maxS=Math.max(maxS,G.slope[i]);
+    }
+  }
+  // highest ATES held for >= 60 m
+  let run=0, prevA=-1;
+  for(let k=0;k<sm.length;k++){const a=G.ates[sm[k].i]; run = a===prevA?run+1:1; prevA=a; if(run>=4) maxA=Math.max(maxA,a);}
+  const sorted=sm.map(s=>s.sc).sort((a,b)=>a-b); const p90=sorted[Math.floor(0.9*(sorted.length-1))];
+  const routeScore=0.55*p90+0.45*maxScore;
+  // cruxes: contiguous >= Considerable
+  const cr=[]; let cur=null;
+  sm.forEach((s,k)=>{
+    if(clsOf(s.sc)>=2){ if(!cur) cur={a:k,b:k,max:s.sc,mk:k}; cur.b=k; if(s.sc>cur.max){cur.max=s.sc;cur.mk=k;} }
+    else if(cur && k-cur.b>4){cr.push(cur);cur=null;}
+  });
+  if(cur)cr.push(cur);
+  cr.forEach(c=>c.len=sm[c.b].d-sm[c.a].d);
+  const cruxes=cr.filter(c=>c.len>=30||c.max>=CUT[2]).sort((a,b)=>b.max-a.max).slice(0,4);
+  const ex=exposure(sm);
+  return {sm,dist,gain,loss,maxS,maxA,maxScore,p90,routeScore,lenByCls,cruxes,ex};
+}
+function reason(i){
+  const F=factorsAt(i); const parts=[];
+  if(F.p>=0.45) parts.push(`start zone, ${F.s}° ${ASP[F.sec]} slope`);
+  else if(F.r>=0.3) parts.push(`runout below steep start zones`);
+  else parts.push(`${F.s}° ${ASP[F.sec]} slope`);
+  if(F.t>=0.45) parts.push('terrain trap');
+  if(F.windLoad>0.25) parts.push('wind-loaded lee slope');
+  if(F.warm>0.3) parts.push('warming on sunny aspect');
+  if(F.matched) parts.push(`matches ${PTYPES.find(p=>p[0]===F.matched.type)[1].toLowerCase()} problem`);
+  if(F.Lsea>=0.6) parts.push('loaded in the last few days');
+  if(F.sup<0.4) parts.push('thin snowpack');
+  return parts.join(' · ');
+}
+const fmtKm=m=>(m/1000).toFixed(m<10000?2:1)+' km';
+function badge(s){const k=clsOf(s);return `<span class="badge" style="background:${CLS[k].c};color:${k===4?'#fff':'#111'}">${CLS[k].n}</span>`;}
+function renderAssess(){ renderAssess0(); const b=document.getElementById('saferBtn'); if(b) b.onclick=()=>{
+  const R=S.selected; if(!R) return; const pts=R.g.filter(p=>inGrid(p[0],p[1])); if(pts.length<2) return;
+  S.start=pts[0]; S.end=pts[pts.length-1]; S.saferFor=R.name; updSE(); document.getElementById('findBtn').click(); }; }
+function renderAssess0(){
+  const host=document.getElementById('assess');
+  const R=S.selected; if(!R){host.innerHTML='';return;}
+  const A=assessRoute(R); R.A=A;
+  if(!A){host.innerHTML='<div class="err">Route is outside the mapped area.</div>';return;}
+  const tot=A.lenByCls.reduce((a,b)=>a+b,0)||1;
+  const seasonNote=R.kind==='osm'&&R.season==='summer'?`<div class="small" style="margin-top:8px;padding:6px 8px;border-radius:6px;background:var(--navy)">Summer route scored in today’s winter conditions. In winter, snow covers the trail and you would follow the same line through the terrain shown here.</div>`:'';
+  const saferBtn=(R.kind==='osm'||R.kind==='user')?`<div class="rowf" style="margin-top:10px"><button class="btn sm" id="saferBtn">Find a safer line</button><span class="muted small">Same start and end, uses the slider in Ideal safest route</span></div>`:'';
+  const runNote=R.kind==='run'?`<div class="small" style="margin-top:8px;padding:6px 8px;border-radius:6px;background:var(--navy)">In-bounds run. Whistler Blackcomb ski patrol does avalanche control here, so an open run carries much less risk than this score. The score shows the slope as if it were uncontrolled, which is close to how it behaves when closed or before control work.</div>`:'';
+  if(A.area){
+    host.innerHTML=`<h2>Assessment</h2>
+    <div class="card">
+      <div class="rowf" style="justify-content:space-between"><b>${R.name}</b><span class="tag muted small">${routeTag(R)}</span></div>
+      ${runNote}
+      <div class="score" style="margin-top:10px"><div class="big">${A.routeScore.toFixed(0)}</div><div>${badge(A.routeScore)}<div class="muted small" style="margin-top:4px">Area score (0–100)</div></div></div>
+      <div class="stats">
+        <div class="stat"><div class="v">${A.ha.toFixed(1)} ha</div><div class="l">Area</div></div>
+        <div class="stat"><div class="v">${A.zmin}–${A.zmax}</div><div class="l">Elevation m</div></div>
+        <div class="stat"><div class="v">${A.maxS}°</div><div class="l">Steepest</div></div>
+        <div class="stat"><div class="v">${A.maxScore.toFixed(0)}</div><div class="l">Peak index</div></div>
+        <div class="stat"><div class="v">${A.p90.toFixed(0)}</div><div class="l">90th pct</div></div>
+        <div class="stat"><div class="v">${ATES[A.maxA].n}</div><div class="l">Max ATES</div></div>
+      </div>
+      <div class="small muted" style="margin-top:10px">Area by risk class</div>
+      <div class="bar">${A.lenByCls.map((l,k)=>l>0?`<div style="width:${l/tot*100}%;background:${CLS[k].c}"></div>`:'').join('')}</div>
+      <div class="small">${A.lenByCls.map((l,k)=>l>0?`<span style="margin-right:10px"><span class="sw" style="background:${CLS[k].c};width:9px;height:9px"></span> ${CLS[k].n} ${Math.round(l/tot*100)}%</span>`:'').join('')}</div>
+      <div class="small muted" style="margin-top:8px">Highest cell: ${reason(A.mi)}</div>
+    </div>`;
+    return;
+  }
+  host.innerHTML=`<h2>Assessment</h2>
+  <div class="card">
+    <div class="rowf" style="justify-content:space-between"><b>${R.name}</b><span class="tag muted small">${routeTag(R)}</span></div>
+    ${R.note?`<div class="muted small" style="margin-top:4px">${R.note}</div>`:''}${runNote}${seasonNote}${saferBtn}
+    <div class="score" style="margin-top:10px"><div class="big">${A.routeScore.toFixed(0)}</div><div>${badge(A.routeScore)}<div class="muted small" style="margin-top:4px">Route score (0–100)</div></div></div>
+    <div class="stats">
+      <div class="stat"><div class="v">${fmtKm(A.dist)}</div><div class="l">Distance</div></div>
+      <div class="stat"><div class="v">+${Math.round(A.gain)} / −${Math.round(A.loss)}</div><div class="l">Gain / loss m</div></div>
+      <div class="stat"><div class="v">${A.maxS}°</div><div class="l">Steepest</div></div>
+      <div class="stat"><div class="v">${A.maxScore.toFixed(0)}</div><div class="l">Peak index</div></div>
+      <div class="stat"><div class="v">${A.p90.toFixed(0)}</div><div class="l">90th pct</div></div>
+      <div class="stat"><div class="v">${ATES[A.maxA].n}</div><div class="l">Max ATES</div></div>
+    </div>
+    <div class="small muted" style="margin-top:10px">Time and exposure on ${A.ex.date}, one way</div>
+    <div class="stats">
+      <div class="stat"><div class="v">${Math.floor(A.ex.hours)} h ${Math.round((A.ex.hours%1)*60)} min</div><div class="l">Travel time, arrive ${A.ex.end}</div></div>
+      <div class="stat"><div class="v">${Math.round(A.ex.startMin)} min</div><div class="l">In start zones</div></div>
+      <div class="stat"><div class="v">${Math.round(A.ex.runMin)} min</div><div class="l">Under slopes (runout)</div></div>
+      <div class="stat"><div class="v">${A.ex.wExp.toFixed(1)}</div><div class="l">Risk-weighted exposure (min × score/100)</div></div>
+      <div class="stat"><div class="v">${A.ex.peak.v?A.ex.peakAt:'–'}</div><div class="l">Most exposed moment</div></div>
+      <div class="stat"><div class="v">×${A.ex.warmMax.toFixed(2)}</div><div class="l">Peak warming effect</div></div>
+    </div>
+    ${A.ex.hasHourly?'':'<div class="muted small">No hourly weather for this date, so time-of-day warming is not applied.</div>'}
+    <div class="small muted" style="margin-top:10px">Distance by risk class</div>
+    <div class="bar">${A.lenByCls.map((l,k)=>l>0?`<div title="${CLS[k].n}: ${fmtKm(l)}" style="width:${l/tot*100}%;background:${CLS[k].c}"></div>`:'').join('')}</div>
+    <div class="small">${A.lenByCls.map((l,k)=>l>0?`<span style="margin-right:10px"><span class="sw" style="background:${CLS[k].c};width:9px;height:9px"></span> ${CLS[k].n} ${Math.round(l/tot*100)}%</span>`:'').join('')}</div>
+  </div>
+  <div class="card"><div class="small muted">Elevation and risk along the route</div>
+    <canvas id="profile"></canvas><div class="ptip" id="ptip">Hover or drag across the profile</div></div>
+  <div class="card"><div class="small muted">Cruxes (Considerable or higher)</div>
+    ${A.cruxes.length?A.cruxes.map((c,k)=>`<div class="crux" data-k="${k}">${badge(c.max)} <b>km ${(A.sm[c.a].d/1000).toFixed(2)}–${(A.sm[c.b].d/1000).toFixed(2)}</b> · ${Math.round(c.len)} m · peak ${c.max.toFixed(0)}<br><span class="muted">${reason(A.sm[c.mk].i)}</span></div>`).join(''):'<div class="small" style="margin-top:6px">No sustained sections at Considerable or above under these conditions.</div>'}
+  </div>`;
+  host.querySelectorAll('.crux').forEach(el=>el.onclick=()=>{
+    const c=A.cruxes[+el.dataset.k]; const g=A.sm[c.mk].g;
+    hoverPt=g; lookAtGrid(g[0],g[1],2.2);
+    if(window.innerWidth<=860) document.getElementById('mapwrap').scrollIntoView({behavior:'smooth'});
+  });
+  drawProfile(A);
+}
+function drawProfile(A){
+  const c=document.getElementById('profile'); if(!c||A.area)return;
+  const r=c.getBoundingClientRect(); if(r.width<10) return; const pr=window.devicePixelRatio||1;
+  c.width=r.width*pr; c.height=r.height*pr; const x=c.getContext('2d'); x.setTransform(pr,0,0,pr,0,0);
+  const P={l:44,r:10,t:10,b:24}; const w=r.width-P.l-P.r, h=r.height-P.t-P.b;
+  const zs=A.sm.map(s=>s.z); let z0=Math.min(...zs), z1=Math.max(...zs); const pad=Math.max(20,(z1-z0)*0.08); z0=Math.floor((z0-pad)/100)*100; z1=Math.ceil((z1+pad)/100)*100;
+  const X=d=>P.l+d/A.dist*w, Y=z=>P.t+h-(z-z0)/(z1-z0)*h;
+  // grid
+  x.strokeStyle='rgba(184,196,214,.12)'; x.lineWidth=1; x.fillStyle='#7F90AA'; x.font='10px Inter, sans-serif';
+  const zstep=(z1-z0)>1200?500:(z1-z0)>500?200:100;
+  for(let z=Math.ceil(z0/zstep)*zstep; z<=z1; z+=zstep){x.beginPath();x.moveTo(P.l,Y(z));x.lineTo(P.l+w,Y(z));x.stroke(); x.textAlign='right'; x.fillText(z+' m',P.l-5,Y(z)+3);}
+  const kstep=A.dist>20000?5000:A.dist>8000?2000:A.dist>3000?1000:500;
+  x.textAlign='center'; for(let d=0; d<=A.dist; d+=kstep) x.fillText((d/1000)+' km',X(d),P.t+h+15);
+  // risk-coloured fill segments
+  for(let k=1;k<A.sm.length;k++){
+    const a=A.sm[k-1], b=A.sm[k];
+    x.fillStyle=CLS[clsOf(b.sc)].c; x.globalAlpha=0.85;
+    x.beginPath(); x.moveTo(X(a.d),Y(a.z)); x.lineTo(X(b.d)+0.5,Y(b.z)); x.lineTo(X(b.d)+0.5,P.t+h); x.lineTo(X(a.d),P.t+h); x.closePath(); x.fill();
+  }
+  x.globalAlpha=1;
+  x.beginPath(); A.sm.forEach((s,k)=>k?x.lineTo(X(s.d),Y(s.z)):x.moveTo(X(s.d),Y(s.z))); x.strokeStyle='#EEF2F7'; x.lineWidth=2; x.stroke();
+  const tip=document.getElementById('ptip');
+  const move=e=>{
+    const rr=c.getBoundingClientRect(); const px=(e.clientX-rr.left); const d=Math.max(0,Math.min(A.dist,(px-P.l)/w*A.dist));
+    let k=0; while(k<A.sm.length-1&&A.sm[k].d<d)k++;
+    const s=A.sm[k];
+    // redraw crosshair
+    drawProfileStatic();
+    x.strokeStyle='#C9A227'; x.lineWidth=1.5; x.beginPath(); x.moveTo(X(s.d),P.t); x.lineTo(X(s.d),P.t+h); x.stroke();
+    x.beginPath(); x.arc(X(s.d),Y(s.z),4.5,0,7); x.fillStyle='#C9A227'; x.fill(); x.strokeStyle='#0B1F3A'; x.lineWidth=2; x.stroke();
+    tip.innerHTML=`km ${(s.d/1000).toFixed(2)} · ${s.z} m · ${G.slope[s.i]}° ${ASP[Math.round(G.aspect[s.i]*360/256/45)%8]} · ${badge(s.sc)} ${s.sc.toFixed(0)}`;
+    hoverPt=s.g; dirty=true;
+  };
+  const snap=x.getImageData(0,0,c.width,c.height);
+  function drawProfileStatic(){x.setTransform(1,0,0,1,0,0); x.putImageData(snap,0,0); x.setTransform(pr,0,0,pr,0,0);}
+  c.onpointermove=move; c.onpointerdown=e=>{c.setPointerCapture(e.pointerId);move(e);};
+  c.onpointerleave=()=>{drawProfileStatic(); hoverPt=null; dirty=true; tip.textContent='Hover or drag across the profile';};
+  c.style.touchAction='none';
+}
+function routeTag(R){
+  if(R.kind==='run') return `${DIFFS[R.diff].n} · ${R.mtn}${R.area?' · area':''}`;
+  return R.kind==='gps'?'GPS track':R.kind==='approx'?'Approximate':R.kind==='osm'?(R.season==='winter'?'Winter route':'Summer route')+' · OSM trail':R.kind==='safe'?'Safest route':'Your route';
+}
+function ritem(R,A){
+  const d=document.createElement('div'); d.className='ritem'+(R===S.selected?' on':'');
+  d.innerHTML=`${R.kind==='run'?DIFFS[R.diff].i:''}<div style="flex:1;min-width:0"><div class="nm">${R.name}</div><div class="tag">${routeTag(R)}${A&&!A.area?' · '+fmtKm(A.dist):A&&A.area?' · '+A.ha.toFixed(1)+' ha':''}</div></div>${A?badge(A.routeScore):''}${(R.kind==='user'||R.kind==='safe')?'<button class="x" title="Remove">✕</button>':''}`;
+  d.onclick=e=>{ if(e.target.classList.contains('x')){ if(R===S.safe)S.safe=null; else S.userRoutes=S.userRoutes.filter(u=>u!==R); if(S.selected===R)S.selected=null; routeListUI(); renderAssess(); drawRoutes(); return;}
+    S.selected=R; routeListUI(); renderAssess(); drawRoutes(); focusRoute(R);
+    if(window.innerWidth<=860) mapwrap.scrollIntoView({behavior:'smooth'}); };
+  return d;
+}
+function routeListUI(){
+  const host=document.getElementById('routeList'); host.innerHTML='';
+  const all=[...ROUTES,...S.userRoutes,...(S.safe?[S.safe]:[])]; all.forEach(R=>R.A=assessRoute(R));
+  const fixed=all.filter(R=>R.kind==='osm').sort((a,b)=>(b.A?b.A.routeScore:0)-(a.A?a.A.routeScore:0));
+  for(const R of [...fixed,...all.filter(R=>R.kind!=='osm')]) host.appendChild(ritem(R,R.A));
+  for(const R of RUNS) R.A=assessRoute(R);
+}
+function focusRoute(R){
+  const pts=(R.parts||[R.g]).flat(); const xs=pts.map(p=>p[0]), ys=pts.map(p=>p[1]);
+  const bx0=Math.min(...xs),bx1=Math.max(...xs),by0=Math.min(...ys),by1=Math.max(...ys);
+  const cx=(bx0+bx1)/2, cy=(by0+by1)/2;
+  const t=new T3.Vector3(wx(cx),meshH(cx,cy)*KM,wz(cy));
+  const pol=Math.min(curPolar(),0.95), az=curAz();
+  const d=fitBox(t,wx(bx0-4),wx(bx1+4),wz(by0-4),wz(by1+4),t.y-0.3,t.y+0.6,pol,az,0.8);
+  animateTo(viewFor(t,Math.max(1.0,d),pol,az),650);
+}
+
+/* drawing */
+function updDraw(){document.getElementById('drawCount').textContent=S.draw.length+' point'+(S.draw.length===1?'':'s');}
+document.getElementById('drawBtn').onclick=()=>{ if(S.mode==='draw'){S.draw=[];setMode('inspect');draw();return;} S.draw=[]; updDraw(); setMode('draw'); document.getElementById('routeErr').textContent=''; };
+document.getElementById('drawUndo').onclick=()=>{S.draw.pop();updDraw();draw();};
+document.getElementById('drawClear').onclick=()=>{S.draw=[];updDraw();draw();};
+document.getElementById('drawDone').onclick=()=>{
+  if(S.draw.length<2){document.getElementById('routeErr').textContent='Add at least two points.';return;}
+  const n=S.userRoutes.filter(r=>r.kind==='user').length+1;
+  const R={id:'u'+Date.now(),name:'New route '+n,kind:'user',note:'Drawn on the map.',g:S.draw.slice()};
+  S.userRoutes.push(R); S.selected=R; S.draw=[]; setMode('inspect'); routeListUI(); renderAssess(); drawRoutes();
+};
+document.getElementById('gpxIn').onchange=async e=>{
+  const f=e.target.files[0]; e.target.value=''; if(!f)return;
+  const err=document.getElementById('routeErr'); err.textContent='';
+  try{
+    const txt=await f.text(); const doc=new DOMParser().parseFromString(txt,'application/xml');
+    if(doc.querySelector('parsererror')) throw new Error('Could not read that file as GPX.');
+    let nodes=[...doc.getElementsByTagName('trkpt')]; if(!nodes.length) nodes=[...doc.getElementsByTagName('rtept')]; if(!nodes.length) nodes=[...doc.getElementsByTagName('wpt')];
+    const ll=nodes.map(n=>[parseFloat(n.getAttribute('lat')),parseFloat(n.getAttribute('lon'))]).filter(p=>!isNaN(p[0])&&!isNaN(p[1]));
+    if(ll.length<2) throw new Error('No track points found in that GPX.');
+    const R=routeFromLL((doc.querySelector('trk > name, rte > name, metadata > name')?.textContent||f.name.replace(/\.gpx$/i,'')).slice(0,40),'user','Imported from GPX.',ll);
+    const inside=R.g.filter(p=>inGrid(p[0],p[1])).length;
+    if(!inside) throw new Error('That track is outside the mapped Mount Temple area.');
+    if(inside<R.g.length) err.textContent=`${R.g.length-inside} of ${R.g.length} points fall outside the mapped area and were skipped.`;
+    S.userRoutes.push(R); S.selected=R; routeListUI(); renderAssess(); drawRoutes(); focusRoute(R);
+  }catch(ex){err.textContent=ex.message;}
+};
+
+/* safest route */
+function updSE(){
+  document.getElementById('findBtn').disabled=!(S.start&&S.end);
+  document.getElementById('seLabel').textContent = S.start&&S.end?'Start and end set':S.start?'Start set':S.end?'End set':'Tap the map after each button';
+}
+document.getElementById('setStart').onclick=()=>{S.saferFor=null; setMode('start');};
+document.getElementById('setEnd').onclick=()=>setMode('end');
+const wSl=document.getElementById('wSlider'); const wLbl=()=>document.getElementById('wVal').textContent=wSl.value+'% safety weight'; wSl.oninput=wLbl;
+const workerSrc=`
+onmessage=e=>{
+  const {W,H,res,slope,elev,score,s,t,a}=e.data;
+  const N=W*H, dist=new Float64Array(N).fill(Infinity), prev=new Int32Array(N).fill(-1), done=new Uint8Array(N);
+  const hk=[], hv=[];
+  const push=(k,v)=>{hk.push(k);hv.push(v);let i=hk.length-1;while(i>0){const p=(i-1)>>1;if(hk[p]<=hk[i])break;[hk[p],hk[i]]=[hk[i],hk[p]];[hv[p],hv[i]]=[hv[i],hv[p]];i=p;}};
+  const pop=()=>{const v=hv[0];const lk=hk.pop(),lv=hv.pop();if(hk.length){hk[0]=lk;hv[0]=lv;let i=0;for(;;){const l=2*i+1,r=l+1;let m=i;if(l<hk.length&&hk[l]<hk[m])m=l;if(r<hk.length&&hk[r]<hk[m])m=r;if(m===i)break;[hk[m],hk[i]]=[hk[i],hk[m]];[hv[m],hv[i]]=[hv[i],hv[m]];i=m;}}return v;};
+  const tx=t%W, ty=(t/W)|0, K=a*250;
+  dist[s]=0; push(Math.hypot(s%W-tx,((s/W)|0)-ty)*res,s);
+  const NB=[[-1,-1],[0,-1],[1,-1],[-1,0],[1,0],[-1,1],[0,1],[1,1]];
+  let found=false;
+  while(hk.length){
+    const u=pop(); if(done[u])continue; done[u]=1; if(u===t){found=true;break;}
+    const ux=u%W, uy=(u/W)|0;
+    for(const [dx,dy] of NB){
+      const vx=ux+dx, vy=uy+dy; if(vx<0||vy<0||vx>=W||vy>=H)continue;
+      const v=vy*W+vx; if(done[v])continue;
+      const sl=slope[v]; if(sl>48&&v!==t)continue;
+      const d=(dx&&dy?1.41421356:1)*res;
+      const dz=elev[v]-elev[u];
+      const sc=score[v]/100;
+      const c=d*(1+Math.max(0,sl-25)/10)+Math.max(0,dz)*6+Math.max(0,-dz)*0.3+K*d*sc*sc;
+      const nd=dist[u]+c;
+      if(nd<dist[v]){dist[v]=nd;prev[v]=u;push(nd+Math.hypot(vx-tx,vy-ty)*res,v);}
+    }
+  }
+  if(!found){postMessage({path:null});return;}
+  const path=[];for(let v=t;v!==-1;v=prev[v])path.push(v);path.reverse();
+  postMessage({path});
+};`;
+let worker=null;
+document.getElementById('findBtn').onclick=()=>{
+  const msg=document.getElementById('findMsg'); msg.textContent='Searching…';
+  document.getElementById('findBtn').disabled=true;
+  try{ if(!worker) worker=new Worker(URL.createObjectURL(new Blob([workerSrc],{type:'text/javascript'}))); }
+  catch(e){ msg.textContent='Background search unavailable in this browser.'; return; }
+  const s=cellIdx(...S.start), t=cellIdx(...S.end); const a=wSl.value/100;
+  worker.onmessage=ev=>{
+    document.getElementById('findBtn').disabled=false;
+    const p=ev.data.path; if(!p){msg.textContent='No passable route found between those points.';return;}
+    let g=p.map(v=>[v%G.W+0.5,Math.floor(v/G.W)+0.5]);
+    // light smoothing for display
+    g=g.map((q,k)=>{if(k<2||k>g.length-3)return q; let sx=0,sy=0; for(let j=-2;j<=2;j++){sx+=g[k+j][0];sy+=g[k+j][1];} return [sx/5,sy/5];});
+    S.safe={id:'safe',name:S.saferFor?`Safer line: ${S.saferFor} (${wSl.value}% safety)`:`Safest route (${wSl.value}% safety)`,kind:'safe',note:'Computed by A* search on the current risk map. Check it against real terrain, cornices and crevasses before trusting it.',g};
+    S.selected=S.safe; msg.textContent=''; routeListUI(); renderAssess(); drawRoutes(); focusRoute(S.safe);
+  };
+  worker.postMessage({W:G.W,H:G.H,res:G.res,slope:G.slope,elev:G.elev,score:SCORE,s,t,a});
+};
+
+/* ---------------- recompute ---------------- */
+let rq=null;
+function recompute(){ clearTimeout(rq); rq=setTimeout(()=>{ computeScores(); renderBase(); routeListUI(); renderAssess(); },60); }
+
+/* ---------------- init ---------------- */
+let RUNS=[], LIFTS=[];
+const unq=p=>{const o=[]; for(let k=0;k<p.length;k+=2) o.push([p[k]/10,p[k+1]/10]); return o;};
+(async function init(){
+  try{
+    G=await loadTerrain();
+    ROUTES=ROUTEDATA.routes.map(r=>Object.assign(routeFromLL(r.name,r.kind,r.note,r.pts),{group:r.group,season:r.season,rid:r.id}));
+    RUNS=RUNDATA.runs.map((r,k)=>{const parts=r.p.map(unq); return {id:'run'+k,name:r.n,kind:'run',diff:r.d,mtn:r.m,area:!!r.a,parts,g:parts.flat(),note:''};});
+    LIFTS=RUNDATA.lifts.map(l=>({name:l.n,type:l.t,g:unq(l.p)}));
+    accUI();
+    if(WXSNAP){ SEASON=seasonModel(mergeERA(structuredClone(WXSNAP),WXSNAP.era5),'snapshot',null,Date.now()); applySeason(true); S.source='snapshot'; }
+    dangerUI(); probsUI(); wxUI(); liveUI(); renderLegend(); wLbl(); seasonUI(); histUI();
+    computeScores(); prepTexture(); renderBase();
+    initGL();
+    document.getElementById('loading').remove();
+    resize(); fit(false); buildRunLayer(); drawRoutes(); routeListUI();
+    new ResizeObserver(()=>{resize();}).observe(mapwrap);
+    loadConditions(null);
+  }catch(e){
+    console.error(e);
+    const l=document.getElementById('loading'); if(l) l.textContent='Could not load the map: '+e.message;
+  }
+})();
+</script>
+</body>
+</html>

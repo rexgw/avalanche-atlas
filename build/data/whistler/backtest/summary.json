@@ -1,0 +1,119 @@
+{
+ "tested_on": "2025-26",
+ "months": "Dec–Mar",
+ "n_band_ratings": 363,
+ "exact": 0.581,
+ "within1": 0.928,
+ "mae": 0.496,
+ "kappa": 0.673,
+ "bench_exact": 0.413,
+ "bench_within1": 0.884,
+ "bench_mae": 0.711,
+ "bench_kappa": 0.307,
+ "beats_benchmark": true,
+ "problems": {
+  "storm": {
+   "hit": 0.754,
+   "false_alarm": 0.132,
+   "parks_days": 61
+  },
+  "wind": {
+   "hit": 0,
+   "false_alarm": null,
+   "parks_days": 44
+  },
+  "persistent": {
+   "hit": 0,
+   "false_alarm": 1,
+   "parks_days": 16
+  },
+  "deep": {
+   "hit": null,
+   "false_alarm": null,
+   "parks_days": 0
+  },
+  "wet": {
+   "hit": 0.211,
+   "false_alarm": 0.467,
+   "parks_days": 38
+  }
+ },
+ "runs": 8,
+ "range_exact": [
+  0.529,
+  0.631
+ ],
+ "range_mae": [
+  0.43,
+  0.562
+ ],
+ "per_season": {
+  "2022-23": {
+   "role": "tuning",
+   "n": 363,
+   "exact": 0.636,
+   "within1": 0.983,
+   "mae": 0.38,
+   "bias": 0.028,
+   "kappa": 0.72,
+   "wind_hit": 0,
+   "persistent_hit": 0.733
+  },
+  "2023-24": {
+   "role": "tuning",
+   "n": 366,
+   "exact": 0.585,
+   "within1": 0.937,
+   "mae": 0.484,
+   "bias": -0.068,
+   "kappa": 0.678,
+   "wind_hit": 0,
+   "persistent_hit": 0.52
+  },
+  "2024-25": {
+   "role": "tuning",
+   "n": 363,
+   "exact": 0.598,
+   "within1": 0.964,
+   "mae": 0.441,
+   "bias": -0.22,
+   "kappa": 0.722,
+   "wind_hit": 0,
+   "persistent_hit": 0.651
+  },
+  "2025-26": {
+   "role": "test",
+   "n": 363,
+   "exact": 0.581,
+   "within1": 0.928,
+   "mae": 0.496,
+   "bias": 0.044,
+   "kappa": 0.673,
+   "wind_hit": 0,
+   "persistent_hit": 0
+  }
+ },
+ "per_season_benchmark": {
+  "2022-23": {
+   "exact": 0.523,
+   "within1": 0.926,
+   "mae": 0.551
+  },
+  "2023-24": {
+   "exact": 0.505,
+   "within1": 0.847,
+   "mae": 0.664
+  },
+  "2024-25": {
+   "exact": 0.419,
+   "within1": 0.862,
+   "mae": 0.727
+  },
+  "2025-26": {
+   "exact": 0.413,
+   "within1": 0.884,
+   "mae": 0.711
+  }
+ },
+ "disclosure": "Test winter scored once; nothing was changed after seeing the result."
+}

@@ -9,7 +9,9 @@ import { fileURLToPath } from 'url';
 const require = createRequire(import.meta.url);
 const here = path.dirname(fileURLToPath(import.meta.url));
 const M = require(path.join(here, 'model.js'));
-const DIR = path.join(here, 'data', 'temple', 'backtest');
+const SITE = process.env.SITE || 'temple';
+M.setSite(SITE);
+const DIR = path.join(here, 'data', SITE, 'backtest');
 const TRAIN = ['2022', '2023', '2024'], TEST = ['2025'];
 const RATING = { low: 1, moderate: 2, considerable: 3, high: 4, extreme: 5 };
 const PMAP = { stormslab: 'storm', windslab: 'wind', persistentslab: 'persistent', deeppersistentslab: 'deep', wetloose: 'wet', wetslab: 'wet' };
@@ -23,7 +25,7 @@ function loadSeason(y) {
   const S = JSON.parse(fs.readFileSync(f, 'utf8'));
   const st = S.stations || {};
   const off = -7;  // Mountain Standard Time, same as the page
-  const obs = M.stationDays(st['110'], st['108'], st['111'], st['109'], off);
+  const obs = SITE === 'temple' ? M.stationDays(st['110'], st['108'], st['111'], st['109'], off) : null;
   const j = M.mergeERA(S.weather, S.era5);
   const I = M.prepare(j, obs);
   const idx = {}; I.days.forEach((d, i) => idx[d.date] = i);
@@ -101,6 +103,7 @@ const RANGES = {   // 12 tuned values; weak-layer rules and problem thresholds s
   stormCm: [20, 45], windCm: [10, 35], decay: [0.1, 0.35], windLife: [3, 14], windMin: [10, 30],
   wPers: [0.1, 1.2], wDeep: [0.1, 1.2], c2: [0.05, 1.0], c3: [0.3, 1.0], c4: [0.6, 1.6], c5: [1.0, 2.5], meltT: [-2, 5]
 };
+if (SITE === 'whistler') RANGES.pScale = [0.5, 3.5];   // no station correction: tune an overall snowfall multiplier
 function rng(seed) { let s = seed >>> 0; return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }; }
 function sample(r, base) {
   const P = { ...base };
@@ -143,10 +146,10 @@ const trainRows = runAll(train, tuned), testRows = runAll(test, tuned);
 const clim = climatology(runAll(train, tuned));
 const report = {
   generated: new Date().toISOString(),
-  design: { compared_against: 'Parks Canada daily danger ratings and problems for Mount Temple (Banff, Yoho and Kootenay forecast)',
+  design: { site: SITE, compared_against: SITE === 'temple' ? 'Parks Canada daily danger ratings and problems for Mount Temple (Banff, Yoho and Kootenay forecast)' : 'Avalanche Canada daily danger ratings and problems at Whistler (Sea-to-Sky forecast region)',
             months: 'December to March', tuned_on: train.map(S => S.season), tested_on: test.map(S => S.season),
             tuning: `${SEEDS.length} seeded random-search runs, each ${N1} samples + ${N2} refinements; objective = mean absolute rating error + 0.3 x (1 - mean F1 of storm, wind, persistent, deep problems) + 0.1 x (1 - wet problem F1) on the tuning winters; the run with the best tuning score is kept`,
-            disclosure: 'The test winter (2025-26) was scored five times while the setup was adjusted: (1) original setup: average error 0.655; (2) warming thresholds added to tuning: 0.597; (3) range limits widened: 0.695; (4) duplicate-crust bug fixed: 0.815; (5) user-chosen changes: weak-layer rules fixed instead of tuned, separate wind-slab life, average station correction for winters without stations (this version is published). Each time the kept tuning run was the one with the best tuning-winter score, never the best test score. Because the test winter was looked at five times, it is not fully unseen.',
+            disclosure: SITE === 'temple' ? 'The test winter (2025-26) was scored five times while the setup was adjusted: (1) original setup: average error 0.655; (2) warming thresholds added to tuning: 0.597; (3) range limits widened: 0.695; (4) duplicate-crust bug fixed: 0.815; (5) user-chosen changes: weak-layer rules fixed instead of tuned, separate wind-slab life, average station correction for winters without stations (this version is published). Each time the kept tuning run was the one with the best tuning-winter score, never the best test score. Because the test winter was looked at five times, it is not fully unseen.' : 'The Whistler test winter (2025-26) was scored once, after the model and tuning setup were fixed; nothing was changed after seeing the result.',
             note: 'Ratings are forecasts, not observed avalanches. Parks Canada days with no numeric rating (early season, spring, no rating) are skipped band by band.' },
   seasons: Object.values(seasons).map(S => ({ season: S.season, forecast_days: S.days.length, station_days: S.obsDays, snowfall_scale: +S.kcal.toFixed(2), temp_bias_c: +S.tbias.toFixed(2), station_rows: S.stationCounts })),
   test: { tuned_model: metrics(testRows), default_model: metrics(runAll(test, P0)), benchmark_climatology: metrics(clim(runAll(test, tuned))) },
@@ -169,6 +172,6 @@ const summary = { tested_on: report.design.tested_on.join(', '), months: 'Dec–
   runs: report.tuning_runs.length, range_exact: [Math.min(...report.tuning_runs.map(x => x.test_exact)), Math.max(...report.tuning_runs.map(x => x.test_exact))],
   range_mae: [Math.min(...report.tuning_runs.map(x => x.test_mae)), Math.max(...report.tuning_runs.map(x => x.test_mae))],
   per_season: report.per_season_tuned_params, per_season_benchmark: report.per_season_benchmark,
-  disclosure: 'Test winter scored five times while adjusting the setup; earlier versions scored average error 0.60 to 0.82.' };
+  disclosure: SITE === 'temple' ? 'Test winter scored five times while adjusting the setup; earlier versions scored average error 0.60 to 0.82.' : 'Test winter scored once; nothing was changed after seeing the result.' };
 fs.writeFileSync(path.join(DIR, 'summary.json'), JSON.stringify(summary, null, 1));
 console.log(JSON.stringify(summary, null, 1));

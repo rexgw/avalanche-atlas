@@ -9,9 +9,19 @@
    Every threshold lives in PARAMS. DEFAULT_PARAMS are starting guesses; the accuracy test tunes
    them against Parks Canada ratings and writes the tuned set to build/data/temple/backtest/params.json. */
 (function (root) {
-  const BANDZ = { btl: 1850, tl: 2175, alp: 2700 };
+  // Site settings. bandz: middle elevation of each band; zp: height at which model precipitation is taken as valid;
+  // noStn: correction used when there are no station readings; ridgeZ: elevation of the ridgetop station.
+  const SITES = {
+    temple:   { bandz: { btl: 1850, tl: 2175, alp: 2700 }, zp: 2100, noStn: { kcal: 2.70, tbias: 3.19 }, ridgeZ: 2745 },
+    // Whistler: bands from the earlier Whistler build (BTL < 1500 m, TL 1500-1900 m, ALP > 1900 m); no station correction
+    // (user choice), so an overall snowfall multiplier (pScale) is tuned against the forecasts instead.
+    whistler: { bandz: { btl: 1100, tl: 1700, alp: 2100 }, zp: 1500, noStn: { kcal: 1, tbias: 0 }, ridgeZ: null }
+  };
+  let SITE = SITES.temple;
+  const BANDZ = {}; Object.assign(BANDZ, SITE.bandz);
+  let ZP = SITE.zp;
+  function setSite(id) { SITE = SITES[id]; Object.assign(BANDZ, SITE.bandz); ZP = SITE.zp; }
   const BANDS = ['btl', 'tl', 'alp'];
-  const ZP = 2100;            // precipitation is taken as valid at the model's own terrain height
   const LAPSE = -0.0065;      // °C per m
   const DEFAULT_PARAMS = {
     // loading thresholds (a day reaches 1.0 at these)
@@ -58,12 +68,13 @@
     let tb = 0, nb = 0;
     for (const D of days) {
       const o = O[D.date]; if (!o || o.ta == null) continue;
-      const m = D.hrs.reduce((a, k) => a + (h.temperature_2m[k] ?? 0), 0) / D.hrs.length + LAPSE * (2745 - zref);
+      if (!SITE.ridgeZ) break;
+      const m = D.hrs.reduce((a, k) => a + (h.temperature_2m[k] ?? 0), 0) / D.hrs.length + LAPSE * (SITE.ridgeZ - zref);
       tb += o.ta - m; nb++;
     }
     // With no station readings, use the average correction measured in the tuning winters that had stations
     // (2023-24 and 2024-25: snowfall x2.70, temperature +3.19 °C). The 2025-26 test winter is left out of this average.
-    const NO_STN = { kcal: 2.70, tbias: 3.19 };
+    const NO_STN = SITE.noStn;
     const tbias = nb >= 5 ? clamp(tb / nb, -6, 6) : NO_STN.tbias;
     // 2. snowfall scaling from treeline snow-depth gains (Bosworth Lower)
     const obsHN = (b, d) => {
@@ -126,7 +137,8 @@
     I.days.forEach((D, i) => {
       const row = { b: {} };
       for (const b of BANDS) {
-        const s = st[b], d = D.b[b];
+        const s = st[b], d0 = D.b[b];
+        const d = P.pScale ? { ...d0, hn: d0.hn * P.pScale } : d0;   // tuned snowfall multiplier (Whistler)
         // night: surface layers form on existing snow
         if (s.HS > 10) {
           const surf = s.layers.find(L => !L.buried && L.type !== 'basal');
@@ -295,7 +307,7 @@
     return j;
   }
 
-  const API = { BANDZ, BANDS, DEFAULT_PARAMS, prepare, simulate, assess, warming, addDays, stationDays, mergeERA };
+  const API = { BANDZ, BANDS, SITES, setSite, DEFAULT_PARAMS, prepare, simulate, assess, warming, addDays, stationDays, mergeERA };
   if (typeof module !== 'undefined' && module.exports) module.exports = API;
   else root.TempleModel = API;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

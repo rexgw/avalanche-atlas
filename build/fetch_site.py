@@ -48,7 +48,11 @@ def dem():
     else:
         raise RuntimeError("no DEM source reachable")
     with rasterio.open("/tmp/tile.tif") as src:
+        from rasterio.windows import Window
         win = from_bounds(W - 0.02, S - 0.015, E + 0.02, N + 0.015, src.transform).round_offsets().round_lengths()
+        # Clip to the tile: a window starting outside the tile is read from the tile edge, while its transform
+        # keeps the requested origin, which shifts the data (this shifted Whistler by ~0.018 deg).
+        win = win.intersection(Window(0, 0, src.width, src.height))
         z = src.read(1, window=win); prof = src.profile.copy()
         prof.update(width=z.shape[1], height=z.shape[0], transform=src.window_transform(win), compress="deflate", tiled=False)
         prof.pop("blockxsize", None); prof.pop("blockysize", None)

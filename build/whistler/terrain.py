@@ -31,6 +31,8 @@ H = int(round((LAT_N - LAT_S) * MY / RES))
 with rasterio.open(dem_path) as src:
     win = from_bounds(LON_W - 0.01, LAT_S - 0.005, LON_E + 0.01, LAT_N + 0.01, src.transform)
     win = win.round_offsets().round_lengths()
+    from rasterio.windows import Window
+    win = win.intersection(Window(0, 0, src.width, src.height))  # avoid a silent shift when the box passes the file edge
     z0 = src.read(1, window=win).astype(np.float64)
     tr = src.window_transform(win)
     nod = src.nodata
