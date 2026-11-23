@@ -16,7 +16,7 @@ jobs:
       - uses: actions/setup-python@v5
         with: {python-version: "3.12"}
       - run: pip install rasterio numpy
-      - run: SITE=whistler python build/fetch_site.py
+      - run: SITE=whistler python build/fetch_site.py weather
       - name: Accuracy test data
         run: |
           for y in 2022 2023 2024 2025; do
