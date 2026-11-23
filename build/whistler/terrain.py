@@ -171,7 +171,10 @@ chall = (f35 > 0.02) | (pra > 0.45) | (runout >= 0.25)
 chall |= (slope >= 30) | ((~treed) & (f30 >= 0.2))
 # Complex defaults: large % > 35 deg; many traps (gullies, cliffs, cornices) under steep ground;
 # numerous overlapping paths (strong runout reach); frequent exposure to start zones
-cplx = (f35 >= 0.30) | ((ftrap >= 0.25) & (f35 >= 0.10)) | (runout >= 0.6) | ((pra > 0.45) & (slope >= 35) & (fsz >= 0.30))
+# overlapping paths: strong runout reach with many start zones within ~225 m (15 x 15 cells); strong runout
+# under a single path stays Challenging ("single path or paths with separation")
+fsz15 = ndimage.uniform_filter((pra > 0.45).astype(float), 15)
+cplx = (f35 >= 0.30) | ((ftrap >= 0.25) & (f35 >= 0.10)) | ((runout >= 0.6) & (fsz15 >= 0.30)) | ((pra > 0.45) & (slope >= 35) & (fsz >= 0.30))
 ates[chall] = 1
 ates[cplx] = 2
 ates = ndimage.median_filter(ates, 3)

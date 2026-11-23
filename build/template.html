@@ -377,10 +377,10 @@ a{color:var(--gold2)}
         <li><b>ATES class:</b> the three classes of the Parks Canada Avalanche Terrain Exposure Scale (technical model v1-04): Simple, Challenging, Complex. ATES rates terrain at route scale, so each 30 m cell is rated from the terrain within about 150 m. The scale's italic "default" descriptors force a class or higher:
           <ul>
             <li>Challenging: isolated slopes over 35° (over 2 % of nearby cells), isolated exposure to start zones and tracks (inside a release area, or runout reach of 0.25 or more).</li>
-            <li>Complex: a large share over 35° (30 % or more of nearby cells), many terrain traps under steep ground (25 % or more trap cells with at least 10 % over 35°), numerous overlapping paths (runout reach of 0.6 or more), and frequent exposure to start zones (inside a 35°+ release area where 30 % or more of nearby cells are release areas).</li>
+            <li>Complex: a large share over 35° (30 % or more of nearby cells), many terrain traps under steep ground (25 % or more trap cells with at least 10 % over 35°), numerous overlapping paths (runout reach of 0.6 or more with 30 % or more release-area cells within about 225 m; strong runout under a single path stays Challenging), and frequent exposure to start zones (inside a 35°+ release area where 30 % or more of nearby cells are release areas).</li>
             <li>Non-default descriptors: slopes over 30° on the cell, or open terrain above 1500 m with 20 % or more over 30°, also make it Challenging.</li>
           </ul>
-          The percentage cut-offs stand in for words like "isolated" and "large %" and are our choices, not values from the scale. Glaciers, crevasses, forest density and avalanche frequency are not mapped, so they cannot raise a class. Result for this map: Simple 41 %, Challenging 23 %, Complex 36 % of cells.</li>
+          The percentage cut-offs stand in for words like "isolated" and "large %" and are our choices, not values from the scale. Glaciers, crevasses, forest density and avalanche frequency are not mapped, so they cannot raise a class. Result for this map: Simple 41 %, Challenging 31 %, Complex 28 % of cells. A route's highest class is the highest it holds for 60 m or more; the assessment also shows how much of the route is in each class.</li>
       </ul>
       <h2>Overall danger and rating source</h2>
       <ul>
@@ -390,7 +390,7 @@ a{color:var(--gold2)}
       <h2>7-day forecast and trip planner</h2>
       <ul>
         <li>Text forecast and weather warnings: Environment and Climate Change Canada city forecast for Whistler (bc-86). It is written for the village, not the alpine.</li>
-        <li>Numbers by elevation: Environment Canada's GEM model through Open-Meteo, with temperature adjusted to 1850, 2175 and 2700 m. Snow amounts are the model's snowfall in cm. Freezing level is worked out from the temperatures at the three elevations. Ridgetop wind is the 700 hPa wind (about 3000 m); valley wind is the 10 m wind.</li>
+        <li>Numbers by elevation: Environment Canada's GEM model through Open-Meteo, with temperature adjusted to 1850, 2175 and 2700 m. Open-Meteo adjusts only the temperature for elevation, so each band's precipitation is split into snow (about 1 cm per mm below 0 °C) and rain (above +2 °C, mixed between), the same rule the snowpack model uses. Freezing level is worked out from the temperatures at the three elevations. Ridgetop wind is the 700 hPa wind (about 3000 m); valley wind is the 10 m wind.</li>
         <li>Picking a day runs the snowpack model on to that day using the forecast weather, then scores the map and routes for it. Danger for days 2 to 7 is modelled; Avalanche Canada forecasts at most 3 days. Forecast skill drops after about 3 days.</li>
         <li>Weather animation: particles fall over the 3D map at the selected forecast hour. The number of particles follows the precipitation rate, they are snow above the freezing level and rain below it, and they drift with the ridgetop wind direction and speed. Speeds are exaggerated so the motion can be seen. It is an illustration of one forecast point, not a radar.</li>
       </ul>
@@ -1687,12 +1687,12 @@ function assessRoute(R){
   const parts=(R.parts||[R.g]).map(p=>resample(p).filter(q=>inGrid(q[0],q[1]))).filter(p=>p.length);
   if(!parts.length||parts.reduce((a,p)=>a+p.length,0)<2) return null;
   const sm=[]; let dist=0, gain=0, loss=0, maxS=0, maxA=0, maxScore=0, maxIdx=0;
-  const lenByCls=[0,0,0,0,0];
+  const lenByCls=[0,0,0,0,0], lenByAtes=[0,0,0];
   for(const pts of parts){
     for(let k=0;k<pts.length;k++){
       const i=cellIdx(pts[k][0],pts[k][1]);
       const z=G.elev[i], sc=SCORE[i];
-      if(k){const dd=Math.hypot(pts[k][0]-pts[k-1][0],pts[k][1]-pts[k-1][1])*G.res; dist+=dd; const dz=z-sm[sm.length-1].z; if(dz>0)gain+=dz; else loss-=dz; lenByCls[clsOf(sc)]+=dd;}
+      if(k){const dd=Math.hypot(pts[k][0]-pts[k-1][0],pts[k][1]-pts[k-1][1])*G.res; dist+=dd; const dz=z-sm[sm.length-1].z; if(dz>0)gain+=dz; else loss-=dz; lenByCls[clsOf(sc)]+=dd; lenByAtes[G.ates[i]]+=dd;}
       sm.push({d:dist,z,sc,i,g:pts[k]});
       if(sc>maxScore){maxScore=sc;maxIdx=sm.length-1;}
       maxS=Math.max(maxS,G.slope[i]);
@@ -1713,7 +1713,7 @@ function assessRoute(R){
   cr.forEach(c=>c.len=sm[c.b].d-sm[c.a].d);
   const cruxes=cr.filter(c=>c.len>=30||c.max>=CUT[2]).sort((a,b)=>b.max-a.max).slice(0,4);
   const ex=exposure(sm);
-  return {sm,dist,gain,loss,maxS,maxA,maxScore,p90,routeScore,lenByCls,cruxes,ex};
+  return {sm,dist,gain,loss,maxS,maxA,maxScore,p90,routeScore,lenByCls,lenByAtes,cruxes,ex};
 }
 function reason(i){
   const F=factorsAt(i); const parts=[];
@@ -1754,7 +1754,7 @@ function renderAssess0(){
         <div class="stat"><div class="v">${A.maxS}°</div><div class="l">Steepest</div></div>
         <div class="stat"><div class="v">${A.maxScore.toFixed(0)}</div><div class="l">Peak index</div></div>
         <div class="stat"><div class="v">${A.p90.toFixed(0)}</div><div class="l">90th pct</div></div>
-        <div class="stat"><div class="v">${ATES[A.maxA].n}</div><div class="l">Max ATES</div></div>
+        <div class="stat"><div class="v">${ATES[A.maxA].n}</div><div class="l">Highest ATES</div></div>
       </div>
       <div class="small muted" style="margin-top:10px">Area by risk class</div>
       <div class="bar">${A.lenByCls.map((l,k)=>l>0?`<div style="width:${l/tot*100}%;background:${CLS[k].c}"></div>`:'').join('')}</div>
@@ -1774,8 +1774,11 @@ function renderAssess0(){
       <div class="stat"><div class="v">${A.maxS}°</div><div class="l">Steepest</div></div>
       <div class="stat"><div class="v">${A.maxScore.toFixed(0)}</div><div class="l">Peak index</div></div>
       <div class="stat"><div class="v">${A.p90.toFixed(0)}</div><div class="l">90th pct</div></div>
-      <div class="stat"><div class="v">${ATES[A.maxA].n}</div><div class="l">Max ATES</div></div>
+      <div class="stat"><div class="v">${ATES[A.maxA].n}</div><div class="l">Highest ATES (60 m+)</div></div>
     </div>
+    <div class="small muted" style="margin-top:10px">Distance by ATES terrain class</div>
+    <div class="bar">${A.lenByAtes.map((l,k)=>l>0?`<div title="${ATES[k].n}: ${fmtKm(l)}" style="width:${l/A.dist*100}%;background:${ATES[k].c}"></div>`:'').join('')}</div>
+    <div class="small">${A.lenByAtes.map((l,k)=>l>0?`<span style="margin-right:10px"><span class="sw" style="background:${ATES[k].c};width:9px;height:9px"></span> ${ATES[k].n} ${Math.round(l/A.dist*100)}%</span>`:'').join('')}</div>
     <div class="small muted" style="margin-top:10px">Time and exposure on ${A.ex.date}, one way</div>
     <div class="stats">
       <div class="stat"><div class="v">${Math.floor(A.ex.hours)} h ${Math.round((A.ex.hours%1)*60)} min</div><div class="l">Travel time, arrive ${A.ex.end}</div></div>
@@ -2010,7 +2013,10 @@ function outlookDays(){
     const date=t.slice(0,10); let D=days.find(d=>d.date===date);
     if(!D){ D={date,tmin:[99,99,99],tmax:[-99,-99,-99],snow:[0,0,0],rain:[0,0,0],ridge:0,ridgeV:[0,0],valley:0,fl:0,precip:0}; days.push(D); }
     const temps=G3.map(h=>h.temperature_2m[k]);
-    G3.forEach((h,b)=>{ D.tmin[b]=Math.min(D.tmin[b],h.temperature_2m[k]); D.tmax[b]=Math.max(D.tmax[b],h.temperature_2m[k]); D.snow[b]+=h.snowfall[k]||0; D.rain[b]+=h.rain[k]||0; });
+    // Open-Meteo adjusts only temperature for elevation, so split precipitation at each band by its temperature
+    // (same rule as the snowpack model: snow below 0 °C, rain above +2 °C, mixed between, about 1 cm of snow per mm)
+    G3.forEach((h,b)=>{ const T=h.temperature_2m[k], P=h.precipitation[k]||0, fs=T<=0?1:T>=2?0:1-T/2;
+      D.tmin[b]=Math.min(D.tmin[b],T); D.tmax[b]=Math.max(D.tmax[b],T); D.snow[b]+=P*fs; D.rain[b]+=P*(1-fs); });
     const ws=G3[2].wind_speed_700hPa[k]||0, wd=G3[2].wind_direction_700hPa[k]||0;
     D.ridge=Math.max(D.ridge,ws); D.ridgeV[0]+=Math.sin(wd*Math.PI/180)*ws; D.ridgeV[1]+=Math.cos(wd*Math.PI/180)*ws;
     D.valley=Math.max(D.valley,G3[0].wind_speed_10m[k]||0); D.fl=Math.max(D.fl,flFrom(temps)); D.precip+=G3[1].precipitation[k]||0;
@@ -2045,7 +2051,7 @@ function fcUI(){
     b.innerHTML=`<div class="d">${D.date===todayLocal()?'Today, ':''}${lab}</div>
       <div>${top?`<span class="badge" style="background:${CLS[top-1].c};color:${top===5?'#fff':'#111'}">${top} · ${DANGER[top-1]}${(S.rateSrc==='avcan'&&av)?'':' (model)'}</span>`:'<span class="muted small">No rating</span>'}</div>
       <div class="t"></div>
-      <div class="nums"><span>Snow <b>${r(D.snow[2])}</b> alp · <b>${r(D.snow[1])}</b> TL · <b>${r(D.snow[0])}</b> BTL cm</span><span>Rain BTL <b>${r(D.rain[0])} mm</b></span>
+      <div class="nums"><span>Snow <b>${r(D.snow[2])}</b> alp · <b>${r(D.snow[1])}</b> TL · <b>${r(D.snow[0])}</b> BTL cm</span><span>Rain <b>${r(D.rain[1])}</b> TL · <b>${r(D.rain[0])}</b> BTL mm</span>
         <span>Alpine <b>${r(D.tmin[2])} to ${r(D.tmax[2])} °C</b></span><span>Freezing level up to <b>${Math.round(D.fl/50)*50} m</b></span>
         <span>Ridgetop wind <b>${D.ridgeDir} ${r(D.ridge)} km/h</b></span><span>Valley wind up to <b>${r(D.valley)} km/h</b></span></div>`;
     b.querySelector('.t').textContent=[D.day&&(D.day.name+': '+D.day.text), D.night&&(D.night.name+': '+D.night.text)].filter(Boolean).join(' ')||'No Environment Canada text for this day.';
