@@ -231,7 +231,7 @@ a{color:var(--gold2)}
         <div id="fcAlerts"></div>
         <div class="muted small" id="fcHead" style="margin-bottom:6px">Loading the Environment Canada forecast for Whistler…</div>
         <div class="rlist" id="fcDays" role="list"></div>
-        <div class="muted small" style="margin-top:6px">Select a day to plan for it: the map, danger, route scores and travel times switch to that day. Text: Environment and Climate Change Canada, Whistler (bc-86, village). Numbers by elevation: GEM model via Open-Meteo at below treeline 1850 m, treeline 2175 m and alpine 2700 m; ridgetop wind from the 700 hPa level (about 3000 m).</div>
+        <div class="muted small" style="margin-top:6px">Select a day to plan for it: the map, danger, route scores and travel times switch to that day. Text: Environment and Climate Change Canada, Whistler (bc-86, village). Numbers by elevation: GEM model via Open-Meteo at below treeline 1100 m, treeline 1700 m and alpine 2100 m; ridgetop wind from the 700 hPa level (about 3000 m).</div>
       </div>
 
       <h2>Live data sources</h2>
@@ -255,7 +255,7 @@ a{color:var(--gold2)}
           </div>
           <div class="err" id="manSum" role="alert"></div>
           <div class="rowf" style="margin-top:8px"><button class="btn sm" type="submit">Use these readings</button><button class="btn ghost sm" type="button" id="manClear">Back to modelled weather</button></div>
-          <div class="muted small" id="manState" style="margin-top:6px">Temperature is moved to the alpine (2700 m) at −6.5 °C per km. Without a freezing level, one is worked out from the temperature.</div>
+          <div class="muted small" id="manState" style="margin-top:6px">Temperature is moved to the alpine (2100 m) at −6.5 °C per km. Without a freezing level, one is worked out from the temperature.</div>
         </form>
       </div>
 
@@ -390,20 +390,20 @@ a{color:var(--gold2)}
       <h2>7-day forecast and trip planner</h2>
       <ul>
         <li>Text forecast and weather warnings: Environment and Climate Change Canada city forecast for Whistler (bc-86). It is written for the village, not the alpine.</li>
-        <li>Numbers by elevation: Environment Canada's GEM model through Open-Meteo, with temperature adjusted to 1850, 2175 and 2700 m. Open-Meteo adjusts only the temperature for elevation, so each band's precipitation is split into snow (about 1 cm per mm below 0 °C) and rain (above +2 °C, mixed between), the same rule the snowpack model uses. Freezing level is worked out from the temperatures at the three elevations. Ridgetop wind is the 700 hPa wind (about 3000 m); valley wind is the 10 m wind.</li>
+        <li>Numbers by elevation: Environment Canada's GEM model through Open-Meteo, with temperature adjusted to 1100, 1700 and 2100 m (the model's band elevations). Open-Meteo adjusts only the temperature for elevation, so each band's precipitation is split into snow (about 1 cm per mm below 0 °C) and rain (above +2 °C, mixed between), the same rule the snowpack model uses. Freezing level is worked out from the temperatures at the three elevations. Ridgetop wind is the 700 hPa wind (about 3000 m); valley wind is the 10 m wind.</li>
         <li>Picking a day runs the snowpack model on to that day using the forecast weather, then scores the map and routes for it. Danger for days 2 to 7 is modelled; Avalanche Canada forecasts at most 3 days. Forecast skill drops after about 3 days.</li>
         <li>Weather animation: particles fall over the 3D map at the selected forecast hour. The number of particles follows the precipitation rate, they are snow above the freezing level and rain below it, and they drift with the ridgetop wind direction and speed. Speeds are exaggerated so the motion can be seen. It is an illustration of one forecast point, not a radar.</li>
       </ul>
       <h2>Manual weather station entry</h2>
       <ul>
-        <li>Readings entered by hand replace the modelled weather for today only: new snow, wind and the temperature (moved to 2700 m at −6.5 °C per km). They do not change the 60-day snowpack history, the weak layers or the modelled danger rating.</li>
+        <li>Readings entered by hand replace the modelled weather for today only: new snow, wind and the temperature (moved to 2100 m at −6.5 °C per km). They do not change the 60-day snowpack history, the weak layers or the modelled danger rating.</li>
       </ul>
       <h2>Last 60 days of weather</h2>
       <ul>
         <li>For the selected date the app pulls the hourly weather before it (from 1 October of the season) for a point on Whistler Mountain from Open-Meteo: current forecast models for recent dates, archived forecast models from 2022, ERA5 reanalysis before that. ERA5 precipitation is also pulled and averaged with the model, because the two disagreed by about three times in autumn 2026 (21 mm against 62 mm). If today's pull fails it uses the snapshot saved in the page and says so.</li>
         <li>No station correction: there is no public weather station on Whistler or Blackcomb. The nearest public stations are highway stations in the valley (Brandywine 496 m, Tantalus 320 m). Instead, one overall snowfall multiplier is tuned against Avalanche Canada's ratings in the accuracy test.</li>
         <li>The Avalanche Canada forecast for the selected date (Sea-to-Sky region) sets the danger ratings and problems when one was issued (archive from 2022). Mountain Information Network reports within 20 km are listed for context but do not change the score.</li>
-        <li>The single weather point is moved to three band elevations (below treeline 1850 m, treeline 2175 m, alpine 2700 m) with a −6.5 °C/km lapse rate and +50 % precipitation per km. Precipitation falls as snow below 0 °C, rain above +2 °C, mixed in between.</li>
+        <li>The single weather point is moved to three band elevations (below treeline 1100 m, treeline 1700 m, alpine 2100 m) with a −6.5 °C/km lapse rate and +50 % precipitation per km. Precipitation falls as snow below 0 °C, rain above +2 °C, mixed in between.</li>
         <li>Each day and band: snow depth (new snow at about 1 cm per mm of water, 3 % daily settlement, degree-day melt), snow available for wind transport, and cold dry days on a thin snowpack (faceting).</li>
         <li>For each band and each of 8 aspects a day counts as loading when it reaches a threshold: 30 cm storm snow in 72 h, 20 cm wind-deposited snow on lee aspects (wind over 20 km/h moving recent snow), 10 mm rain on a 30 cm snowpack, or strong warming on sunny aspects.</li>
         <li>Recent loading = strongest loading in the last days, counted 100 % today, 80 % yesterday, 60 % two days ago and so on. It multiplies the hazard on that band and aspect by up to 2.1×. Thin snowpack (under about 20 cm) lowers hazard to about a third, because there is not enough snow to slide.</li>
@@ -6143,7 +6143,7 @@ function tryLive(){ return loadConditions(document.getElementById('endDate').val
    then a daily snow and wind-loading model runs per elevation band and aspect sector. */
 let SEASON=null;
 const AVC={};
-const BANDZ={btl:1850, tl:2175, alp:2700};
+let BANDZ={btl:1100, tl:1700, alp:2100}; // replaced by the model's site settings below
 /* The snowpack and danger model itself lives in build/model.js (inlined below at build time)
    and is shared with the accuracy test, so the page runs exactly the tested code. */
 /* Mount Temple snowpack and danger model.
@@ -6460,7 +6460,7 @@ const BANDZ={btl:1850, tl:2175, alp:2700};
   else root.TempleModel = API;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
 
-const TM=globalThis.TempleModel; TM.setSite('whistler');
+const TM=globalThis.TempleModel; TM.setSite('whistler'); BANDZ=TM.BANDZ;
 const TUNED={"stormCm":31.548,"windCm":35,"rainMm":10,"decay":0.213,"windMin":28.641,"windSpan":40,"clearCloud":20,"shWind":10,"shTmin":-8,"nsfTmin":-12,"grad":10,"basalDays":7,"basalMaxHS":100,"buryCm":5,"surfLife":10,"pMin":30,"pMax":100,"life":60,"windLife":7.826,"wPers":0.1,"wDeep":0.1,"c2":0.102,"c3":0.534,"c4":1.403,"c5":1.886,"supMin":20,"supSpan":60,"probStorm":0.6,"probWind":0.4,"probPers":0.5,"probDeep":0.5,"probWet":0.5,"meltT":3.015,"meltSpan":6,"pScale":0.679};
 const ACC={"tested_on":"2025-26","months":"Dec\u2013Mar","n_band_ratings":363,"exact":0.581,"within1":0.928,"mae":0.496,"kappa":0.673,"bench_exact":0.413,"bench_within1":0.884,"bench_mae":0.711,"bench_kappa":0.307,"beats_benchmark":true,"problems":{"storm":{"hit":0.754,"false_alarm":0.132,"parks_days":61},"wind":{"hit":0,"false_alarm":null,"parks_days":44},"persistent":{"hit":0,"false_alarm":1,"parks_days":16},"deep":{"hit":null,"false_alarm":null,"parks_days":0},"wet":{"hit":0.211,"false_alarm":0.467,"parks_days":38}},"runs":8,"range_exact":[0.529,0.631],"range_mae":[0.43,0.562],"per_season":{"2022-23":{"role":"tuning","n":363,"exact":0.636,"within1":0.983,"mae":0.38,"bias":0.028,"kappa":0.72,"wind_hit":0,"persistent_hit":0.733},"2023-24":{"role":"tuning","n":366,"exact":0.585,"within1":0.937,"mae":0.484,"bias":-0.068,"kappa":0.678,"wind_hit":0,"persistent_hit":0.52},"2024-25":{"role":"tuning","n":363,"exact":0.598,"within1":0.964,"mae":0.441,"bias":-0.22,"kappa":0.722,"wind_hit":0,"persistent_hit":0.651},"2025-26":{"role":"test","n":363,"exact":0.581,"within1":0.928,"mae":0.496,"bias":0.044,"kappa":0.673,"wind_hit":0,"persistent_hit":0}},"per_season_benchmark":{"2022-23":{"exact":0.523,"within1":0.926,"mae":0.551},"2023-24":{"exact":0.505,"within1":0.847,"mae":0.664},"2024-25":{"exact":0.419,"within1":0.862,"mae":0.727},"2025-26":{"exact":0.413,"within1":0.884,"mae":0.711}},"disclosure":"Test winter scored once; nothing was changed after seeing the result."};
 const MP=Object.assign({},TM.DEFAULT_PARAMS,TUNED||{});
@@ -6929,7 +6929,7 @@ document.getElementById('findBtn').onclick=()=>{
 
 
 /* ---------------- 7-day outlook: Environment Canada text + GEM by elevation ---------------- */
-const FCELEV=[1850,2175,2700];
+const FCELEV=[BANDZ.btl,BANDZ.tl,BANDZ.alp];
 async function getOutlook(){
   const out={};
   const [ec,gm]=await Promise.allSettled([
@@ -7098,7 +7098,7 @@ function wxNow(){
 function wxLabel(){
   const w=wxNow(); const el=document.getElementById('wxLbl'); if(!w){ el.textContent='Forecast not loaded.'; return; }
   const when=new Date(w.t).toLocaleString([], {weekday:'short',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
-  const type=w.rate<0.05?'No precipitation':w.fl<1850?'Snow':w.fl>2700?'Rain':'Snow above '+Math.round(w.fl/50)*50+' m, rain below';
+  const type=w.rate<0.05?'No precipitation':w.fl<FCELEV[0]?'Snow':w.fl>FCELEV[2]?'Rain':'Snow above '+Math.round(w.fl/50)*50+' m, rain below';
   el.innerHTML=`<b>${when}</b><br>${type}${w.rate>=0.05?` · ${w.rate.toFixed(1)} mm/h`:''} · ridgetop wind ${ASP[Math.round(w.wd/45)%8]} ${Math.round(w.ws)} km/h`;
 }
 function wxBuild(){
