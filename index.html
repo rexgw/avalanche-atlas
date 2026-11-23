@@ -150,13 +150,23 @@ a{color:var(--gold2)}
     <div class="tabs"><button data-t="cond" class="on">Conditions</button><button data-t="routes">Routes</button><button data-t="print">3D print</button><button data-t="method">Method</button></div>
 
     <div class="pane on" id="pane-cond">
-      <h2>Data source</h2>
+      <h2>Date</h2>
       <div class="card">
-        <div class="status" id="liveStatus"></div>
-        <div class="rowf" style="margin-top:8px"><button class="btn sm" id="liveBtn">Retry live data</button><span class="muted small" id="srcLabel"></span></div>
+        <div class="rowf">
+          <input type="date" id="endDate" aria-label="Assessment date" style="background:var(--navy);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:6px 8px;font:inherit">
+          <button class="btn sm" id="todayBtn">Today</button>
+          <button class="btn ghost sm" id="liveBtn">Reload data</button>
+        </div>
+        <div class="muted small" style="margin-top:6px">Risk uses the 60 days of weather before this date. Official Parks Canada ratings are available from 2023, station readings from 2024, weather back to 1940.</div>
       </div>
 
-      <h2>Last 60 days at Mount Temple</h2>
+      <h2>Live data sources</h2>
+      <div class="card">
+        <div class="status" id="liveStatus"></div>
+        <div class="muted small" id="srcLabel" style="margin-top:6px"></div>
+      </div>
+
+      <h2>60 days before the selected date</h2>
       <div class="card">
         <div class="muted small" id="seasonHead">Waiting for weather…</div>
         <canvas id="seasonCv" style="width:100%;height:190px;display:block;margin-top:8px"></canvas>
@@ -171,19 +181,16 @@ a{color:var(--gold2)}
       <div id="dangerRows"></div>
 
       <h2>Avalanche problems</h2>
+      <div class="muted small" id="probSrc" style="margin:-4px 0 6px"></div>
       <div id="probs"></div>
-      <button class="btn ghost sm" id="addProb">+ Add problem</button>
 
-      <h2>Weather now</h2>
-      <div class="muted small" style="margin:-4px 0 6px">Filled from the last hours of the 60-day record. Edit to test a scenario.</div>
-      <div class="grid2">
-        <div class="field"><label>New snow 24 h (cm)</label><input type="number" min="0" max="150" id="hn24"></div>
-        <div class="field"><label>New snow 72 h (cm)</label><input type="number" min="0" max="300" id="hn72"></div>
-        <div class="field"><label>Wind speed (km/h)</label><input type="number" min="0" max="200" id="wind"></div>
-        <div class="field"><label>Wind from</label><select id="windDir"></select></div>
-        <div class="field"><label>Alpine temp (°C)</label><input type="number" min="-40" max="25" id="temp"></div>
-        <div class="field"><label>Freezing level (m)</label><input type="number" min="0" max="5000" step="50" id="fl"></div>
-      </div>
+      <h2>Weather at the selected time</h2>
+      <div class="muted small" style="margin:-4px 0 6px" id="wxSrc"></div>
+      <div class="stats" id="wxStats"></div>
+
+      <h2>Field reports near Temple</h2>
+      <div class="muted small" style="margin:-4px 0 6px">Avalanche Canada Mountain Information Network (MIN) reports within 20 km, in the 31 days before the selected date.</div>
+      <div class="rlist" id="minList"></div>
 
       <h2>Avalanche history near Temple</h2>
       <div class="rlist" id="histList"></div>
@@ -253,12 +260,14 @@ a{color:var(--gold2)}
       </ul>
       <h2>Last 60 days of weather</h2>
       <ul>
-        <li>On page load the app pulls 61 past days plus 2 forecast days of hourly weather for Mount Temple from Open-Meteo (best available forecast models), plus ERA5 reanalysis precipitation up to 5 days ago. For autumn 2026 the two disagreed by about three times on precipitation (21 mm against 62 mm), so the app averages them where both exist. If the pull fails it uses a saved snapshot and says so.</li>
+        <li>For the selected date the app pulls the 61 days of hourly weather before it for Mount Temple from Open-Meteo: current forecast models for recent dates, archived forecast models from 2022, ERA5 reanalysis before that. ERA5 precipitation is also pulled and averaged with the model, because the two disagreed by about three times in autumn 2026 (21 mm against 62 mm). If today's pull fails it uses the snapshot saved in the page and says so.</li>
+        <li>Parks Canada weather stations (via Avalanche Canada, from 2024): snow depth at Bosworth Lower (2210 m, treeline) and Stanley (1930 m, below treeline) replaces the modelled depth and gives daily new snow; ridgetop wind from Bosworth Upper (2745 m, Whymper as backup) replaces the model wind; the model's temperature is shifted by its average error against Bosworth Upper; alpine snowfall is scaled by how far off the model was at treeline.</li>
+        <li>The Parks Canada forecast for the selected date sets the danger ratings and problems when one was issued (archive from 2023). Mountain Information Network reports within 20 km are listed for context but do not change the score.</li>
         <li>The single weather point is moved to three band elevations (below treeline 1850 m, treeline 2175 m, alpine 2700 m) with a −6.5 °C/km lapse rate and +50 % precipitation per km. Precipitation falls as snow below 0 °C, rain above +2 °C, mixed in between.</li>
         <li>Each day and band: snow depth (new snow at about 1 cm per mm of water, 3 % daily settlement, degree-day melt), snow available for wind transport, and cold dry days on a thin snowpack (faceting).</li>
         <li>For each band and each of 8 aspects a day counts as loading when it reaches a threshold: 30 cm storm snow in 72 h, 20 cm wind-deposited snow on lee aspects (wind over 20 km/h moving recent snow), 10 mm rain on a 30 cm snowpack, or strong warming on sunny aspects.</li>
         <li>Recent loading = strongest loading in the last days, counted 100 % today, 80 % yesterday, 60 % two days ago and so on. It multiplies the hazard on that band and aspect by up to 2.1×. Thin snowpack (under about 20 cm) lowers hazard to about a third, because there is not enough snow to slide.</li>
-        <li>When Parks Canada has issued a rating it sets the danger level. When no rating is issued (early or late season) the app models one from the replay and marks it as modelled.</li>
+        <li>When Parks Canada issued no rating (early or late season, or before 2023) the app models one from the replay and marks it as modelled.</li>
       </ul>
       <h2>Conditions model</h2>
       <ul>
@@ -284,13 +293,15 @@ a{color:var(--gold2)}
         <li>Summer trails are scored on their summer line. Winter travel often takes different lines (for example frozen lakes and the valley floor), which can be drawn or loaded as GPX.</li>
         <li>Trail lines come from OpenStreetMap. The last pitch to the Mount Temple summit has no OSM line and uses a least-effort terrain path.</li>
         <li>30 m cells miss small features like rolls, cornice edges and short gullies. Glaciers, seracs and crevasses on Temple's north face are not modelled.</li>
-        <li>Avalanche Canada weather station readings (Bosworth, Whymper) were not available through their public API, so the model is not corrected against stations.</li>
-        <li>Live data only loads when the page runs outside the Claude viewer (self-hosted or opened as a file).</li>
+        <li>No station sits in the Moraine Lake or Paradise Valley drainages: the nearest are 16 to 20 km north and west, so local snowfall differences are not captured.</li>
+        <li>Station readings only go back to 2024 and the archived forecasts to 2023. Older dates run on the weather model alone.</li>
       </ul>
       <h2>Sources</h2>
       <ul class="small">
         <li>USGS 3D Elevation Program, 1 arc-second DEM tile n52w117 (public domain)</li>
-        <li>Open-Meteo forecast API with past days (weather, CC BY 4.0)</li>
+        <li>Open-Meteo forecast, historical forecast and ERA5 archive APIs (weather, CC BY 4.0)</li>
+        <li>Parks Canada weather stations (Bosworth Upper and Lower, Whymper, Stanley) via the Avalanche Canada weather API</li>
+        <li>Avalanche Canada Mountain Information Network</li>
         <li>Avalanche Canada public forecast API (Parks Canada forecast for Banff, Yoho and Kootenay) and danger scale</li>
         <li>Trails and peaks: © OpenStreetMap contributors (ODbL), via the Overpass API</li>
         <li>Incident history: Avalanche Canada incident reports, Parks Canada and news reports linked in the list</li>
@@ -5709,15 +5720,10 @@ document.getElementById('printBtn').onclick=async()=>{
 function dangerUI(){
   const host=document.getElementById('dangerRows'); host.innerHTML='';
   for(const [k,label] of BANDS){
+    const v=S.danger[k];
     const row=document.createElement('div'); row.className='danger-row';
-    row.innerHTML=`<div class="small">${label}</div><div class="dsel">${DANGER.map((d,j)=>`<button data-v="${j+1}" title="${d}">${j+1}</button>`).join('')}</div>`;
-    row.querySelectorAll('button').forEach(b=>{
-      const v=+b.dataset.v; const on=S.danger[k]===v; b.classList.toggle('on',on);
-      if(on){b.style.background=CLS[v-1].c; b.style.color=v===5?'#fff':'#111';}
-      b.onclick=()=>{S.danger[k]=v; S.dangerFrom='manual'; markManual(); dangerUI(); recompute();};
-    });
-    const nm=document.createElement('div'); nm.className='small muted'; nm.style.gridColumn='2'; nm.style.marginTop='-3px'; nm.textContent=DANGER[S.danger[k]-1];
-    host.appendChild(row); host.appendChild(nm);
+    row.innerHTML=`<div class="small">${label}</div><div class="rowf"><span class="badge" style="background:${CLS[v-1].c};color:${v===5?'#fff':'#111'}">${v} · ${DANGER[v-1]}</span></div>`;
+    host.appendChild(row);
   }
 }
 function roseSVG(asp){
@@ -5732,97 +5738,131 @@ function roseSVG(asp){
 }
 function probsUI(){
   const host=document.getElementById('probs'); host.innerHTML='';
+  document.getElementById('probSrc').textContent=S.dangerFrom==='avcan'?'From the Parks Canada forecast.':'Modelled from the 60-day weather.';
   if(!S.problems.length) host.innerHTML='<div class="muted small" style="margin-bottom:8px">No problems listed. Hazard follows the danger ratings evenly across aspects.</div>';
-  S.problems.forEach((P,idx)=>{
+  for(const P of S.problems){
     const d=document.createElement('div'); d.className='prob';
-    d.innerHTML=`<div class="top"><select class="ptype">${PTYPES.map(([v,l])=>`<option value="${v}" ${v===P.type?'selected':''}>${l}</option>`).join('')}</select><button class="x" title="Remove">✕</button></div>
+    d.innerHTML=`<div class="top"><b>${PTYPES.find(p=>p[0]===P.type)?.[1]||P.type}</b></div>
       <div class="rowf" style="margin-top:8px;align-items:flex-start;flex-wrap:nowrap">${roseSVG(P.asp)}
-        <div style="flex:1;min-width:0">
-          <div class="field"><label>Elevation bands</label><div class="chips">${BANDS.map(([k,l])=>`<span class="chip ${P.bands[k]?'on':''}" data-b="${k}">${k.toUpperCase()}</span>`).join('')}</div></div>
-          <div class="field" style="margin-top:6px"><label>Likelihood</label><select class="plike">${LIKE.map((l,j)=>`<option value="${j+1}" ${P.like===j+1?'selected':''}>${l}</option>`).join('')}</select></div>
-          <div class="field" style="margin-top:6px"><label>Expected size</label><select class="psize">${SIZES.map(z=>`<option ${P.size===z?'selected':''}>${z}</option>`).join('')}</select></div>
+        <div style="flex:1;min-width:0" class="small">
+          <div><span class="muted">Bands</span> ${BANDS.filter(([k])=>P.bands[k]).map(([k])=>k.toUpperCase()).join(', ')||'none'}</div>
+          <div style="margin-top:4px"><span class="muted">Likelihood</span> ${LIKE[P.like-1]||''}</div>
+          <div style="margin-top:4px"><span class="muted">Expected size</span> ${P.size}</div>
         </div></div>`;
-    d.querySelector('.ptype').onchange=e=>{P.type=e.target.value; markManual(); recompute();};
-    d.querySelector('.plike').onchange=e=>{P.like=+e.target.value; markManual(); recompute();};
-    d.querySelector('.psize').onchange=e=>{P.size=+e.target.value; markManual(); recompute();};
-    d.querySelector('.x').onclick=()=>{S.problems.splice(idx,1); markManual(); probsUI(); recompute();};
-    d.querySelectorAll('.chip').forEach(c=>c.onclick=()=>{P.bands[c.dataset.b]=P.bands[c.dataset.b]?0:1; markManual(); probsUI(); recompute();});
-    d.querySelectorAll('path').forEach(p=>p.onclick=()=>{const k=+p.dataset.k; P.asp[k]=P.asp[k]?0:1; markManual(); probsUI(); recompute();});
     host.appendChild(d);
-  });
-  document.getElementById('addProb').style.display=S.problems.length>=3?'none':'inline-block';
+  }
 }
-document.getElementById('addProb').onclick=()=>{S.problems.push({type:'persistent',bands:{alp:1,tl:1,btl:0},asp:[1,1,0,0,0,0,0,1],like:2,size:2}); markManual(); probsUI(); recompute();};
-const wxIds=['hn24','hn72','wind','temp','fl'];
 function wxUI(){
-  wxIds.forEach(k=>document.getElementById(k).value=S.wx[k]);
-  const sel=document.getElementById('windDir'); sel.innerHTML=ASP.map((a,k)=>`<option value="${k}" ${S.wx.windDir===k?'selected':''}>${a}</option>`).join('');
+  const w=S.wx; const el=document.getElementById('wxStats');
+  const st=(v,l)=>`<div class="stat"><div class="v">${v}</div><div class="l">${l}</div></div>`;
+  el.innerHTML=st(w.hn24+' cm','New snow 24 h')+st(w.hn72+' cm','New snow 72 h')+st(w.wind+' km/h','Wind')+st(ASP[w.windDir],'Wind from')+st(w.temp+' °C','Alpine temp')+st(w.fl+' m','Freezing level');
+  document.getElementById('wxSrc').textContent=SEASON?(SEASON.obsUsed?'Treeline snow from Parks Canada stations, wind from Bosworth Upper, the rest from the weather model.':'From the weather model at Mount Temple.'):'';
 }
-wxIds.forEach(k=>document.getElementById(k).addEventListener('input',e=>{const v=parseFloat(e.target.value); if(!isNaN(v)){S.wx[k]=v; markManual(); recompute();}}));
-document.getElementById('windDir').onchange=e=>{S.wx.windDir=+e.target.value; markManual(); recompute();};
 
-/* ---------------- live data (hybrid) ---------------- */
-const LIVE={wx:{st:'wait',msg:'Checking Open-Meteo…'},av:{st:'wait',msg:'Checking Avalanche Canada…'}};
+/* ---------------- live data ----------------
+   Everything is pulled by the reader's browser from public APIs that allow it (CORS).
+   For a past date the same sources are queried for that date. */
+const LIVE={};
+const SRC=[['wx','Open-Meteo weather model'],['era','ERA5 reanalysis (precipitation)'],['stn','Parks Canada weather stations'],['av','Parks Canada avalanche forecast'],['min','Mountain Information Network']];
+let REQ=0;
 function srcLabel(){
   const l=document.getElementById('srcLabel');
-  l.textContent = S.source==='example'?'Showing example conditions, not today’s forecast':S.source==='live'?'Using live data':S.source==='snapshot'?'Using saved weather snapshot':S.source==='mixed'?'Live data with manual edits':'Manual entry';
-  const ds=document.getElementById('dangerSrc'); if(ds) ds.textContent = S.dangerFrom==='avcan'?'From the Parks Canada forecast.':S.dangerFrom==='model'?'Modelled from the last 60 days of weather, because no official rating is issued. Not an official rating.':'Manual entry.';
+  l.textContent = S.source==='live'?'Conditions for right now.':S.source==='past'?'Conditions replayed for '+(S.endDate||'')+'.':S.source==='snapshot'?'Weather from the snapshot saved in this page.':'Loading…';
+  const ds=document.getElementById('dangerSrc'); if(ds) ds.textContent = S.dangerFrom==='avcan'?'From the Parks Canada forecast'+(AVC.issued?' issued '+new Date(AVC.issued).toLocaleDateString():'')+'.':'Modelled from the 60 days of weather, because no Parks Canada rating was issued for this date. Not an official rating.';
 }
-function markManual(){ if(S.source==='live'||S.source==='snapshot') S.source='mixed'; else if(S.source==='example') S.source='manual'; srcLabel(); }
 function liveUI(){
   const el=document.getElementById('liveStatus');
-  const row=(o,name)=>`<div class="s"><span class="dot ${o.st}"></span><div><b>${name}</b> <span class="muted">${o.msg}</span></div></div>`;
-  el.innerHTML=row(LIVE.av,'Avalanche Canada')+row(LIVE.wx,'Open-Meteo weather')+
-    `<div class="muted small" style="margin-top:4px">Official forecast: <a href="${AVC.url||'https://avalanche.ca/forecasts'}" target="_blank" rel="noopener">Banff, Yoho &amp; Kootenay</a>. Live loading works when this page is hosted on its own site or opened as a file.</div>`;
+  el.innerHTML=SRC.map(([k,name])=>{const o=LIVE[k]||{st:'wait',msg:'Waiting…'}; return `<div class="s"><span class="dot ${o.st}"></span><div><b>${name}</b> <span class="muted">${o.msg}</span></div></div>`;}).join('')+
+    `<div class="muted small" style="margin-top:4px">Official forecast: <a href="${AVC.url||'https://avalanche.ca/forecasts'}" target="_blank" rel="noopener">Banff, Yoho &amp; Kootenay</a>.</div>`;
   srcLabel();
 }
-async function fetchJSON(url,ms=7000){
+async function fetchJSON(url,ms=15000){
   const c=new AbortController(); const t=setTimeout(()=>c.abort(),ms);
   try{const r=await fetch(url,{signal:c.signal}); if(!r.ok) throw new Error('HTTP '+r.status); return await r.json();}
+  catch(e){ if(e.name==='AbortError') throw new Error('timed out'); if(e instanceof TypeError) throw new Error('blocked or offline'); throw e; }
   finally{clearTimeout(t);}
 }
-const WXURL='https://api.open-meteo.com/v1/forecast?latitude=51.3506&longitude=-116.2067&hourly=temperature_2m,precipitation,rain,snowfall,wind_speed_10m,wind_direction_10m,wind_gusts_10m,freezing_level_height&past_days=61&forecast_days=2&timezone=America%2FEdmonton';
-function eraURL(){
-  const d=n=>new Date(Date.now()-7*3600e3-n*864e5).toISOString().slice(0,10);
-  return 'https://archive-api.open-meteo.com/v1/archive?latitude=51.3506&longitude=-116.2067&hourly=precipitation&timezone=America%2FEdmonton&start_date='+d(62)+'&end_date='+d(5);
+const LL='latitude=51.3506&longitude=-116.2067';
+const WXVARS='temperature_2m,precipitation,rain,snowfall,wind_speed_10m,wind_direction_10m,wind_gusts_10m,freezing_level_height';
+const TZ='timezone=America%2FEdmonton';
+const ymd=ms=>new Date(ms).toISOString().slice(0,10);
+const addDays=(d,n)=>ymd(Date.parse(d+'T12:00:00Z')+n*864e5);
+function todayLocal(){ return ymd(Date.now()-7*3600e3); }
+// weather model for the 61 days ending at endDate (plus 2 forecast days when endDate is today)
+async function getModel(endDate,isNow){
+  const start=addDays(endDate,-61);
+  if(isNow) return {j:await fetchJSON(`https://api.open-meteo.com/v1/forecast?${LL}&hourly=${WXVARS}&past_days=61&forecast_days=2&${TZ}`), name:'forecast models'};
+  const ageDays=(Date.parse(todayLocal())-Date.parse(endDate))/864e5;
+  if(ageDays<80) return {j:await fetchJSON(`https://api.open-meteo.com/v1/forecast?${LL}&hourly=${WXVARS}&start_date=${start}&end_date=${addDays(endDate,1)}&${TZ}`), name:'forecast models'};
+  if(start>='2022-01-01') return {j:await fetchJSON(`https://historical-forecast-api.open-meteo.com/v1/forecast?${LL}&hourly=${WXVARS}&start_date=${start}&end_date=${addDays(endDate,1)}&${TZ}`,25000), name:'archived forecast models'};
+  const j=await fetchJSON(`https://archive-api.open-meteo.com/v1/archive?${LL}&hourly=temperature_2m,precipitation,rain,snowfall,wind_speed_10m,wind_direction_10m,wind_gusts_10m&start_date=${start}&end_date=${addDays(endDate,1)}&${TZ}`,25000);
+  j.eraOnly=true; return {j, name:'ERA5 only (before 2022)'};
+}
+async function getERA(endDate){
+  const last=addDays(todayLocal(),-5); const end=endDate<last?addDays(endDate,1):last;
+  return fetchJSON(`https://archive-api.open-meteo.com/v1/archive?${LL}&hourly=precipitation&start_date=${addDays(endDate,-61)}&end_date=${end}&${TZ}`,25000);
 }
 // Average the forecast-model archive with ERA5 reanalysis precipitation where both exist.
 // The two disagree by up to 3x in this area; averaging hedges between them.
 function mergeERA(j,e){
-  j.era=0; if(!e||!e.hourly) return j;
+  j.era=0; if(!e||!e.hourly||j.eraOnly) return j;
   const m={}; e.hourly.time.forEach((t,k)=>m[t]=e.hourly.precipitation[k]);
   j.hourly.precipitation=j.hourly.precipitation.map((p,k)=>{const q=m[j.hourly.time[k]]; if(q==null) return p; j.era++; return ((p||0)+q)/2;});
   return j;
 }
-async function liveWeather(){
-  const [j,e]=await Promise.all([fetchJSON(WXURL,15000), fetchJSON(eraURL(),15000).catch(()=>null)]);
-  if(!j.hourly||!j.hourly.time) throw new Error('No hourly data');
-  SEASON=seasonModel(mergeERA(j,e),'live');
-  return SEASON.label;
+// Parks Canada stations via Avalanche Canada: snow depth (Bosworth Lower = treeline, Stanley = below treeline),
+// ridgetop wind and temperature (Bosworth Upper, Whymper as backup). At most ~31 days per request.
+const STATIONS={tl:110, btl:108, ridge:111, ridge2:109};
+async function getStations(endDate,isNow){
+  const endMs=isNow?Date.now():Date.parse(endDate+'T19:00:00Z');
+  const iso=ms=>new Date(ms).toISOString().slice(0,19)+'Z';
+  const chunks=[[endMs-61*864e5,endMs-31*864e5],[endMs-31*864e5,endMs]];
+  const get=async id=>{ const parts=await Promise.all(chunks.map(([a,b])=>fetchJSON(`https://weather.prod.avalanche.ca/stations/${id}/measurements?fromDate=${iso(a)}&toDate=${iso(b)}`,20000).catch(()=>[]))); return parts.flat(); };
+  const [tl,btl,ridge,ridge2]=await Promise.all([get(STATIONS.tl),get(STATIONS.btl),get(STATIONS.ridge),get(STATIONS.ridge2)]);
+  const n=tl.length+btl.length+ridge.length+ridge2.length;
+  if(!n) throw new Error('no readings for these dates');
+  // daily values, local day (Mountain time)
+  const by={};
+  const day=t=>ymd(Date.parse(t)-7*3600e3);
+  const put=(arr,f)=>arr.forEach(x=>{const d=day(x.measurementDateTime); (by[d]=by[d]||{}); f(by[d],x);});
+  put(tl,(o,x)=>{ if(x.snowHeight!=null&&x.snowHeight>=0&&x.snowHeight<600)(o.tlHS=o.tlHS||[]).push(x.snowHeight); });
+  put(btl,(o,x)=>{ if(x.snowHeight!=null&&x.snowHeight>=0&&x.snowHeight<600)(o.btlHS=o.btlHS||[]).push(x.snowHeight); });
+  const rid=ridge.length?ridge:ridge2;
+  put(rid,(o,x)=>{ if(x.windSpeedAvg!=null){(o.w=o.w||[]).push([x.windSpeedAvg,x.windDirAvg||0]);} if(x.airTempAvg!=null)(o.ta=o.ta||[]).push(x.airTempAvg); });
+  const med=a=>{const s=[...a].sort((p,q)=>p-q); return s[Math.floor(s.length/2)];};
+  const out={};
+  for(const [d,o] of Object.entries(by)){
+    const r={};
+    if(o.tlHS&&o.tlHS.length>=6) r.tlHS=med(o.tlHS);
+    if(o.btlHS&&o.btlHS.length>=6) r.btlHS=med(o.btlHS);
+    if(o.w&&o.w.length>=6){ let sx=0,sy=0,s=0; o.w.forEach(([v,a])=>{sx+=Math.sin(a*Math.PI/180)*v; sy+=Math.cos(a*Math.PI/180)*v; s+=v;}); r.wind=s/o.w.length; r.wdir=((Math.atan2(sx,sy)*180/Math.PI)+360)%360; }
+    if(o.ta&&o.ta.length>=6) r.ta=o.ta.reduce((a,b)=>a+b,0)/o.ta.length;
+    out[d]=r;
+  }
+  const last=tl[0]||btl[0]||rid[0];
+  return {days:out, count:n, latest:last?.measurementDateTime, ridgeName:ridge.length?'Bosworth Upper':'Whymper'};
 }
 const AVMAP={low:1,moderate:2,considerable:3,high:4,extreme:5};
-const PTMAP={'storm-slab':'storm','wind-slab':'wind','persistent-slab':'persistent','deep-persistent-slab':'deep','wet-slab':'wetslab','loose-wet':'wetloose','loose-dry':'dryloose','cornice':'cornice','cornices':'cornice'};
-const LKMAP={'unlikely':1,'possible':2,'likely':3,'very-likely':4,'certain':5,'almost-certain':5};
+const PTMAP={'storm-slab':'storm','stormslab':'storm','wind-slab':'wind','windslab':'wind','persistent-slab':'persistent','persistentslab':'persistent','deep-persistent-slab':'deep','deeppersistentslab':'deep','wet-slab':'wetslab','wetslab':'wetslab','loose-wet':'wetloose','loosewet':'wetloose','loose-dry':'dryloose','loosedry':'dryloose','cornice':'cornice','cornices':'cornice'};
+const LKMAP={'unlikely':1,'possible':2,'likely':3,'very-likely':4,'verylikely':4,'certain':5,'almost-certain':5,'almostcertain':5};
 function val(x){return (x&&typeof x==='object')?(x.value??x.display??''):x;}
-async function liveAvalanche(){
-  const urls=['https://api.avalanche.ca/forecasts/en/products/point?lat=51.3506&long=-116.2067',
-              'https://avcan-services-api.prod.avalanche.ca/forecasts/en/products/point?lat=51.3506&long=-116.2067'];
-  let j=null, err;
-  for(const u of urls){try{j=await fetchJSON(u); break;}catch(e){err=e;}}
-  if(!j) throw err||new Error('no response');
+async function getForecast(endDate,isNow){
+  const q=isNow?'':`&date=${endDate}T19:00:00Z`;
+  const j=await fetchJSON('https://api.avalanche.ca/forecasts/en/products/point?lat=51.3506&long=-116.2067'+q);
   const rep=j.report||j.product?.report||j;
-  const dr=(rep.dangerRatings||[])[0]; if(!dr) throw new Error('No danger ratings in response');
+  for(const k of Object.keys(AVC)) delete AVC[k];
+  AVC.issued=rep.dateIssued||null; AVC.url=j.url?('https://avalanche.ca'+(j.url.startsWith('/')?'':'/')+j.url.replace(/^https?:\/\/[^/]+/,'')):'https://avalanche.ca/forecasts';
+  if(/^https?:/.test(j.url||'')) AVC.url=j.url;
+  const dr=(rep.dangerRatings||[])[0];
+  if(!dr||!rep.dateIssued){ AVC.status=isNow?'No forecast published right now':'No forecast archived for this date'; throw new Error(AVC.status); }
   const rt=dr.ratings||dr;
   const pick=k=>AVMAP[String(val(rt[k]?.rating)||'').toLowerCase()];
   const d={alp:pick('alp'), tl:pick('tln')||pick('tl'), btl:pick('btl')};
-  AVC.title='Parks Canada · Banff, Yoho & Kootenay'; AVC.issued=rep.dateIssued||null; AVC.url=j.url||'https://avalanche.ca/forecasts';
-  AVC.types=(rep.problems||[]).map(p=>val(p.type)).filter(Boolean);
   if(!d.alp||!d.tl||!d.btl){
     const raw=['alp','tln','btl'].map(k=>String(val(rt[k]?.rating)||'')).join(' ');
-    AVC.rated=false; AVC.status=/early/i.test(raw)?'Early season: no danger rating issued yet':'No danger rating issued';
+    AVC.status=/early/i.test(raw)?'Early season: no danger rating issued':/spring|off/i.test(raw)?'Spring or off season: no danger rating issued':'No danger rating issued';
     throw new Error(AVC.status);
   }
-  AVC.rated=true; AVC.status='Rated';
   const probs=[];
   for(const p of (rep.problems||[]).slice(0,3)){
     const type=PTMAP[String(val(p.type)).toLowerCase()]; if(!type) continue;
@@ -5833,26 +5873,66 @@ async function liveAvalanche(){
     const es=data.expectedSize||{}; const sz=parseFloat(es.max||es.min||2);
     probs.push({type,bands,asp,like,size:SIZES.reduce((a,b)=>Math.abs(b-sz)<Math.abs(a-sz)?b:a,2)});
   }
-  S.danger=d; S.problems=probs; S.dangerFrom='avcan';
-  return (AVC.title)+(rep.dateIssued?' · issued '+new Date(rep.dateIssued).toLocaleDateString():'');
+  return {danger:d, problems:probs, issued:rep.dateIssued};
 }
-async function tryLive(){
-  LIVE.wx={st:'wait',msg:'Checking…'}; LIVE.av={st:'wait',msg:'Checking…'}; liveUI();
-  let wxLive=false, avRated=false;
-  try{const t=await liveWeather(); LIVE.wx={st:'ok',msg:'60 days loaded, '+t}; wxLive=true;}
-  catch(e){
-    if(WXSNAP){ SEASON=seasonModel(mergeERA(structuredClone(WXSNAP),WXSNAP.era5),'snapshot'); LIVE.wx={st:'warn',msg:'Live pull failed. Using the saved snapshot from '+SEASON.label}; }
-    else LIVE.wx={st:'bad',msg:'Not reachable from this page'};
+async function getMIN(endDate,isNow){
+  const to=isNow?todayLocal():endDate, from=addDays(to,-30);
+  const j=await fetchJSON(`https://api.avalanche.ca/min/en/submissions?fromdate=${from}&todate=${to}&pagesize=500`,20000);
+  const items=(j.items?.data||[]).filter(x=>x.location&&Math.hypot((x.location.latitude-51.3506)*111,(x.location.longitude+116.2067)*69.6)<20);
+  return items.sort((a,b)=>b.datetime.localeCompare(a.datetime));
+}
+function minUI(list){
+  const host=document.getElementById('minList'); host.innerHTML='';
+  if(!list){host.innerHTML='<div class="muted small">Not loaded.</div>';return;}
+  if(!list.length){host.innerHTML='<div class="muted small">No reports in this period.</div>';return;}
+  for(const x of list.slice(0,12)){
+    const ob=x.observations||{}; const tags=[ob.avalanche?'avalanche':'',ob.incident?'incident':'',ob.snowpack?'snowpack':'',ob.weather?'weather':''].filter(Boolean).join(', ');
+    const d=document.createElement('div'); d.className='ritem';
+    d.innerHTML=`<div style="flex:1;min-width:0"><div class="nm"></div><div class="tag">${new Date(x.datetime).toLocaleDateString()}${tags?' · '+tags:''}</div></div><a class="small" target="_blank" rel="noopener" href="https://avalanche.ca/mountain-information-network/submissions/${encodeURIComponent(x.id)}" onclick="event.stopPropagation()">Open</a>`;
+    d.querySelector('.nm').textContent=x.title||'Report';
+    if(ob.avalanche||ob.incident){ const b=document.createElement('span'); b.className='badge'; b.style.cssText='background:#F79218;color:#111;margin-left:6px'; b.textContent=ob.incident?'Incident':'Avalanche seen'; d.querySelector('.nm').appendChild(b); }
+    d.onclick=()=>{ const g=toGrid(x.location.latitude,x.location.longitude); if(!inGrid(g[0],g[1])) return; hoverPt=g; dirty=true; focusRoute({g:[[g[0]-15,g[1]-15],[g[0]+15,g[1]+15]]}); };
+    host.appendChild(d);
   }
-  try{const t=await liveAvalanche(); LIVE.av={st:'ok',msg:'Loaded: '+t}; avRated=true;}
-  catch(e){LIVE.av={st:AVC.status?'warn':'bad',msg: AVC.status?AVC.status+'. Danger below is modelled from the 60-day weather.':'Not reachable from this page. Danger below is modelled from the 60-day weather.'};}
-  if(SEASON){ applySeason(!avRated); }
-  S.source = wxLive?(avRated?'live':'live'):(SEASON?'snapshot':'example');
-  dangerUI(); probsUI(); wxUI(); seasonUI(); recompute();
-  liveUI();
 }
-document.getElementById('liveBtn').onclick=tryLive;
-
+async function loadConditions(endDate){
+  const my=++REQ;
+  const isNow=!endDate||endDate>=todayLocal();
+  if(isNow) endDate=todayLocal();
+  S.endDate=endDate; S.source='loading';
+  for(const [k] of SRC) LIVE[k]={st:'wait',msg:'Loading…'};
+  liveUI();
+  const [m,e,st,fc,mn]=await Promise.allSettled([getModel(endDate,isNow),getERA(endDate),getStations(endDate,isNow),getForecast(endDate,isNow),getMIN(endDate,isNow)]);
+  if(my!==REQ) return;  // a newer date was picked meanwhile
+  const why=r=>r.reason&&r.reason.message||'failed';
+  let j=null;
+  if(m.status==='fulfilled'&&m.value.j.hourly){ j=m.value.j; LIVE.wx={st:'ok',msg:'Loaded, '+m.value.name}; S.source=isNow?'live':'past'; }
+  else if(isNow&&WXSNAP){ j=structuredClone(WXSNAP); LIVE.wx={st:'warn',msg:'Live pull '+why(m)+'. Using the snapshot saved in this page.'}; S.source='snapshot'; }
+  else LIVE.wx={st:'bad',msg:why(m)};
+  if(j&&j.eraOnly) LIVE.era={st:'ok',msg:'Used for all weather (dates before 2022)'};
+  else if(S.source==='snapshot'){ LIVE.era={st:'warn',msg:'Using the copy saved with the snapshot'}; }
+  else LIVE.era=e.status==='fulfilled'?{st:'ok',msg:'Loaded, averaged with the model precipitation'}:{st:'bad',msg:why(e)};
+  const obs=st.status==='fulfilled'?st.value:null;
+  LIVE.stn=obs?{st:'ok',msg:`${obs.count} hourly readings: Bosworth Lower, Stanley, ${obs.ridgeName}`}:{st:'bad',msg:why(st)};
+  let avOK=false;
+  if(fc.status==='fulfilled'){ avOK=true; LIVE.av={st:'ok',msg:'Rated forecast loaded'}; }
+  else LIVE.av={st:AVC.status?'warn':'bad',msg:(AVC.status||why(fc))+'. Danger is modelled from the weather.'};
+  LIVE.min=mn.status==='fulfilled'?{st:'ok',msg:`${mn.value.length} report${mn.value.length===1?'':'s'} within 20 km`}:{st:'bad',msg:why(mn)};
+  if(j){
+    const refMs=isNow?Date.now():Date.parse(endDate+'T19:00:00Z');
+    SEASON=seasonModel(mergeERA(j,S.source==='snapshot'?WXSNAP.era5:(e.status==='fulfilled'?e.value:null)),S.source,obs,refMs);
+    applySeason(!avOK);
+  }
+  if(avOK){ S.danger=fc.value.danger; S.problems=fc.value.problems; S.dangerFrom='avcan'; }
+  dangerUI(); probsUI(); wxUI(); seasonUI(); minUI(mn.status==='fulfilled'?mn.value:null); recompute(); liveUI();
+}
+function tryLive(){ return loadConditions(document.getElementById('endDate').value||null); }
+(function(){
+  const inp=document.getElementById('endDate'); inp.max=todayLocal(); inp.min='1950-01-01'; inp.value=todayLocal();
+  inp.onchange=()=>{ if(inp.value) loadConditions(inp.value); };
+  document.getElementById('todayBtn').onclick=()=>{ inp.value=todayLocal(); loadConditions(null); };
+  document.getElementById('liveBtn').onclick=tryLive;
+})();
 
 /* ---------------- 60-day weather replay ----------------
    One weather point (Open-Meteo at Mount Temple) is moved to three band elevations,
@@ -5860,9 +5940,9 @@ document.getElementById('liveBtn').onclick=tryLive;
 let SEASON=null;
 const AVC={};
 const BANDZ={btl:1850, tl:2175, alp:2700};
-function seasonModel(j,src){
+function seasonModel(j,src,obs,refMs){
   const h=j.hourly, zref=j.elevation||3478, zP=2100, off=(j.utc_offset_seconds||0)*1000;
-  const tms=h.time.map(t=>Date.parse(t+'Z')-off), now=Date.now();
+  const tms=h.time.map(t=>Date.parse(t+'Z')-off), now=refMs||Date.now();
   const dayOf=k=>h.time[k].slice(0,10);
   const todayStr=new Date(now+off).toISOString().slice(0,10);
   const days=[]; const idx={};
@@ -5871,6 +5951,21 @@ function seasonModel(j,src){
     days[idx[d]].hrs.push(k);
   }
   const bands=['btl','tl','alp'];
+  // ---- station corrections (Parks Canada stations near Lake Louise) ----
+  const O=(obs&&obs.days)||{};
+  const pfOf=b=>Math.max(0.35,1+0.5*(BANDZ[b]-zP)/1000);
+  // 1. temperature bias of the model against the ridgetop station (2745 m)
+  let tb=0, nb=0;
+  for(const D of days){ const o=O[D.date]; if(!o||o.ta==null) continue;
+    const m=D.hrs.reduce((a,k)=>a+(h.temperature_2m[k]??0),0)/D.hrs.length-0.0065*(2745-zref); tb+=o.ta-m; nb++; }
+  const tbias=nb>=5?Math.max(-6,Math.min(6,tb/nb)):0;
+  // 2. snowfall scaling: treeline snow-depth gains at Bosworth Lower against modelled treeline snowfall
+  const obsHN=(b,d)=>{ const key=b+'HS'; const o=O[d], p=O[addDays(d,-1)]; if(!o||o[key]==null||!p||p[key]==null) return null; return Math.max(0,o[key]-p[key])*1.15; };
+  let so=0, sm=0;
+  for(const D of days){ const ho=obsHN('tl',D.date); if(ho==null) continue; so+=ho;
+    for(const k of D.hrs){ const T=(h.temperature_2m[k]??0)+tbias-0.0065*(BANDZ.tl-zref); sm+=Math.max(0,h.precipitation[k]||0)*pfOf('tl')*Math.min(1,Math.max(0,(2-T)/2)); } }
+  const kcal=(sm>5&&so>2)?Math.max(0.4,Math.min(3,so/sm)):1;
+  let obsDays=0;
   const out={days:[], src, zref, label:'', bands};
   const HS={btl:0,tl:0,alp:0}, SWE={btl:0,tl:0,alp:0}, loose={btl:0,tl:0,alp:0}, face={btl:0,tl:0,alp:0};
   const hist={btl:[],tl:[],alp:[]};
@@ -5881,9 +5976,11 @@ function seasonModel(j,src){
     for(const k of D.hrs){ const ws=h.wind_speed_10m[k]||0, wd=h.wind_direction_10m[k]||0;
       wsx+=Math.sin(wd*Math.PI/180)*ws; wsy+=Math.cos(wd*Math.PI/180)*ws; wsum+=ws; n++; wmax=Math.max(wmax,ws); gust=Math.max(gust,h.wind_gusts_10m?.[k]||0); fl+=h.freezing_level_height?.[k]||0; }
     row.wind=wsum/Math.max(1,n); row.windDir=((Math.atan2(wsx,wsy)*180/Math.PI)+360)%360; row.gust=gust; row.fl=fl/Math.max(1,n);
+    const od=O[D.date]; if(od&&od.wind!=null){ row.wind=od.wind; row.windDir=od.wdir; row.obsWind=true; }
+    if(od&&(od.tlHS!=null||od.wind!=null)) obsDays++;
     for(const b of bands){
       // temperature is valid at the API elevation (zref); precipitation at the model's own terrain height (~zP)
-      const zb=BANDZ[b], dT=-0.0065*(zb-zref), pf=Math.max(0.35,1+0.5*(zb-zP)/1000);
+      const zb=BANDZ[b], dT=-0.0065*(zb-zref)+tbias, pf=pfOf(b);
       let hn=0, rain=0, tmax=-99, tsum=0;
       for(const k of D.hrs){
         const T=(h.temperature_2m[k]??0)+dT, p=Math.max(0,h.precipitation[k]||0)*pf;
@@ -5891,11 +5988,16 @@ function seasonModel(j,src){
         hn+=p*fs; rain+=p*(1-fs); tmax=Math.max(tmax,T); tsum+=T;
       }
       const tmean=tsum/Math.max(1,D.hrs.length);
+      hn*=kcal;
+      const ho=b==='alp'?null:obsHN(b,D.date); if(ho!=null) hn=ho;
       // snowpack depth (cm): new snow at ~100 kg/m3 (1 mm water = 1 cm), settles 3 %/day, degree-day melt
       const melt=Math.max(0,3*Math.max(0,tmean)+1*Math.max(0,tmax-1));
       // water equivalent (mm) and depth (cm): fresh snow ~100 kg/m3, settles 3 %/day down to ~300 kg/m3
       SWE[b]=Math.max(0,SWE[b]+hn-melt+(HS[b]>0?Math.min(rain,SWE[b]*0.1):0));
       HS[b]=SWE[b]<=0?0:Math.min(SWE[b], Math.max(SWE[b]/3, HS[b]*0.97+hn-melt/3));
+      const oHS=od&&b!=='alp'?od[b+'HS']:null;
+      if(oHS!=null){ HS[b]=oHS; SWE[b]=Math.max(SWE[b],oHS*2.5); }
+      if(b==='alp'&&od&&od.tlHS!=null&&HS.alp<od.tlHS){ HS.alp=od.tlHS; SWE.alp=Math.max(SWE.alp,od.tlHS*2.5); }
       // snow available for wind transport (decays as it bonds)
       loose[b]=loose[b]*0.6+hn;
       // faceting: thin, cold, dry snowpack (early-season weak layers)
@@ -5960,13 +6062,14 @@ function seasonModel(j,src){
   out.problems=probs.slice(0,3);
   // current weather for the Weather now fields (treeline band, last hours)
   const nk=Math.max(1,tms.findIndex(t=>t>now)); const kk=nk<0?tms.length:nk;
-  const sumH=(arr,hrs,b)=>{let s=0; for(let k=Math.max(0,kk-hrs);k<kk;k++){const T=(h.temperature_2m[k]??0)-0.0065*(BANDZ[b]-zref); const p=Math.max(0,h.precipitation[k]||0)*Math.max(0.35,1+0.5*(BANDZ[b]-zP)/1000); s+=p*Math.min(1,Math.max(0,(2-T)/2));} return s;};
-  const ws=h.wind_speed_10m.slice(Math.max(0,kk-12),kk), wd=h.wind_direction_10m.slice(Math.max(0,kk-12),kk);
+  const sumH=(arr,hrs,b)=>{ const nd=Math.round(hrs/24); let s=0; for(let i=Math.max(0,nowI-nd+1);i<=nowI;i++) s+=out.days[i].b[b].hn; return s; };
+  let ws=h.wind_speed_10m.slice(Math.max(0,kk-12),kk), wd=h.wind_direction_10m.slice(Math.max(0,kk-12),kk);
+  if(out.days[nowI].obsWind){ ws=[out.days[nowI].wind]; wd=[out.days[nowI].windDir]; }
   const sx=wd.reduce((a,d,k)=>a+Math.sin(d*Math.PI/180)*(ws[k]||1),0), sy=wd.reduce((a,d,k)=>a+Math.cos(d*Math.PI/180)*(ws[k]||1),0);
   out.wx={hn24:Math.round(sumH(null,24,'tl')), hn72:Math.round(sumH(null,72,'tl')),
     wind:Math.round(ws.reduce((a,b)=>a+(b||0),0)/Math.max(1,ws.length)), windDir:Math.round((((Math.atan2(sx,sy)*180/Math.PI)+360)%360)/45)%8,
-    temp:Math.round((h.temperature_2m[kk-1]??0)-0.0065*(BANDZ.alp-zref)), fl:Math.round((h.freezing_level_height?.[kk-1]||0)/50)*50};
-  out.nowI=nowI; out.era=j.era||0;
+    temp:Math.round((h.temperature_2m[kk-1]??0)+tbias-0.0065*(BANDZ.alp-zref)), fl:Math.round((h.freezing_level_height?.[kk-1]??Math.max(0,zref+((h.temperature_2m[kk-1]??0)+tbias)/0.0065))/50)*50};
+  out.nowI=nowI; out.era=j.era||0; out.obsUsed=obsDays; out.kcal=kcal; out.tbias=tbias; out.eraOnly=!!j.eraOnly;
   out.label=new Date(tms[Math.min(tms.length-1,kk-1)]).toLocaleString([], {month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
   out.range=out.days[0].date+' to '+out.days[nowI].date;
   return out;
@@ -5981,7 +6084,10 @@ function seasonUI(){
   if(!Sx){head.textContent='No weather loaded. Enter conditions by hand below.'; return;}
   const nd=Sx.days.slice(0,Sx.nowI+1);
   const tot=b=>nd.reduce((a,d)=>a+d.b[b].hn,0);
-  head.innerHTML=`${Sx.range} · ${Sx.src==='live'?'live from Open-Meteo':'saved snapshot'} · ${Sx.era?'precipitation averaged with ERA5 reanalysis up to 5 days ago':'forecast-model archive only (ERA5 not reached)'} · moved to each elevation band`;
+  const bits=[Sx.range, Sx.src==='snapshot'?'saved snapshot':'live pull', Sx.eraOnly?'ERA5 reanalysis':Sx.era?'model precipitation averaged with ERA5':'forecast models only'];
+  if(Sx.obsUsed) bits.push(`corrected with Parks Canada stations on ${Sx.obsUsed} days (snowfall ×${Sx.kcal.toFixed(2)}, temperature ${Sx.tbias>=0?'+':''}${Sx.tbias.toFixed(1)} °C)`);
+  else bits.push('no station readings for these dates');
+  head.textContent=bits.join(' · ');
   // chart
   const c=document.getElementById('seasonCv'), pr=window.devicePixelRatio||1, Wc=c.clientWidth||320, Hc=190;
   c.width=Wc*pr; c.height=Hc*pr; const x=c.getContext('2d'); x.setTransform(pr,0,0,pr,0,0); x.clearRect(0,0,Wc,Hc);
@@ -6015,7 +6121,7 @@ function seasonUI(){
     [['alp','Alpine'],['tl','Treeline'],['btl','Below TL']].map(([b,lab])=>`<tr><td style="color:#9FB0C8;white-space:nowrap;padding-right:4px">${lab}</td>${Sx.L[b].map(cell).join('')}<td style="text-align:right">${Math.round(Sx.days[Sx.nowI].b[b].HS)} cm</td></tr>`).join('')+'</table>';
   // text summary
   const trigDays=nd.filter(d=>['alp','tl'].some(b=>d.b[b].asp.some(a=>a.I>=1))).length;
-  const parts=[`Modelled new snow over the period: about ${Math.round(tot('alp'))} cm alpine, ${Math.round(tot('tl'))} cm treeline, ${Math.round(tot('btl'))} cm below treeline.`,
+  const parts=[`New snow over the period: about ${Math.round(tot('alp'))} cm alpine, ${Math.round(tot('tl'))} cm treeline, ${Math.round(tot('btl'))} cm below treeline.`,
     `${trigDays} day${trigDays===1?'':'s'} reached a loading threshold (30 cm storm snow, 20 cm wind loading, 10 mm rain on snow, or strong warming).`];
   if(Sx.pers.alp>=0.5||Sx.pers.tl>=0.5) parts.push('Long cold, dry spells on a thin snowpack point to weak faceted layers near the ground, a persistent slab concern once it is buried.');
   if(Sx.days[Sx.nowI].b.tl.HS<30) parts.push('The treeline snowpack is still thin, so most low terrain does not yet have enough snow to avalanche, and rocks and shrubs anchor what is there.');
@@ -6336,14 +6442,14 @@ const unq=p=>{const o=[]; for(let k=0;k<p.length;k+=2) o.push([p[k]/10,p[k+1]/10
     ROUTES=ROUTEDATA.routes.map(r=>Object.assign(routeFromLL(r.name,r.kind,r.note,r.pts),{group:r.group,season:r.season,rid:r.id}));
     RUNS=RUNDATA.runs.map((r,k)=>{const parts=r.p.map(unq); return {id:'run'+k,name:r.n,kind:'run',diff:r.d,mtn:r.m,area:!!r.a,parts,g:parts.flat(),note:''};});
     LIFTS=RUNDATA.lifts.map(l=>({name:l.n,type:l.t,g:unq(l.p)}));
-    if(WXSNAP){ SEASON=seasonModel(mergeERA(structuredClone(WXSNAP),WXSNAP.era5),'snapshot'); applySeason(true); S.source='snapshot'; }
+    if(WXSNAP){ SEASON=seasonModel(mergeERA(structuredClone(WXSNAP),WXSNAP.era5),'snapshot',null,Date.now()); applySeason(true); S.source='snapshot'; }
     dangerUI(); probsUI(); wxUI(); liveUI(); renderLegend(); wLbl(); seasonUI(); histUI();
     computeScores(); prepTexture(); renderBase();
     initGL();
     document.getElementById('loading').remove();
     resize(); fit(false); buildRunLayer(); drawRoutes(); routeListUI();
     new ResizeObserver(()=>{resize();}).observe(mapwrap);
-    tryLive();
+    loadConditions(null);
   }catch(e){
     console.error(e);
     const l=document.getElementById('loading'); if(l) l.textContent='Could not load the map: '+e.message;
