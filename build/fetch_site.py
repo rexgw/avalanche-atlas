@@ -77,7 +77,7 @@ def glaciers():
     q = f"""[out:json][timeout:180];
 (way["natural"="glacier"]({S-0.02},{W-0.03},{N+0.02},{E+0.03});
  relation["natural"="glacier"]({S-0.02},{W-0.03},{N+0.02},{E+0.03}););
-out geom tags;"""
+out geom;"""
     raw = overpass(q)
     els = json.loads(raw).get("elements", [])
     log.append(f"     glaciers: {len(els)} elements")
