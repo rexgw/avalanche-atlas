@@ -6,7 +6,7 @@ Outputs (all on a local metric grid, row 0 = north):
   elev (int16 m), slope (deg), aspect (0-255 = 0-360 deg, downslope facing),
   pra (0-255 release-area membership), runout (0-255 exposure),
   trap (0-255 terrain-trap index), crest (0-255 proximity to ridge crest),
-  ates (0-4), hillshade (0-255)
+  ates (0 Simple, 1 Challenging, 2 Complex), hillshade (0-255)
 """
 import sys, json, gzip, base64
 import numpy as np
@@ -151,13 +151,29 @@ trap = ndimage.gaussian_filter(trap, 0.6)
 zmax = ndimage.maximum_filter(z, size=11)  # ~330 m window
 crest = np.clip(1.0 - (zmax - z) / 150.0, 0, 1)
 
-# ---------- ATES-style classification (simplified AutoATES approach) ----------
-# 0 non-avalanche, 1 simple, 2 challenging, 3 complex, 4 extreme
-ates = np.ones(z.shape, dtype=np.uint8)
-ates[(slope < 12) & (runout < 0.05)] = 0
-ates[(slope >= 25) | (runout >= 0.25)] = 2
-ates[(slope >= 35) & (pra >= 0.5) | (runout >= 0.6)] = 3
-ates[((slope >= 45) & (pra >= 0.3)) | (cliff > 0) & (slope >= 40)] = 4
+# ---------- ATES v1-04 technical model, three classes ----------
+# 0 Simple, 1 Challenging, 2 Complex (Parks Canada ATES v1-04, technical model).
+# ATES is meant for terrain at route scale, so each 30 m cell is rated from the terrain within
+# about 150 m of it (11 x 11 cells). Italic "default" descriptors force a class or higher;
+# the percentage cut-offs below stand in for the scale's words ("isolated", "large %") and are
+# our choices, not values from the scale. Glaciation is not mapped, so it cannot raise a class.
+NBW = 11
+f30 = ndimage.uniform_filter((slope > 30).astype(float), NBW)
+f35 = ndimage.uniform_filter((slope > 35).astype(float), NBW)
+fsz = ndimage.uniform_filter((pra > 0.45).astype(float), NBW)
+ftrap = ndimage.uniform_filter((trap > 0.5).astype(float), NBW)
+treed = z < BTL_TOP  # forest proxy: no canopy data
+
+ates = np.zeros(z.shape, dtype=np.uint8)
+# Challenging defaults: isolated slopes > 35 deg; isolated exposure to start zones and tracks
+chall = (f35 > 0.02) | (pra > 0.45) | (runout >= 0.25)
+# non-default descriptors: angles over 30 deg in open terrain (not primarily treed)
+chall |= (slope >= 30) | ((~treed) & (f30 >= 0.2))
+# Complex defaults: large % > 35 deg; many traps (gullies, cliffs, cornices) under steep ground;
+# numerous overlapping paths (strong runout reach); frequent exposure to start zones
+cplx = (f35 >= 0.30) | ((ftrap >= 0.25) & (f35 >= 0.10)) | (runout >= 0.6) | ((pra > 0.45) & (slope >= 35) & (fsz >= 0.30))
+ates[chall] = 1
+ates[cplx] = 2
 ates = ndimage.median_filter(ates, 3)
 
 # ---------- hillshade ----------
@@ -198,5 +214,5 @@ print("grid", W, H, "cells", W * H)
 print("elev", z.min(), z.max())
 for k in ["pra", "runout", "trap"]:
     print(k, "mean", float(layers[k].mean()) / 255, ">0.5", float((layers[k] > 127).mean()))
-print("ates share", {i: round(float((ates == i).mean()), 3) for i in range(5)})
+print("ates share", {i: round(float((ates == i).mean()), 3) for i in range(3)})
 print("json MB", round(sum(len(v) for k, v in blob.items() if k != "meta") / 1e6, 2))

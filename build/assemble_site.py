@@ -26,6 +26,8 @@ t = t.replace("/*__MODEL__*/", model, 1)
 for key, fn in (("/*__PARAMS__*/null", "params.json"), ("/*__ACCURACY__*/null", "summary.json")):
     p = os.path.join(dd, "backtest", fn)
     if os.path.exists(p): t = t.replace(key, json.dumps(json.load(open(p)), separators=(",", ":")), 1)
+ic = os.path.join(here, "assets", "danger_icons.json")
+if os.path.exists(ic): t = t.replace("/*__DICONS__*/{}", open(ic).read(), 1)
 t = t.replace("/*__THREE__*/", "/* three.js r187, MIT licence, https://threejs.org */\n" + js, 1)
 open(out, "w").write(t)
 print("wrote", out, round(len(t) / 1e6, 2), "MB")
