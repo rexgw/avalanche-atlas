@@ -1,4 +1,4 @@
-"""Collect data for the Mount Temple accuracy test. Runs in GitHub Actions.
+"""Collect data for a site accuracy test (SITE=temple or SITE=whistler). Runs in GitHub Actions.
 
 For each winter (season start year Y = 2022..2025), writes build/data/temple/backtest/season_Y.json with:
   weather   Open-Meteo archived forecast models, hourly, 1 Oct Y to 31 Mar Y+1
@@ -8,9 +8,12 @@ For each winter (season start year Y = 2022..2025), writes build/data/temple/bac
 """
 import json, os, sys, time, datetime as dt, urllib.request, urllib.parse
 
-OUT = os.path.join(os.path.dirname(__file__), "data", "temple", "backtest")
+SITE = os.environ.get("SITE", "temple")
+POINTS = {"temple": (51.3506, -116.2067), "whistler": (50.0640, -122.9560)}
+STATIONS = {"temple": (110, 108, 111, 109), "whistler": ()}   # Whistler: no public station on the mountain (user choice: no station correction)
+OUT = os.path.join(os.path.dirname(__file__), "data", SITE, "backtest")
 os.makedirs(OUT, exist_ok=True)
-LAT, LON = 51.3506, -116.2067
+LAT, LON = POINTS[SITE]
 UA = {"User-Agent": "avalanche-atlas accuracy test (github.com/rexgw/avalanche-atlas)"}
 HV = "temperature_2m,precipitation,rain,snowfall,wind_speed_10m,wind_direction_10m,wind_gusts_10m,freezing_level_height,cloud_cover,shortwave_radiation"
 log = []
@@ -44,7 +47,7 @@ def hourly(base, a, b, vars_):
 
 def stations(a, b):
     out = {}
-    for sid in (110, 108, 111, 109):
+    for sid in STATIONS[SITE]:
         rows = []
         t = dt.datetime.combine(a, dt.time()) + dt.timedelta(hours=7)
         end = dt.datetime.combine(b + dt.timedelta(days=1), dt.time()) + dt.timedelta(hours=7)

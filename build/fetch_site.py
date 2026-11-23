@@ -1,18 +1,25 @@
-"""Fetch source data for the Mount Temple build. Runs in GitHub Actions (needs open internet).
+"""Fetch source data for a site build (SITE=temple or SITE=whistler). Runs in GitHub Actions (needs open internet).
 
-Writes to build/data/temple/:
+Writes to build/data/<SITE>/:
   dem.tif           USGS 1 arc-second DEM cropped to the study area (public domain)
   osm_paths.json    OpenStreetMap trails and roads in the study area (ODbL, via Overpass)
   weather_60d.json  Open-Meteo hourly weather, 61 past days + 2 forecast days (snapshot fallback)
-  avcan_point.json  Avalanche Canada forecast product for Mount Temple
+  avcan_point.json  Avalanche Canada forecast product for the site point
   avcan_stations.json, station_<id>.json  Avalanche Canada weather stations near the area
 """
 import json, os, sys, time, urllib.request, urllib.parse, math, traceback
 
-OUT = os.path.join(os.path.dirname(__file__), "data", "temple")
+SITES = {
+    "temple":   dict(bbox=(-116.30, 51.30, -116.12, 51.43), pt=(51.3506, -116.2067), tile="n52w117",
+                     cop="Copernicus_DSM_COG_10_N51_00_W117_00_DEM"),
+    "whistler": dict(bbox=(-123.000, 50.000, -122.760, 50.185), pt=(50.0640, -122.9560), tile="n51w123",
+                     cop="Copernicus_DSM_COG_10_N50_00_W123_00_DEM"),
+}
+SITE = os.environ.get("SITE", "temple")
+OUT = os.path.join(os.path.dirname(__file__), "data", SITE)
 os.makedirs(OUT, exist_ok=True)
-W, S, E, N = -116.30, 51.30, -116.12, 51.43     # study area
-LAT, LON = 51.3506, -116.2067                   # Mount Temple summit
+W, S, E, N = SITES[SITE]["bbox"]                 # study area
+LAT, LON = SITES[SITE]["pt"]                     # weather and forecast point
 UA = {"User-Agent": "avalanche-atlas build (github.com/rexgw/avalanche-atlas)"}
 log = []
 
@@ -30,8 +37,9 @@ def step(name, fn):
 def dem():
     import rasterio
     from rasterio.windows import from_bounds
-    srcs = ["https://prd-tnm.s3.amazonaws.com/StagedProducts/Elevation/1/TIFF/current/n52w117/USGS_1_n52w117.tif",
-            "https://copernicus-dem-30m.s3.amazonaws.com/Copernicus_DSM_COG_10_N51_00_W117_00_DEM/Copernicus_DSM_COG_10_N51_00_W117_00_DEM.tif"]
+    t, c = SITES[SITE]["tile"], SITES[SITE]["cop"]
+    srcs = [f"https://prd-tnm.s3.amazonaws.com/StagedProducts/Elevation/1/TIFF/current/{t}/USGS_1_{t}.tif",
+            f"https://copernicus-dem-30m.s3.amazonaws.com/{c}/{c}.tif"]
     for u in srcs:
         try:
             raw = get(u, timeout=600); open("/tmp/tile.tif", "wb").write(raw); src_url = u; break

@@ -1,0 +1,31 @@
+name: Fetch Whistler data
+# Elevation, OpenStreetMap trails, weather snapshot and forecast for Whistler and Blackcomb,
+# plus four winters of forecasts and weather for the accuracy test.
+on:
+  workflow_dispatch:
+  push:
+    paths: [.github/workflows/fetch-whistler-data.yml]
+permissions:
+  contents: write
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12"}
+      - run: pip install rasterio numpy
+      - run: SITE=whistler python build/fetch_site.py
+      - name: Accuracy test data
+        run: |
+          for y in 2022 2023 2024 2025; do
+            [ -f build/data/whistler/backtest/season_$y.json ] || SITE=whistler python build/collect_backtest.py $y
+          done
+      - name: Commit data
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898699+github-actions[bot]@users.noreply.github.com"
+          git add build/data/whistler
+          git diff --cached --quiet || git commit -m "Fetch Whistler source data"
+          git pull --rebase -q && git push
