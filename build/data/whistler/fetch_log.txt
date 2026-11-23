@@ -22,3 +22,6 @@ OK   weather
      glaciers: 52 elements
 OK   glaciers
 OK   weather
+     glaciers: 52 elements
+OK   glaciers
+OK   weather
