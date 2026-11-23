@@ -287,7 +287,7 @@ a{color:var(--gold2)}
         <li>The model runs day by day from 1 October of the season (or 61 days back in summer) so layers buried before the 60-day window are kept.</li>
         <li>Surface hoar: a clear night (Open-Meteo cloud cover under 20 %), light wind and a cold night at that elevation, with no new snow. Near-surface facets: a clear, cold night with little recent snow. Crusts: rain on snow, or melting on sunny slopes. Facets near the ground: a strong temperature gradient (ground at 0 °C) through a thin, cold snowpack for several days.</li>
         <li>A layer is buried once enough new snow falls on it, then settles with the snowpack. It counts as a persistent slab problem between two burial depths and as deep persistent beyond, and fades with age or after a warm spell.</li>
-        <li>The night-time thresholds and burial depths are tuned against Parks Canada's problem lists (see Accuracy test). The layers are modelled, not observed.</li>
+        <li>These rules are fixed, not tuned, to limit overfitting. Surface hoar uses night wind under 10 km/h (2.8 m/s) and night air below −8 °C, and faceting a gradient above 10 °C per m, from published sources (UBC ATSC 113 course notes; a 2026 Copernicus surface hoar study). The burial depths (persistent at 30–100 cm, deep beyond 100 cm), layer life (60 days) and the other thresholds are starting guesses without a source. The layers are modelled, not observed.</li>
       </ul>
       <h2>Accuracy test</h2>
       <div class="small" id="accBox"></div>
@@ -5795,7 +5795,7 @@ function accUI(){
   <p style="margin-top:8px">Problems (share of Parks Canada's days the model also flagged, and share of the model's flags Parks Canada did not list):</p>
   <ul>${Object.entries(ACC.problems).map(([k,v])=>`<li>${PN[k]}: caught ${p(v.hit)} of ${v.parks_days} days, false alarms ${p(v.false_alarm)}</li>`).join('')}</ul>
   <p>By winter (same settings): ${Object.entries(ACC.per_season||{}).map(([k,v])=>`${k} ${v.role==='test'?'(test)':'(tuning)'}: exact ${p(v.exact)}, average error ${v.mae}`).join('; ')}. Across ${ACC.runs} tuning runs the test-winter exact match ranged ${p(ACC.range_exact[0])} to ${p(ACC.range_exact[1])}.</p>
-  <p>Known weaknesses: the model never rates Low, because buried weak layers keep its danger above the Low cut-off; it misses most wind slab days; it over-flags storm, deep persistent and wet problems. Before October 2023 there are no station readings and the weather model alone is too dry.</p>
+  <p>Known weaknesses: it rarely rates Low (buried weak layers keep its danger above the Low cut-off), rates too high on average in the test winter, misses about 4 in 10 wind slab days, and over-flags storm, deep persistent and wet problems. Before October 2023 there are no station readings, so an average correction from the tuning winters is used instead.</p>
   ${ACC.disclosure?`<p class="muted">${ACC.disclosure}</p>`:''}
   <p class="muted">Parks Canada's rating is a forecast, not a record of avalanches, so this measures agreement with the forecasters. Full results: build/data/temple/backtest/report.json in the repo.</p>`;
 }
@@ -6015,17 +6015,22 @@ const BANDZ={btl:1850, tl:2175, alp:2700};
     // loading thresholds (a day reaches 1.0 at these)
     stormCm: 30, windCm: 20, rainMm: 10, decay: 0.2, windMin: 20, windSpan: 40,
     // weak layers
+    // Weak-layer rules are FIXED (not tuned), to limit overfitting (user choice).
+    // Sourced: shWind, shTmin (surface hoar: calm wind under 15 km/h, UBC ATSC 113; overnight air below about
+    // -8 to -10 °C and wind under 2-3 m/s, Copernicus preprint egusphere-2026-935); grad (faceting above about
+    // 10 °C per m, UBC ATSC 113). The rest are starting guesses with no source.
     clearCloud: 20,  // % cloud cover counted as a clear night (user choice)
-    shWind: 10,      // km/h, night wind below which surface hoar can grow
-    shTmin: -8,      // °C, night air temperature below which surface hoar can grow
-    nsfTmin: -12,    // °C, night air temperature for near-surface facets under clear sky
-    grad: 10,        // °C per m, temperature gradient for basal faceting (ground at 0 °C)
-    basalDays: 7,    // days of strong gradient before a basal facet layer is counted
-    basalMaxHS: 100, // cm, basal faceting only in a snowpack thinner than this
-    buryCm: 5,       // cm of new snow that buries a surface layer
-    surfLife: 10,    // days an unburied surface layer survives
-    pMin: 30, pMax: 100, // cm burial depth: persistent between, deep persistent beyond
-    life: 60,        // days after which a buried layer stops counting
+    shWind: 10,      // km/h (2.8 m/s), sourced
+    shTmin: -8,      // °C, sourced
+    nsfTmin: -12,    // °C, guess
+    grad: 10,        // °C per m, sourced (ground at 0 °C)
+    basalDays: 7,    // guess
+    basalMaxHS: 100, // cm, guess
+    buryCm: 5,       // cm, guess
+    surfLife: 10,    // days, guess
+    pMin: 30, pMax: 100, // cm burial depth, guess
+    life: 60,        // days, guess
+    windLife: 10,    // days a wind slab stays a problem (tuned; storm snow fades with decay)
     // danger
     wPers: 0.45, wDeep: 0.35, c2: 0.25, c3: 0.6, c4: 1.0, c5: 1.6, supMin: 20, supSpan: 60,
     // problems
@@ -6054,7 +6059,10 @@ const BANDZ={btl:1850, tl:2175, alp:2700};
       const m = D.hrs.reduce((a, k) => a + (h.temperature_2m[k] ?? 0), 0) / D.hrs.length + LAPSE * (2745 - zref);
       tb += o.ta - m; nb++;
     }
-    const tbias = nb >= 5 ? clamp(tb / nb, -6, 6) : 0;
+    // With no station readings, use the average correction measured in the tuning winters that had stations
+    // (2023-24 and 2024-25: snowfall x2.70, temperature +3.19 °C). The 2025-26 test winter is left out of this average.
+    const NO_STN = { kcal: 2.70, tbias: 3.19 };
+    const tbias = nb >= 5 ? clamp(tb / nb, -6, 6) : NO_STN.tbias;
     // 2. snowfall scaling from treeline snow-depth gains (Bosworth Lower)
     const obsHN = (b, d) => {
       const key = b + 'HS', o = O[d], p = O[addDays(d, -1)];
@@ -6069,7 +6077,9 @@ const BANDZ={btl:1850, tl:2175, alp:2700};
         sm += Math.max(0, h.precipitation[k] || 0) * pfOf('tl') * clamp((2 - T) / 2, 0, 1);
       }
     }
-    const kcal = (sm > 5 && so > 2) ? clamp(so / sm, 0.4, 3) : 1;
+    const stnSnow = sm > 5 && so > 2;
+    const kcal = stnSnow ? clamp(so / sm, 0.4, 3) : NO_STN.kcal;
+    const defaultCorr = !stnSnow || nb < 5;
     let obsDays = 0;
     for (const D of days) {
       let wsx = 0, wsy = 0, wsum = 0, n = 0, gust = 0, fl = 0, cn = 0, cnN = 0, wn = 0, sw = 0;
@@ -6103,7 +6113,7 @@ const BANDZ={btl:1850, tl:2175, alp:2700};
                    oHS: od && b !== 'alp' ? od[b + 'HS'] : null, oTL: od ? od.tlHS : null };
       }
     }
-    return { days, zref, tbias, kcal, obsDays, h };
+    return { days, zref, tbias, kcal, obsDays, h, defaultCorr };
   }
 
   /* ---- daily simulation per band ---- */
@@ -6196,10 +6206,12 @@ const BANDZ={btl:1850, tl:2175, alp:2700};
     const out = { L: {}, main: {}, trig: {}, sup: {}, pers: {}, deep: {}, danger: {}, layers: {}, wet: {} };
     for (const b of BANDS) {
       out.L[b] = [0, 0, 0, 0, 0, 0, 0, 0]; out.main[b] = ['', '', '', '', '', '', '', ''];
-      for (let j = Math.max(0, i - 6); j <= i; j++) {
-        const w = Math.max(0, 1 - P.decay * (i - j));
+      // storm snow and wet loading fade with decay; wind slabs last up to windLife days
+      for (let j = Math.max(0, i - 20); j <= i; j++) {
+        const w = Math.max(0, 1 - P.decay * (i - j)), ww = Math.max(0, 1 - (i - j) / Math.max(1, P.windLife));
         R[j].b[b].asp.forEach((A, k) => {
-          if (w > 0 && A.I * w > out.L[b][k]) { out.L[b][k] = A.I * w; out.main[b][k] = A.I === A.wind ? 'wind slab' : A.I === A.storm ? 'storm snow' : 'wet'; }
+          const cand = [[A.storm * w, 'storm snow'], [A.wind * ww, 'wind slab'], [A.wet * w, 'wet']];
+          for (const [v, lab] of cand) if (v > out.L[b][k]) { out.L[b][k] = v; out.main[b][k] = lab; }
         });
       }
       const r = R[i].b[b], hs = r.HS;
@@ -6287,8 +6299,8 @@ const BANDZ={btl:1850, tl:2175, alp:2700};
 })(typeof globalThis !== 'undefined' ? globalThis : this);
 
 const TM=globalThis.TempleModel;
-const TUNED={"stormCm":43.183,"windCm":12.59,"rainMm":10,"decay":0.26,"windMin":10.012,"windSpan":40,"clearCloud":20,"shWind":2,"shTmin":-9.369,"nsfTmin":-15.605,"grad":18.926,"basalDays":6,"basalMaxHS":100,"buryCm":5,"surfLife":10,"pMin":19.236,"pMax":84.784,"life":88.361,"wPers":0.344,"wDeep":0.93,"c2":0.05,"c3":0.521,"c4":1.138,"c5":2.427,"supMin":0,"supSpan":189.375,"probStorm":0.725,"probWind":0.455,"probPers":0.38,"probDeep":0.25,"probWet":0.712,"meltT":0.156,"meltSpan":5.196};
-const ACC={"tested_on":"2025-26","months":"Dec\u2013Mar","n_band_ratings":357,"exact":0.308,"within1":0.88,"mae":0.815,"kappa":0.572,"bench_exact":0.482,"bench_within1":0.905,"bench_mae":0.633,"bench_kappa":0.481,"beats_benchmark":false,"problems":{"storm":{"hit":0.667,"false_alarm":0.667,"parks_days":15},"wind":{"hit":0.484,"false_alarm":0.241,"parks_days":91},"persistent":{"hit":0.887,"false_alarm":0.481,"parks_days":62},"deep":{"hit":1,"false_alarm":0.727,"parks_days":33},"wet":{"hit":1,"false_alarm":0.65,"parks_days":7}},"runs":8,"range_exact":[0.294,0.389],"range_mae":[0.703,0.86],"per_season":{"2022-23":{"role":"tuning","n":363,"exact":0.399,"within1":0.967,"mae":0.634,"bias":-0.518,"kappa":0.351,"wind_hit":0,"persistent_hit":0.651},"2023-24":{"role":"tuning","n":359,"exact":0.415,"within1":0.958,"mae":0.627,"bias":0.304,"kappa":0.515,"wind_hit":0.254,"persistent_hit":0.943},"2024-25":{"role":"tuning","n":363,"exact":0.479,"within1":0.994,"mae":0.526,"bias":0.284,"kappa":0.584,"wind_hit":0.291,"persistent_hit":1},"2025-26":{"role":"test","n":357,"exact":0.308,"within1":0.88,"mae":0.815,"bias":0.748,"kappa":0.572,"wind_hit":0.484,"persistent_hit":0.887}},"per_season_benchmark":{"2022-23":{"exact":0.559,"within1":0.915,"mae":0.534},"2023-24":{"exact":0.549,"within1":0.889,"mae":0.577},"2024-25":{"exact":0.617,"within1":0.972,"mae":0.41},"2025-26":{"exact":0.482,"within1":0.905,"mae":0.633}},"disclosure":"Test winter scored four times while adjusting the setup (average error 0.60 to 0.82); this published version scored 0.82."};
+const TUNED={"stormCm":33.981,"windCm":16.718,"rainMm":10,"decay":0.345,"windMin":13.055,"windSpan":40,"clearCloud":20,"shWind":10,"shTmin":-8,"nsfTmin":-12,"grad":10,"basalDays":7,"basalMaxHS":100,"buryCm":5,"surfLife":10,"pMin":30,"pMax":100,"life":60,"windLife":12.677,"wPers":1.025,"wDeep":0.272,"c2":0.196,"c3":0.763,"c4":1.599,"c5":2.5,"supMin":20,"supSpan":60,"probStorm":0.6,"probWind":0.4,"probPers":0.5,"probDeep":0.5,"probWet":0.5,"meltT":0.959,"meltSpan":6};
+const ACC={"tested_on":"2025-26","months":"Dec\u2013Mar","n_band_ratings":357,"exact":0.322,"within1":0.91,"mae":0.77,"kappa":0.605,"bench_exact":0.482,"bench_within1":0.905,"bench_mae":0.633,"bench_kappa":0.481,"beats_benchmark":false,"problems":{"storm":{"hit":0.8,"false_alarm":0.727,"parks_days":15},"wind":{"hit":0.582,"false_alarm":0.185,"parks_days":91},"persistent":{"hit":0.645,"false_alarm":0.333,"parks_days":62},"deep":{"hit":0.515,"false_alarm":0.734,"parks_days":33},"wet":{"hit":0.857,"false_alarm":0.684,"parks_days":7}},"runs":8,"range_exact":[0.305,0.364],"range_mae":[0.717,0.812],"per_season":{"2022-23":{"role":"tuning","n":363,"exact":0.625,"within1":0.992,"mae":0.383,"bias":-0.339,"kappa":0.655,"wind_hit":0,"persistent_hit":0.683},"2023-24":{"role":"tuning","n":359,"exact":0.409,"within1":0.947,"mae":0.643,"bias":0.309,"kappa":0.551,"wind_hit":0.433,"persistent_hit":0.547},"2024-25":{"role":"tuning","n":363,"exact":0.504,"within1":0.948,"mae":0.548,"bias":0.245,"kappa":0.591,"wind_hit":0.405,"persistent_hit":0.514},"2025-26":{"role":"test","n":357,"exact":0.322,"within1":0.91,"mae":0.77,"bias":0.675,"kappa":0.605,"wind_hit":0.582,"persistent_hit":0.645}},"per_season_benchmark":{"2022-23":{"exact":0.559,"within1":0.915,"mae":0.534},"2023-24":{"exact":0.549,"within1":0.889,"mae":0.577},"2024-25":{"exact":0.617,"within1":0.972,"mae":0.41},"2025-26":{"exact":0.482,"within1":0.905,"mae":0.633}},"disclosure":"Test winter scored five times while adjusting the setup; earlier versions scored average error 0.60 to 0.82."};
 const MP=Object.assign({},TM.DEFAULT_PARAMS,TUNED||{});
 function seasonModel(j,src,obs,refMs){
   const I=TM.prepare(j,obs), R=TM.simulate(I,MP), h=j.hourly, zref=I.zref, off=(j.utc_offset_seconds||0)*1000;
@@ -6331,7 +6343,7 @@ function seasonUI(){
   const tot=b=>nd.reduce((a,d)=>a+d.b[b].hn,0);
   const bits=[Sx.range, Sx.src==='snapshot'?'saved snapshot':'live pull', Sx.eraOnly?'ERA5 reanalysis':Sx.era?'model precipitation averaged with ERA5':'forecast models only'];
   if(Sx.obsUsed) bits.push(`corrected with Parks Canada stations on ${Sx.obsUsed} days (snowfall ×${Sx.kcal.toFixed(2)}, temperature ${Sx.tbias>=0?'+':''}${Sx.tbias.toFixed(1)} °C)`);
-  else bits.push('no station readings for these dates');
+  else bits.push(`no station readings for these dates, so the average correction from the tuning winters is used (snowfall ×${Sx.kcal.toFixed(2)}, temperature +${Sx.tbias.toFixed(1)} °C)`);
   if(Sx.seasonStart&&Sx.seasonStart<Sx.days[0].date) bits.push('snowpack and weak layers tracked from '+Sx.seasonStart);
   head.textContent=bits.join(' · ');
   // chart

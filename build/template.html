@@ -287,7 +287,7 @@ a{color:var(--gold2)}
         <li>The model runs day by day from 1 October of the season (or 61 days back in summer) so layers buried before the 60-day window are kept.</li>
         <li>Surface hoar: a clear night (Open-Meteo cloud cover under 20 %), light wind and a cold night at that elevation, with no new snow. Near-surface facets: a clear, cold night with little recent snow. Crusts: rain on snow, or melting on sunny slopes. Facets near the ground: a strong temperature gradient (ground at 0 °C) through a thin, cold snowpack for several days.</li>
         <li>A layer is buried once enough new snow falls on it, then settles with the snowpack. It counts as a persistent slab problem between two burial depths and as deep persistent beyond, and fades with age or after a warm spell.</li>
-        <li>The night-time thresholds and burial depths are tuned against Parks Canada's problem lists (see Accuracy test). The layers are modelled, not observed.</li>
+        <li>These rules are fixed, not tuned, to limit overfitting. Surface hoar uses night wind under 10 km/h (2.8 m/s) and night air below −8 °C, and faceting a gradient above 10 °C per m, from published sources (UBC ATSC 113 course notes; a 2026 Copernicus surface hoar study). The burial depths (persistent at 30–100 cm, deep beyond 100 cm), layer life (60 days) and the other thresholds are starting guesses without a source. The layers are modelled, not observed.</li>
       </ul>
       <h2>Accuracy test</h2>
       <div class="small" id="accBox"></div>
@@ -1161,7 +1161,7 @@ function accUI(){
   <p style="margin-top:8px">Problems (share of Parks Canada's days the model also flagged, and share of the model's flags Parks Canada did not list):</p>
   <ul>${Object.entries(ACC.problems).map(([k,v])=>`<li>${PN[k]}: caught ${p(v.hit)} of ${v.parks_days} days, false alarms ${p(v.false_alarm)}</li>`).join('')}</ul>
   <p>By winter (same settings): ${Object.entries(ACC.per_season||{}).map(([k,v])=>`${k} ${v.role==='test'?'(test)':'(tuning)'}: exact ${p(v.exact)}, average error ${v.mae}`).join('; ')}. Across ${ACC.runs} tuning runs the test-winter exact match ranged ${p(ACC.range_exact[0])} to ${p(ACC.range_exact[1])}.</p>
-  <p>Known weaknesses: the model never rates Low, because buried weak layers keep its danger above the Low cut-off; it misses most wind slab days; it over-flags storm, deep persistent and wet problems. Before October 2023 there are no station readings and the weather model alone is too dry.</p>
+  <p>Known weaknesses: it rarely rates Low (buried weak layers keep its danger above the Low cut-off), rates too high on average in the test winter, misses about 4 in 10 wind slab days, and over-flags storm, deep persistent and wet problems. Before October 2023 there are no station readings, so an average correction from the tuning winters is used instead.</p>
   ${ACC.disclosure?`<p class="muted">${ACC.disclosure}</p>`:''}
   <p class="muted">Parks Canada's rating is a forecast, not a record of avalanches, so this measures agreement with the forecasters. Full results: build/data/temple/backtest/report.json in the repo.</p>`;
 }
@@ -1408,7 +1408,7 @@ function seasonUI(){
   const tot=b=>nd.reduce((a,d)=>a+d.b[b].hn,0);
   const bits=[Sx.range, Sx.src==='snapshot'?'saved snapshot':'live pull', Sx.eraOnly?'ERA5 reanalysis':Sx.era?'model precipitation averaged with ERA5':'forecast models only'];
   if(Sx.obsUsed) bits.push(`corrected with Parks Canada stations on ${Sx.obsUsed} days (snowfall ×${Sx.kcal.toFixed(2)}, temperature ${Sx.tbias>=0?'+':''}${Sx.tbias.toFixed(1)} °C)`);
-  else bits.push('no station readings for these dates');
+  else bits.push(`no station readings for these dates, so the average correction from the tuning winters is used (snowfall ×${Sx.kcal.toFixed(2)}, temperature +${Sx.tbias.toFixed(1)} °C)`);
   if(Sx.seasonStart&&Sx.seasonStart<Sx.days[0].date) bits.push('snowpack and weak layers tracked from '+Sx.seasonStart);
   head.textContent=bits.join(' · ');
   // chart

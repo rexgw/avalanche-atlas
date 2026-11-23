@@ -17,17 +17,22 @@
     // loading thresholds (a day reaches 1.0 at these)
     stormCm: 30, windCm: 20, rainMm: 10, decay: 0.2, windMin: 20, windSpan: 40,
     // weak layers
+    // Weak-layer rules are FIXED (not tuned), to limit overfitting (user choice).
+    // Sourced: shWind, shTmin (surface hoar: calm wind under 15 km/h, UBC ATSC 113; overnight air below about
+    // -8 to -10 °C and wind under 2-3 m/s, Copernicus preprint egusphere-2026-935); grad (faceting above about
+    // 10 °C per m, UBC ATSC 113). The rest are starting guesses with no source.
     clearCloud: 20,  // % cloud cover counted as a clear night (user choice)
-    shWind: 10,      // km/h, night wind below which surface hoar can grow
-    shTmin: -8,      // °C, night air temperature below which surface hoar can grow
-    nsfTmin: -12,    // °C, night air temperature for near-surface facets under clear sky
-    grad: 10,        // °C per m, temperature gradient for basal faceting (ground at 0 °C)
-    basalDays: 7,    // days of strong gradient before a basal facet layer is counted
-    basalMaxHS: 100, // cm, basal faceting only in a snowpack thinner than this
-    buryCm: 5,       // cm of new snow that buries a surface layer
-    surfLife: 10,    // days an unburied surface layer survives
-    pMin: 30, pMax: 100, // cm burial depth: persistent between, deep persistent beyond
-    life: 60,        // days after which a buried layer stops counting
+    shWind: 10,      // km/h (2.8 m/s), sourced
+    shTmin: -8,      // °C, sourced
+    nsfTmin: -12,    // °C, guess
+    grad: 10,        // °C per m, sourced (ground at 0 °C)
+    basalDays: 7,    // guess
+    basalMaxHS: 100, // cm, guess
+    buryCm: 5,       // cm, guess
+    surfLife: 10,    // days, guess
+    pMin: 30, pMax: 100, // cm burial depth, guess
+    life: 60,        // days, guess
+    windLife: 10,    // days a wind slab stays a problem (tuned; storm snow fades with decay)
     // danger
     wPers: 0.45, wDeep: 0.35, c2: 0.25, c3: 0.6, c4: 1.0, c5: 1.6, supMin: 20, supSpan: 60,
     // problems
@@ -56,7 +61,10 @@
       const m = D.hrs.reduce((a, k) => a + (h.temperature_2m[k] ?? 0), 0) / D.hrs.length + LAPSE * (2745 - zref);
       tb += o.ta - m; nb++;
     }
-    const tbias = nb >= 5 ? clamp(tb / nb, -6, 6) : 0;
+    // With no station readings, use the average correction measured in the tuning winters that had stations
+    // (2023-24 and 2024-25: snowfall x2.70, temperature +3.19 °C). The 2025-26 test winter is left out of this average.
+    const NO_STN = { kcal: 2.70, tbias: 3.19 };
+    const tbias = nb >= 5 ? clamp(tb / nb, -6, 6) : NO_STN.tbias;
     // 2. snowfall scaling from treeline snow-depth gains (Bosworth Lower)
     const obsHN = (b, d) => {
       const key = b + 'HS', o = O[d], p = O[addDays(d, -1)];
@@ -71,7 +79,9 @@
         sm += Math.max(0, h.precipitation[k] || 0) * pfOf('tl') * clamp((2 - T) / 2, 0, 1);
       }
     }
-    const kcal = (sm > 5 && so > 2) ? clamp(so / sm, 0.4, 3) : 1;
+    const stnSnow = sm > 5 && so > 2;
+    const kcal = stnSnow ? clamp(so / sm, 0.4, 3) : NO_STN.kcal;
+    const defaultCorr = !stnSnow || nb < 5;
     let obsDays = 0;
     for (const D of days) {
       let wsx = 0, wsy = 0, wsum = 0, n = 0, gust = 0, fl = 0, cn = 0, cnN = 0, wn = 0, sw = 0;
@@ -105,7 +115,7 @@
                    oHS: od && b !== 'alp' ? od[b + 'HS'] : null, oTL: od ? od.tlHS : null };
       }
     }
-    return { days, zref, tbias, kcal, obsDays, h };
+    return { days, zref, tbias, kcal, obsDays, h, defaultCorr };
   }
 
   /* ---- daily simulation per band ---- */
@@ -198,10 +208,12 @@
     const out = { L: {}, main: {}, trig: {}, sup: {}, pers: {}, deep: {}, danger: {}, layers: {}, wet: {} };
     for (const b of BANDS) {
       out.L[b] = [0, 0, 0, 0, 0, 0, 0, 0]; out.main[b] = ['', '', '', '', '', '', '', ''];
-      for (let j = Math.max(0, i - 6); j <= i; j++) {
-        const w = Math.max(0, 1 - P.decay * (i - j));
+      // storm snow and wet loading fade with decay; wind slabs last up to windLife days
+      for (let j = Math.max(0, i - 20); j <= i; j++) {
+        const w = Math.max(0, 1 - P.decay * (i - j)), ww = Math.max(0, 1 - (i - j) / Math.max(1, P.windLife));
         R[j].b[b].asp.forEach((A, k) => {
-          if (w > 0 && A.I * w > out.L[b][k]) { out.L[b][k] = A.I * w; out.main[b][k] = A.I === A.wind ? 'wind slab' : A.I === A.storm ? 'storm snow' : 'wet'; }
+          const cand = [[A.storm * w, 'storm snow'], [A.wind * ww, 'wind slab'], [A.wet * w, 'wet']];
+          for (const [v, lab] of cand) if (v > out.L[b][k]) { out.L[b][k] = v; out.main[b][k] = lab; }
         });
       }
       const r = R[i].b[b], hs = r.HS;

@@ -1,5 +1,5 @@
 {
- "generated": "2026-11-23T04:09:56.438Z",
+ "generated": "2026-11-23T04:15:00.242Z",
  "design": {
   "compared_against": "Parks Canada daily danger ratings and problems for Mount Temple (Banff, Yoho and Kootenay forecast)",
   "months": "December to March",
@@ -12,7 +12,7 @@
    "2025-26"
   ],
   "tuning": "8 seeded random-search runs, each 600 samples + 400 refinements; objective = mean absolute rating error + 0.3 x (1 - mean F1 of storm, wind, persistent, deep problems) + 0.1 x (1 - wet problem F1) on the tuning winters; the run with the best tuning score is kept",
-  "disclosure": "The test winter (2025-26) was scored four times while the setup was adjusted: (1) original ranges: average error 0.655; (2) warming thresholds added to tuning: 0.597; (3) five range limits widened: 0.695; (4) duplicate-crust bug fixed in the model: 0.815 (this version is published). Each time the kept tuning run was the one with the best tuning-winter score, never the best test score. Because the test winter was looked at four times, it is not fully unseen.",
+  "disclosure": "The test winter (2025-26) was scored five times while the setup was adjusted: (1) original setup: average error 0.655; (2) warming thresholds added to tuning: 0.597; (3) range limits widened: 0.695; (4) duplicate-crust bug fixed: 0.815; (5) user-chosen changes: weak-layer rules fixed instead of tuned, separate wind-slab life, average station correction for winters without stations (this version is published). Each time the kept tuning run was the one with the best tuning-winter score, never the best test score. Because the test winter was looked at five times, it is not fully unseen.",
   "note": "Ratings are forecasts, not observed avalanches. Parks Canada days with no numeric rating (early season, spring, no rating) are skipped band by band."
  },
  "seasons": [
@@ -20,8 +20,8 @@
    "season": "2022-23",
    "forecast_days": 121,
    "station_days": 0,
-   "snowfall_scale": 1,
-   "temp_bias_c": 0,
+   "snowfall_scale": 2.7,
+   "temp_bias_c": 3.19,
    "station_rows": {
     "108": 0,
     "109": 0,
@@ -75,38 +75,38 @@
    "bands": {
     "alp": {
      "n": 119,
-     "exact": 0.345,
-     "within1": 0.882,
-     "mae": 0.782,
-     "bias": 0.765,
+     "exact": 0.303,
+     "within1": 0.941,
+     "mae": 0.765,
+     "bias": 0.563,
      "confusion_official_rows_model_cols": [
       [
        0,
-       14,
-       3,
+       17,
+       0,
        0,
        0
       ],
       [
        0,
-       16,
        15,
-       3,
+       19,
+       0,
        1
       ],
       [
-       0,
        1,
-       19,
-       17,
-       7
+       9,
+       14,
+       15,
+       5
       ],
       [
        0,
        0,
-       0,
-       4,
-       17
+       1,
+       5,
+       15
       ],
       [
        0,
@@ -119,31 +119,31 @@
     },
     "tl": {
      "n": 119,
-     "exact": 0.336,
-     "within1": 0.966,
-     "mae": 0.697,
-     "bias": 0.647,
+     "exact": 0.387,
+     "within1": 0.958,
+     "mae": 0.655,
+     "bias": 0.622,
      "confusion_official_rows_model_cols": [
       [
        0,
-       28,
-       3,
+       27,
+       4,
        0,
        0
       ],
       [
        0,
-       13,
-       30,
-       0,
+       17,
+       25,
+       1,
        0
       ],
       [
        0,
        1,
-       19,
+       20,
        13,
-       1
+       0
       ],
       [
        0,
@@ -156,147 +156,147 @@
        0,
        0,
        0,
-       1,
-       1
+       0,
+       2
       ]
      ]
     },
     "btl": {
      "n": 119,
-     "exact": 0.244,
-     "within1": 0.79,
-     "mae": 0.966,
-     "bias": 0.832,
+     "exact": 0.277,
+     "within1": 0.832,
+     "mae": 0.891,
+     "bias": 0.84,
      "confusion_official_rows_model_cols": [
       [
-       0,
-       46,
-       23,
-       0,
-       0
-      ],
-      [
-       0,
-       11,
-       15,
+       6,
+       44,
+       19,
        0,
        0
       ],
       [
        0,
-       1,
+       8,
        17,
-       0,
-       0
-      ],
-      [
-       0,
-       2,
-       1,
        1,
        0
       ],
       [
        0,
        0,
-       0,
+       16,
        2,
        0
+      ],
+      [
+       0,
+       0,
+       2,
+       2,
+       0
+      ],
+      [
+       0,
+       0,
+       0,
+       1,
+       1
       ]
      ]
     }
    },
    "all": {
     "n": 357,
-    "exact": 0.308,
-    "within1": 0.88,
-    "mae": 0.815,
-    "bias": 0.748,
+    "exact": 0.322,
+    "within1": 0.91,
+    "mae": 0.77,
+    "bias": 0.675,
     "confusion_official_rows_model_cols": [
      [
-      0,
+      6,
       88,
-      29,
+      23,
       0,
       0
      ],
      [
       0,
       40,
-      60,
-      3,
+      61,
+      2,
       1
      ],
      [
-      0,
-      3,
-      55,
+      1,
+      10,
+      50,
       30,
-      8
-     ],
-     [
-      0,
-      2,
-      2,
-      12,
-      18
+      5
      ],
      [
       0,
       0,
+      4,
+      14,
+      16
+     ],
+     [
       0,
-      3,
-      3
+      0,
+      0,
+      1,
+      5
      ]
     ],
-    "kappa_quadratic": 0.572
+    "kappa_quadratic": 0.605
    },
    "problems": {
     "storm": {
      "parks_listed_days": 15,
-     "model_listed_days": 30,
-     "both": 10,
-     "hit_rate": 0.667,
-     "false_alarm_rate": 0.667,
-     "f1": 0.444
+     "model_listed_days": 44,
+     "both": 12,
+     "hit_rate": 0.8,
+     "false_alarm_rate": 0.727,
+     "f1": 0.407
     },
     "wind": {
      "parks_listed_days": 91,
-     "model_listed_days": 58,
-     "both": 44,
-     "hit_rate": 0.484,
-     "false_alarm_rate": 0.241,
-     "f1": 0.591
+     "model_listed_days": 65,
+     "both": 53,
+     "hit_rate": 0.582,
+     "false_alarm_rate": 0.185,
+     "f1": 0.679
     },
     "persistent": {
      "parks_listed_days": 62,
-     "model_listed_days": 106,
-     "both": 55,
-     "hit_rate": 0.887,
-     "false_alarm_rate": 0.481,
-     "f1": 0.655
+     "model_listed_days": 60,
+     "both": 40,
+     "hit_rate": 0.645,
+     "false_alarm_rate": 0.333,
+     "f1": 0.656
     },
     "deep": {
      "parks_listed_days": 33,
-     "model_listed_days": 121,
-     "both": 33,
-     "hit_rate": 1,
-     "false_alarm_rate": 0.727,
-     "f1": 0.429
+     "model_listed_days": 64,
+     "both": 17,
+     "hit_rate": 0.515,
+     "false_alarm_rate": 0.734,
+     "f1": 0.351
     },
     "wet": {
      "parks_listed_days": 7,
-     "model_listed_days": 20,
-     "both": 7,
-     "hit_rate": 1,
-     "false_alarm_rate": 0.65,
-     "f1": 0.519
+     "model_listed_days": 19,
+     "both": 6,
+     "hit_rate": 0.857,
+     "false_alarm_rate": 0.684,
+     "f1": 0.462
     }
    },
    "wet": {
     "parks_wet_days": 7,
-    "model_warming_flag_days": 20,
-    "both": 7
+    "model_warming_flag_days": 19,
+    "both": 6
    }
   },
   "default_model": {
@@ -305,9 +305,9 @@
     "alp": {
      "n": 119,
      "exact": 0.361,
-     "within1": 0.933,
-     "mae": 0.706,
-     "bias": 0.42,
+     "within1": 0.924,
+     "mae": 0.714,
+     "bias": 0.496,
      "confusion_official_rows_model_cols": [
       [
        3,
@@ -317,18 +317,18 @@
        0
       ],
       [
-       3,
-       21,
-       9,
+       1,
+       22,
+       10,
        2,
        0
       ],
       [
        0,
-       14,
-       10,
-       14,
-       6
+       12,
+       9,
+       16,
+       7
       ],
       [
        0,
@@ -351,7 +351,7 @@
      "exact": 0.294,
      "within1": 0.924,
      "mae": 0.782,
-     "bias": 0.697,
+     "bias": 0.731,
      "confusion_official_rows_model_cols": [
       [
        3,
@@ -362,15 +362,15 @@
       ],
       [
        0,
-       17,
-       22,
+       15,
+       24,
        4,
        0
       ],
       [
        0,
-       4,
-       11,
+       2,
+       13,
        17,
        2
       ],
@@ -438,9 +438,9 @@
    "all": {
     "n": 357,
     "exact": 0.311,
-    "within1": 0.846,
-    "mae": 0.849,
-    "bias": 0.709,
+    "within1": 0.843,
+    "mae": 0.852,
+    "bias": 0.745,
     "confusion_official_rows_model_cols": [
      [
       22,
@@ -450,18 +450,18 @@
       0
      ],
      [
-      3,
+      1,
+      44,
       45,
-      42,
       14,
       0
      ],
      [
       0,
-      19,
-      27,
-      40,
-      10
+      15,
+      28,
+      42,
+      11
      ],
      [
       0,
@@ -478,7 +478,7 @@
       6
      ]
     ],
-    "kappa_quadratic": 0.581
+    "kappa_quadratic": 0.584
    },
    "problems": {
     "storm": {
@@ -491,11 +491,11 @@
     },
     "wind": {
      "parks_listed_days": 91,
-     "model_listed_days": 17,
-     "both": 16,
-     "hit_rate": 0.176,
-     "false_alarm_rate": 0.059,
-     "f1": 0.296
+     "model_listed_days": 28,
+     "both": 24,
+     "hit_rate": 0.264,
+     "false_alarm_rate": 0.143,
+     "f1": 0.403
     },
     "persistent": {
      "parks_listed_days": 62,
@@ -764,38 +764,38 @@
    "bands": {
     "alp": {
      "n": 363,
-     "exact": 0.499,
-     "within1": 0.961,
-     "mae": 0.54,
-     "bias": -0.242,
+     "exact": 0.455,
+     "within1": 0.967,
+     "mae": 0.579,
+     "bias": -0.099,
      "confusion_official_rows_model_cols": [
       [
-       0,
-       5,
        4,
+       3,
+       2,
        0,
        0
       ],
       [
-       0,
-       121,
-       18,
+       5,
+       85,
+       49,
        1,
        0
       ],
       [
-       0,
-       116,
-       45,
+       1,
+       93,
+       65,
        14,
-       0
+       2
       ],
       [
        0,
-       9,
-       8,
-       15,
-       7
+       6,
+       11,
+       11,
+       11
       ],
       [
        0,
@@ -808,37 +808,37 @@
     },
     "tl": {
      "n": 363,
-     "exact": 0.501,
-     "within1": 0.967,
-     "mae": 0.532,
-     "bias": -0.03,
+     "exact": 0.556,
+     "within1": 0.945,
+     "mae": 0.499,
+     "bias": 0.047,
      "confusion_official_rows_model_cols": [
       [
-       0,
-       63,
-       8,
-       0,
-       0
-      ],
-      [
-       0,
-       138,
-       8,
+       16,
+       43,
+       12,
        0,
        0
       ],
       [
+       2,
+       122,
+       21,
+       1,
+       0
+      ],
+      [
+       2,
+       56,
+       61,
+       7,
+       1
+      ],
+      [
        0,
-       84,
-       39,
        4,
-       0
-      ],
-      [
-       0,
-       4,
-       10,
-       5,
+       12,
+       3,
        0
       ],
       [
@@ -852,37 +852,37 @@
     },
     "btl": {
      "n": 359,
-     "exact": 0.292,
-     "within1": 0.992,
-     "mae": 0.716,
-     "bias": 0.343,
+     "exact": 0.529,
+     "within1": 0.975,
+     "mae": 0.496,
+     "bias": 0.267,
      "confusion_official_rows_model_cols": [
       [
-       45,
-       179,
+       112,
+       107,
+       8,
+       0,
+       0
+      ],
+      [
+       11,
+       59,
+       13,
+       0,
+       0
+      ],
+      [
+       1,
+       22,
+       16,
+       1,
+       0
+      ],
+      [
+       0,
+       0,
+       6,
        3,
-       0,
-       0
-      ],
-      [
-       32,
-       46,
-       5,
-       0,
-       0
-      ],
-      [
-       0,
-       26,
-       14,
-       0,
-       0
-      ],
-      [
-       0,
-       0,
-       9,
-       0,
        0
       ],
       [
@@ -897,38 +897,38 @@
    },
    "all": {
     "n": 1085,
-    "exact": 0.431,
-    "within1": 0.973,
-    "mae": 0.595,
-    "bias": 0.022,
+    "exact": 0.513,
+    "within1": 0.962,
+    "mae": 0.524,
+    "bias": 0.071,
     "confusion_official_rows_model_cols": [
      [
-      45,
-      247,
-      15,
+      132,
+      153,
+      22,
       0,
       0
      ],
      [
-      32,
-      305,
-      31,
-      1,
-      0
-     ],
-     [
-      0,
-      226,
-      98,
       18,
+      266,
+      83,
+      2,
       0
      ],
      [
+      4,
+      171,
+      142,
+      22,
+      3
+     ],
+     [
       0,
-      13,
-      27,
-      20,
-      7
+      10,
+      29,
+      17,
+      11
      ],
      [
       0,
@@ -938,54 +938,54 @@
       0
      ]
     ],
-    "kappa_quadratic": 0.468
+    "kappa_quadratic": 0.583
    },
    "problems": {
     "storm": {
      "parks_listed_days": 41,
-     "model_listed_days": 22,
-     "both": 16,
-     "hit_rate": 0.39,
-     "false_alarm_rate": 0.273,
-     "f1": 0.508
+     "model_listed_days": 42,
+     "both": 24,
+     "hit_rate": 0.585,
+     "false_alarm_rate": 0.429,
+     "f1": 0.578
     },
     "wind": {
      "parks_listed_days": 221,
-     "model_listed_days": 67,
-     "both": 40,
-     "hit_rate": 0.181,
-     "false_alarm_rate": 0.403,
-     "f1": 0.278
+     "model_listed_days": 100,
+     "both": 61,
+     "hit_rate": 0.276,
+     "false_alarm_rate": 0.39,
+     "f1": 0.38
     },
     "persistent": {
      "parks_listed_days": 151,
-     "model_listed_days": 216,
-     "both": 126,
-     "hit_rate": 0.834,
-     "false_alarm_rate": 0.417,
-     "f1": 0.687
+     "model_listed_days": 173,
+     "both": 90,
+     "hit_rate": 0.596,
+     "false_alarm_rate": 0.48,
+     "f1": 0.556
     },
     "deep": {
      "parks_listed_days": 283,
-     "model_listed_days": 340,
-     "both": 259,
-     "hit_rate": 0.915,
-     "false_alarm_rate": 0.238,
-     "f1": 0.831
+     "model_listed_days": 82,
+     "both": 72,
+     "hit_rate": 0.254,
+     "false_alarm_rate": 0.122,
+     "f1": 0.395
     },
     "wet": {
      "parks_listed_days": 27,
-     "model_listed_days": 28,
-     "both": 15,
-     "hit_rate": 0.556,
-     "false_alarm_rate": 0.464,
-     "f1": 0.545
+     "model_listed_days": 30,
+     "both": 17,
+     "hit_rate": 0.63,
+     "false_alarm_rate": 0.433,
+     "f1": 0.596
     }
    },
    "wet": {
     "parks_wet_days": 27,
-    "model_warming_flag_days": 28,
-    "both": 15
+    "model_warming_flag_days": 30,
+    "both": 17
    }
   },
   "default_model": {
@@ -993,10 +993,10 @@
    "bands": {
     "alp": {
      "n": 363,
-     "exact": 0.237,
-     "within1": 0.653,
-     "mae": 1.135,
-     "bias": -0.722,
+     "exact": 0.355,
+     "within1": 0.926,
+     "mae": 0.722,
+     "bias": -0.231,
      "confusion_official_rows_model_cols": [
       [
        6,
@@ -1006,25 +1006,25 @@
        0
       ],
       [
-       58,
-       54,
-       24,
+       33,
+       70,
+       33,
        4,
        0
       ],
       [
-       102,
-       36,
-       18,
+       9,
+       101,
+       45,
        16,
-       3
+       4
       ],
       [
+       0,
        8,
-       7,
-       1,
+       5,
        8,
-       15
+       18
       ],
       [
        0,
@@ -1037,10 +1037,10 @@
     },
     "tl": {
      "n": 363,
-     "exact": 0.289,
-     "within1": 0.782,
-     "mae": 0.939,
-     "bias": -0.311,
+     "exact": 0.419,
+     "within1": 0.926,
+     "mae": 0.656,
+     "bias": -0.028,
      "confusion_official_rows_model_cols": [
       [
        12,
@@ -1050,24 +1050,24 @@
        0
       ],
       [
-       64,
-       57,
+       28,
+       93,
        20,
        5,
        0
       ],
       [
-       58,
-       27,
-       28,
+       10,
+       67,
+       36,
        9,
        5
       ],
       [
-       4,
+       0,
        1,
-       6,
-       8,
+       7,
+       11,
        0
       ],
       [
@@ -1081,29 +1081,29 @@
     },
     "btl": {
      "n": 359,
-     "exact": 0.462,
-     "within1": 0.942,
-     "mae": 0.596,
-     "bias": 0.145,
+     "exact": 0.515,
+     "within1": 0.953,
+     "mae": 0.532,
+     "bias": 0.231,
      "confusion_official_rows_model_cols": [
       [
-       130,
-       82,
+       128,
+       84,
        15,
        0,
        0
       ],
       [
-       51,
-       18,
-       13,
+       29,
+       38,
+       15,
        1,
        0
       ],
       [
-       5,
-       16,
-       13,
+       1,
+       19,
+       14,
        6,
        0
       ],
@@ -1126,38 +1126,38 @@
    },
    "all": {
     "n": 1085,
-    "exact": 0.329,
-    "within1": 0.792,
-    "mae": 0.891,
-    "bias": -0.298,
+    "exact": 0.429,
+    "within1": 0.935,
+    "mae": 0.637,
+    "bias": -0.01,
     "confusion_official_rows_model_cols": [
      [
-      148,
-      136,
+      146,
+      138,
       22,
       1,
       0
      ],
      [
-      173,
-      129,
-      57,
+      90,
+      201,
+      68,
       10,
       0
      ],
      [
-      165,
-      79,
-      59,
+      20,
+      187,
+      95,
       31,
-      8
+      9
      ],
      [
-      12,
-      8,
-      11,
-      21,
-      15
+      0,
+      9,
+      16,
+      24,
+      18
      ],
      [
       0,
@@ -1167,54 +1167,54 @@
       0
      ]
     ],
-    "kappa_quadratic": 0.29
+    "kappa_quadratic": 0.543
    },
    "problems": {
     "storm": {
      "parks_listed_days": 41,
-     "model_listed_days": 44,
+     "model_listed_days": 47,
      "both": 25,
      "hit_rate": 0.61,
-     "false_alarm_rate": 0.432,
-     "f1": 0.588
+     "false_alarm_rate": 0.468,
+     "f1": 0.568
     },
     "wind": {
      "parks_listed_days": 221,
-     "model_listed_days": 11,
-     "both": 5,
-     "hit_rate": 0.023,
-     "false_alarm_rate": 0.545,
-     "f1": 0.043
+     "model_listed_days": 27,
+     "both": 11,
+     "hit_rate": 0.05,
+     "false_alarm_rate": 0.593,
+     "f1": 0.089
     },
     "persistent": {
      "parks_listed_days": 151,
-     "model_listed_days": 112,
-     "both": 47,
-     "hit_rate": 0.311,
-     "false_alarm_rate": 0.58,
-     "f1": 0.357
+     "model_listed_days": 173,
+     "both": 90,
+     "hit_rate": 0.596,
+     "false_alarm_rate": 0.48,
+     "f1": 0.556
     },
     "deep": {
      "parks_listed_days": 283,
-     "model_listed_days": 58,
-     "both": 58,
-     "hit_rate": 0.205,
-     "false_alarm_rate": 0,
-     "f1": 0.34
+     "model_listed_days": 82,
+     "both": 72,
+     "hit_rate": 0.254,
+     "false_alarm_rate": 0.122,
+     "f1": 0.395
     },
     "wet": {
      "parks_listed_days": 27,
-     "model_listed_days": 31,
-     "both": 15,
-     "hit_rate": 0.556,
-     "false_alarm_rate": 0.516,
-     "f1": 0.517
+     "model_listed_days": 32,
+     "both": 16,
+     "hit_rate": 0.593,
+     "false_alarm_rate": 0.5,
+     "f1": 0.542
     }
    },
    "wet": {
     "parks_wet_days": 27,
-    "model_warming_flag_days": 31,
-    "both": 15
+    "model_warming_flag_days": 32,
+    "both": 16
    }
   }
  },
@@ -1222,46 +1222,46 @@
   "2022-23": {
    "role": "tuning",
    "n": 363,
-   "exact": 0.399,
-   "within1": 0.967,
-   "mae": 0.634,
-   "bias": -0.518,
-   "kappa": 0.351,
+   "exact": 0.625,
+   "within1": 0.992,
+   "mae": 0.383,
+   "bias": -0.339,
+   "kappa": 0.655,
    "wind_hit": 0,
-   "persistent_hit": 0.651
+   "persistent_hit": 0.683
   },
   "2023-24": {
    "role": "tuning",
    "n": 359,
-   "exact": 0.415,
-   "within1": 0.958,
-   "mae": 0.627,
-   "bias": 0.304,
-   "kappa": 0.515,
-   "wind_hit": 0.254,
-   "persistent_hit": 0.943
+   "exact": 0.409,
+   "within1": 0.947,
+   "mae": 0.643,
+   "bias": 0.309,
+   "kappa": 0.551,
+   "wind_hit": 0.433,
+   "persistent_hit": 0.547
   },
   "2024-25": {
    "role": "tuning",
    "n": 363,
-   "exact": 0.479,
-   "within1": 0.994,
-   "mae": 0.526,
-   "bias": 0.284,
-   "kappa": 0.584,
-   "wind_hit": 0.291,
-   "persistent_hit": 1
+   "exact": 0.504,
+   "within1": 0.948,
+   "mae": 0.548,
+   "bias": 0.245,
+   "kappa": 0.591,
+   "wind_hit": 0.405,
+   "persistent_hit": 0.514
   },
   "2025-26": {
    "role": "test",
    "n": 357,
-   "exact": 0.308,
-   "within1": 0.88,
-   "mae": 0.815,
-   "bias": 0.748,
-   "kappa": 0.572,
-   "wind_hit": 0.484,
-   "persistent_hit": 0.887
+   "exact": 0.322,
+   "within1": 0.91,
+   "mae": 0.77,
+   "bias": 0.675,
+   "kappa": 0.605,
+   "wind_hit": 0.582,
+   "persistent_hit": 0.645
   }
  },
  "per_season_benchmark": {
@@ -1287,83 +1287,81 @@
   }
  },
  "params_at_range_edge": [
-  "windMin",
-  "shWind",
-  "c2",
-  "supMin"
+  "c4",
+  "c5"
  ],
  "tuning_runs": [
   {
    "seed": 1,
-   "tuning_score": 0.9172,
+   "tuning_score": 0.7366,
    "kept": false,
-   "test_exact": 0.384,
-   "test_within1": 0.905,
-   "test_mae": 0.714,
-   "test_kappa": 0.575
+   "test_exact": 0.328,
+   "test_within1": 0.902,
+   "test_mae": 0.773,
+   "test_kappa": 0.586
   },
   {
    "seed": 2,
-   "tuning_score": 0.7677,
-   "kept": true,
-   "test_exact": 0.308,
-   "test_within1": 0.877,
-   "test_mae": 0.818,
-   "test_kappa": 0.569
+   "tuning_score": 0.7213,
+   "kept": false,
+   "test_exact": 0.347,
+   "test_within1": 0.908,
+   "test_mae": 0.745,
+   "test_kappa": 0.578
   },
   {
    "seed": 3,
-   "tuning_score": 0.9044,
+   "tuning_score": 0.7271,
    "kept": false,
-   "test_exact": 0.297,
-   "test_within1": 0.846,
-   "test_mae": 0.86,
-   "test_kappa": 0.531
+   "test_exact": 0.364,
+   "test_within1": 0.916,
+   "test_mae": 0.72,
+   "test_kappa": 0.573
   },
   {
    "seed": 4,
-   "tuning_score": 0.7934,
+   "tuning_score": 0.7251,
    "kept": false,
-   "test_exact": 0.336,
-   "test_within1": 0.95,
-   "test_mae": 0.717,
-   "test_kappa": 0.618
+   "test_exact": 0.314,
+   "test_within1": 0.905,
+   "test_mae": 0.782,
+   "test_kappa": 0.589
   },
   {
    "seed": 5,
-   "tuning_score": 0.9151,
+   "tuning_score": 0.7301,
    "kept": false,
-   "test_exact": 0.339,
-   "test_within1": 0.899,
-   "test_mae": 0.765,
-   "test_kappa": 0.574
+   "test_exact": 0.305,
+   "test_within1": 0.885,
+   "test_mae": 0.812,
+   "test_kappa": 0.596
   },
   {
    "seed": 6,
-   "tuning_score": 0.9005,
-   "kept": false,
-   "test_exact": 0.356,
-   "test_within1": 0.905,
-   "test_mae": 0.739,
-   "test_kappa": 0.579
+   "tuning_score": 0.7212,
+   "kept": true,
+   "test_exact": 0.322,
+   "test_within1": 0.91,
+   "test_mae": 0.77,
+   "test_kappa": 0.605
   },
   {
    "seed": 7,
-   "tuning_score": 0.9555,
+   "tuning_score": 0.7288,
    "kept": false,
-   "test_exact": 0.294,
-   "test_within1": 0.854,
-   "test_mae": 0.852,
-   "test_kappa": 0.514
+   "test_exact": 0.342,
+   "test_within1": 0.908,
+   "test_mae": 0.751,
+   "test_kappa": 0.59
   },
   {
    "seed": 8,
-   "tuning_score": 0.9203,
+   "tuning_score": 0.728,
    "kept": false,
-   "test_exact": 0.389,
-   "test_within1": 0.91,
-   "test_mae": 0.703,
-   "test_kappa": 0.659
+   "test_exact": 0.347,
+   "test_within1": 0.938,
+   "test_mae": 0.717,
+   "test_kappa": 0.625
   }
  ],
  "params_default": {
@@ -1385,6 +1383,7 @@
   "pMin": 30,
   "pMax": 100,
   "life": 60,
+  "windLife": 10,
   "wPers": 0.45,
   "wDeep": 0.35,
   "c2": 0.25,
@@ -1402,38 +1401,39 @@
   "meltSpan": 6
  },
  "params_tuned": {
-  "stormCm": 43.183,
-  "windCm": 12.59,
+  "stormCm": 33.981,
+  "windCm": 16.718,
   "rainMm": 10,
-  "decay": 0.26,
-  "windMin": 10.012,
+  "decay": 0.345,
+  "windMin": 13.055,
   "windSpan": 40,
   "clearCloud": 20,
-  "shWind": 2,
-  "shTmin": -9.369,
-  "nsfTmin": -15.605,
-  "grad": 18.926,
-  "basalDays": 6,
+  "shWind": 10,
+  "shTmin": -8,
+  "nsfTmin": -12,
+  "grad": 10,
+  "basalDays": 7,
   "basalMaxHS": 100,
   "buryCm": 5,
   "surfLife": 10,
-  "pMin": 19.236,
-  "pMax": 84.784,
-  "life": 88.361,
-  "wPers": 0.344,
-  "wDeep": 0.93,
-  "c2": 0.05,
-  "c3": 0.521,
-  "c4": 1.138,
-  "c5": 2.427,
-  "supMin": 0,
-  "supSpan": 189.375,
-  "probStorm": 0.725,
-  "probWind": 0.455,
-  "probPers": 0.38,
-  "probDeep": 0.25,
-  "probWet": 0.712,
-  "meltT": 0.156,
-  "meltSpan": 5.196
+  "pMin": 30,
+  "pMax": 100,
+  "life": 60,
+  "windLife": 12.677,
+  "wPers": 1.025,
+  "wDeep": 0.272,
+  "c2": 0.196,
+  "c3": 0.763,
+  "c4": 1.599,
+  "c5": 2.5,
+  "supMin": 20,
+  "supSpan": 60,
+  "probStorm": 0.6,
+  "probWind": 0.4,
+  "probPers": 0.5,
+  "probDeep": 0.5,
+  "probWet": 0.5,
+  "meltT": 0.959,
+  "meltSpan": 6
  }
 }
