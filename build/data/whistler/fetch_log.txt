@@ -14,3 +14,4 @@ OK   avcan point
      station 71 chunk 2026-11-11 failed: <HTTPError 400: 'Bad Request'>
      station 71 chunk 2026-11-18 failed: <HTTPError 400: 'Bad Request'>
 OK   stations
+OK   weather
