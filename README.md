@@ -13,7 +13,9 @@ An interactive avalanche risk heat map and route assessment tool for Mount Templ
   - Parks Canada weather stations via Avalanche Canada (from 2024): snow depth at Bosworth Lower and Stanley, ridgetop wind and temperature at Bosworth Upper (Whymper as backup), used to correct the snow model
   - Parks Canada avalanche forecast for Banff, Yoho and Kootenay (archive from 2023); when no rating was issued the danger is modelled and marked as modelled
   - Avalanche Canada Mountain Information Network reports within 20 km
-- Daily snow and wind-loading model for each elevation band and aspect, with a chart and a band by aspect loading table
+- Daily snow and wind-loading model for each elevation band and aspect, run from 1 October, with buried weak-layer tracking (surface hoar, near-surface facets, crusts, facets near the ground)
+- Trip timing: start time and pace (Munter), minutes in start zones and under slopes, risk-weighted exposure, hourly warming on sunny slopes
+- Shared model code in `build/model.js`, used by both the page and the accuracy test
 - No manual entry: all conditions come from the sources above
 - Existing routes from OpenStreetMap, summer and winter, all scored in current winter conditions: Mount Temple SW Ridge, Larch Valley and Sentinel Pass, Sentinel Pass to Paradise Valley, Eiffel Lake, Wenkchemna Pass, Paradise Valley and Giant Steps, Moraine Lake Road, Little Temple, Plain of Six Glaciers, Lake Agnes and Big Beehive, Fairview Mountain
 - Ideal safest route: A* search with a slider from shortest to safest, between any two points or as a safer line for any existing route
@@ -25,7 +27,11 @@ An interactive avalanche risk heat map and route assessment tool for Mount Templ
 
 The app is one file, `index.html`, served by GitHub Pages. All APIs it calls allow browser requests. If today's weather pull fails it falls back to the snapshot saved in the page.
 
-In a check of 13 days from winters 2023 to 2025, the modelled danger matched the official Parks Canada rating in 13 of 39 band ratings and was within one level in 33. The official rating is used whenever one exists.
+## Accuracy test
+
+`build/backtest.mjs` (run by the **Accuracy test** workflow) scores the model against Parks Canada's daily ratings for Mount Temple, December to March. It tunes on 2022-23, 2023-24 and 2024-25 and tests on 2025-26. Results are in `build/data/temple/backtest/report.json`.
+
+On the 2025-26 test winter the kept model matched Parks Canada exactly on 35% of band ratings, was within one level on 96%, with an average error of 0.70 levels. The benchmark (the most common Parks Canada rating for that band and month) scored 48%, 91% and 0.63. **The model does not beat the benchmark on average error.** It follows high-danger periods better (weighted kappa 0.62 against 0.48), never rates Low, and misses most wind slab days. The test winter was scored three times while the tuning setup was adjusted, so it is not fully unseen. The official rating is always used when one exists.
 
 ## Data sources
 

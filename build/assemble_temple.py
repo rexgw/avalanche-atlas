@@ -1,6 +1,6 @@
 """Assemble index.html for Mount Temple.
 Usage: python3 -I assemble_temple.py template.html terrain.json routes.json weather_60d.json history.json three.bundle.js out.html"""
-import sys, json
+import sys, json, os
 tpl, terr, routes, wx, hist, three, out = sys.argv[1:8]
 t = open(tpl).read()
 js = open(three).read()
@@ -18,6 +18,14 @@ for k, f in (("/*__TERRAIN__*/null", open(terr).read()), ("/*__ROUTES__*/null", 
     assert t.count(k) == 1, k
     assert "</script" not in f.lower()
     t = t.replace(k, f)
+bt = os.path.join(os.path.dirname(__file__), "data", "temple", "backtest")
+model = open(os.path.join(os.path.dirname(__file__), "model.js")).read()
+assert "</script" not in model.lower()
+t = t.replace("/*__MODEL__*/", model, 1)
+for key, fn in (("/*__PARAMS__*/null", "params.json"), ("/*__ACCURACY__*/null", "summary.json")):
+    p = os.path.join(bt, fn)
+    if os.path.exists(p):
+        t = t.replace(key, json.dumps(json.load(open(p)), separators=(",", ":")), 1)
 t = t.replace("/*__THREE__*/", "/* three.js r187, MIT licence, https://threejs.org */\n" + js, 1)
 open(out, "w").write(t)
 print("wrote", out, round(len(t) / 1e6, 2), "MB")

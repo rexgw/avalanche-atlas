@@ -184,6 +184,10 @@ a{color:var(--gold2)}
       <div class="muted small" id="probSrc" style="margin:-4px 0 6px"></div>
       <div id="probs"></div>
 
+      <h2>Buried weak layers (modelled)</h2>
+      <div class="muted small" style="margin:-4px 0 6px">Layers the model tracks from 1 October: surface hoar and near-surface facets formed on clear, cold nights, crusts from rain or sun, and facets near the ground in a thin, cold snowpack. Not observed; Parks Canada's forecast is the reference.</div>
+      <div class="rlist" id="layerList"></div>
+
       <h2>Weather at the selected time</h2>
       <div class="muted small" style="margin:-4px 0 6px" id="wxSrc"></div>
       <div class="stats" id="wxStats"></div>
@@ -198,6 +202,15 @@ a{color:var(--gold2)}
     </div>
 
     <div class="pane" id="pane-routes">
+      <h2>Trip timing</h2>
+      <div class="card">
+        <div class="rowf">
+          <div class="field"><label for="startTime">Start time</label><input type="time" id="startTime" value="07:00" style="background:var(--navy);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:6px 8px;font:inherit"></div>
+          <div class="field"><label for="paceSel">Pace</label><select id="paceSel"><option value="normal">Normal (Munter 4 up, 6 down)</option><option value="deep">Deep snow or snowshoe (2 up, 3 down)</option></select></div>
+        </div>
+        <div class="muted small" style="margin-top:6px">Used for travel time and exposure on the selected date. Warming on sunny slopes follows the hourly forecast for that day.</div>
+      </div>
+
       <h2>Existing routes</h2>
       <div class="muted small" style="margin:-4px 0 6px">Summer and winter routes, all scored in the current winter conditions. Sorted by score, highest first.</div>
       <div class="rlist" id="routeList"></div>
@@ -268,6 +281,21 @@ a{color:var(--gold2)}
         <li>For each band and each of 8 aspects a day counts as loading when it reaches a threshold: 30 cm storm snow in 72 h, 20 cm wind-deposited snow on lee aspects (wind over 20 km/h moving recent snow), 10 mm rain on a 30 cm snowpack, or strong warming on sunny aspects.</li>
         <li>Recent loading = strongest loading in the last days, counted 100 % today, 80 % yesterday, 60 % two days ago and so on. It multiplies the hazard on that band and aspect by up to 2.1×. Thin snowpack (under about 20 cm) lowers hazard to about a third, because there is not enough snow to slide.</li>
         <li>When Parks Canada issued no rating (early or late season, or before 2023) the app models one from the replay and marks it as modelled.</li>
+      </ul>
+      <h2>Buried weak layers</h2>
+      <ul>
+        <li>The model runs day by day from 1 October of the season (or 61 days back in summer) so layers buried before the 60-day window are kept.</li>
+        <li>Surface hoar: a clear night (Open-Meteo cloud cover under 20 %), light wind and a cold night at that elevation, with no new snow. Near-surface facets: a clear, cold night with little recent snow. Crusts: rain on snow, or melting on sunny slopes. Facets near the ground: a strong temperature gradient (ground at 0 °C) through a thin, cold snowpack for several days.</li>
+        <li>A layer is buried once enough new snow falls on it, then settles with the snowpack. It counts as a persistent slab problem between two burial depths and as deep persistent beyond, and fades with age or after a warm spell.</li>
+        <li>The night-time thresholds and burial depths are tuned against Parks Canada's problem lists (see Accuracy test). The layers are modelled, not observed.</li>
+      </ul>
+      <h2>Accuracy test</h2>
+      <div class="small" id="accBox"></div>
+      <h2>Exposure time</h2>
+      <ul>
+        <li>Travel time uses the Munter calculation: 1 km of distance or 100 m of climb or descent is one unit, at 4 units an hour uphill and 6 downhill, or half that in deep snow or on snowshoes.</li>
+        <li>Minutes in start zones (release potential above 0.45) and under slopes (runout reach 0.25 or more) are added up. Risk-weighted exposure multiplies each minute by the score at that spot.</li>
+        <li>Warming: on the selected day, when the hourly air temperature at that elevation is above 0 °C and the sun is out, the score on sunny slopes is raised by up to 1.8×. This rule is a simplification; the test checks the daily version against days Parks Canada listed wet avalanche problems.</li>
       </ul>
       <h2>Conditions model</h2>
       <ul>
@@ -5752,6 +5780,39 @@ function probsUI(){
     host.appendChild(d);
   }
 }
+const LTYPE={sh:'Surface hoar',nsf:'Near-surface facets',crust:'Crust',basal:'Facets near the ground'};
+function accUI(){
+  const el=document.getElementById('accBox'); if(!el) return;
+  if(!ACC){ el.textContent='Not run yet.'; return; }
+  const p=x=>x==null?'–':Math.round(x*100)+'%';
+  const PN={storm:'Storm slab',wind:'Wind slab',persistent:'Persistent slab',deep:'Deep persistent slab',wet:'Wet avalanches'};
+  el.innerHTML=`<p>Compared with Parks Canada's daily ratings for Mount Temple, ${ACC.months}, tested on ${ACC.tested_on} after tuning on the three earlier winters (${ACC.n_band_ratings} band ratings).</p>
+  <table style="width:100%;border-collapse:collapse;font-size:12px"><tr><td></td><td style="text-align:right">Model</td><td style="text-align:right">Usual rating for the month</td></tr>
+  <tr><td>Exact match</td><td style="text-align:right">${p(ACC.exact)}</td><td style="text-align:right">${p(ACC.bench_exact)}</td></tr>
+  <tr><td>Within one level</td><td style="text-align:right">${p(ACC.within1)}</td><td style="text-align:right">${p(ACC.bench_within1)}</td></tr>
+  <tr><td>Average error (levels)</td><td style="text-align:right">${ACC.mae}</td><td style="text-align:right">${ACC.bench_mae}</td></tr>
+  <tr><td>Weighted kappa</td><td style="text-align:right">${ACC.kappa}</td><td style="text-align:right">${ACC.bench_kappa}</td></tr></table>
+  <p style="margin-top:8px">Problems (share of Parks Canada's days the model also flagged, and share of the model's flags Parks Canada did not list):</p>
+  <ul>${Object.entries(ACC.problems).map(([k,v])=>`<li>${PN[k]}: caught ${p(v.hit)} of ${v.parks_days} days, false alarms ${p(v.false_alarm)}</li>`).join('')}</ul>
+  <p>By winter (same settings): ${Object.entries(ACC.per_season||{}).map(([k,v])=>`${k} ${v.role==='test'?'(test)':'(tuning)'}: exact ${p(v.exact)}, average error ${v.mae}`).join('; ')}. Across ${ACC.runs} tuning runs the test-winter exact match ranged ${p(ACC.range_exact[0])} to ${p(ACC.range_exact[1])}.</p>
+  <p>Known weaknesses: the model never rates Low, because buried weak layers keep its danger above the Low cut-off; it misses most wind slab days; it over-flags storm, deep persistent and wet problems. Before October 2023 there are no station readings and the weather model alone is too dry.</p>
+  ${ACC.disclosure?`<p class="muted">${ACC.disclosure}</p>`:''}
+  <p class="muted">Parks Canada's rating is a forecast, not a record of avalanches, so this measures agreement with the forecasters. Full results: build/data/temple/backtest/report.json in the repo.</p>`;
+}
+function layersUI(){
+  const host=document.getElementById('layerList'); if(!host) return; host.innerHTML='';
+  if(!SEASON){host.innerHTML='<div class="muted small">No weather loaded.</div>';return;}
+  const rows=[];
+  for(const [b,lab] of BANDS){ for(const L of (SEASON.layers[b]||[])){ rows.push({b,lab,L}); } }
+  if(!rows.length){host.innerHTML='<div class="muted small">No buried weak layers in the model for this date.</div>';return;}
+  rows.sort((a,b)=>a.L.date.localeCompare(b.L.date));
+  for(const {lab,L} of rows){
+    const kind=L.type==='basal'?'deep persistent':L.depth>MP.pMax?'deep persistent':L.depth>=MP.pMin?'persistent':'shallow, not yet a slab problem';
+    const d=document.createElement('div'); d.className='ritem';
+    d.innerHTML=`<div style="flex:1;min-width:0"><div class="nm">${LTYPE[L.type]} · ${lab}</div><div class="tag">Formed ${new Date(L.date+'T12:00').toLocaleDateString([], {month:'short',day:'numeric'})} · about ${Math.round(L.depth)} cm deep · ${kind}</div></div>`;
+    host.appendChild(d);
+  }
+}
 function wxUI(){
   const w=S.wx; const el=document.getElementById('wxStats');
   const st=(v,l)=>`<div class="stat"><div class="v">${v}</div><div class="l">${l}</div></div>`;
@@ -5768,7 +5829,11 @@ let REQ=0;
 function srcLabel(){
   const l=document.getElementById('srcLabel');
   l.textContent = S.source==='live'?'Conditions for right now.':S.source==='past'?'Conditions replayed for '+(S.endDate||'')+'.':S.source==='snapshot'?'Weather from the snapshot saved in this page.':'Loading…';
-  const ds=document.getElementById('dangerSrc'); if(ds) ds.textContent = S.dangerFrom==='avcan'?'From the Parks Canada forecast'+(AVC.issued?' issued '+new Date(AVC.issued).toLocaleDateString():'')+'.':'Modelled from the 60 days of weather, because no Parks Canada rating was issued for this date. Not an official rating.';
+  const ds=document.getElementById('dangerSrc');
+  if(ds){
+    if(S.dangerFrom==='avcan') ds.textContent='From the Parks Canada forecast'+(AVC.issued?' issued '+new Date(AVC.issued).toLocaleDateString():'')+'.';
+    else ds.innerHTML='<span style="color:#F79218;font-weight:600">Modelled, not an official rating.</span> No Parks Canada rating was issued for this date. '+(ACC?`In testing on ${ACC.tested_on} (${ACC.months}), the model matched Parks Canada exactly on ${Math.round(ACC.exact*100)}% of band ratings and was within one level on ${Math.round(ACC.within1*100)}%. ${ACC.beats_benchmark?'It did better than simply using the usual rating for the month.':'It did <b>not</b> do better than simply using the usual rating for the month.'} See Method for details.`:'Its accuracy has not been tested yet.');
+  }
 }
 function liveUI(){
   const el=document.getElementById('liveStatus');
@@ -5783,64 +5848,52 @@ async function fetchJSON(url,ms=15000){
   finally{clearTimeout(t);}
 }
 const LL='latitude=51.3506&longitude=-116.2067';
-const WXVARS='temperature_2m,precipitation,rain,snowfall,wind_speed_10m,wind_direction_10m,wind_gusts_10m,freezing_level_height';
+const WXVARS='temperature_2m,precipitation,rain,snowfall,wind_speed_10m,wind_direction_10m,wind_gusts_10m,freezing_level_height,cloud_cover,shortwave_radiation';
 const TZ='timezone=America%2FEdmonton';
 const ymd=ms=>new Date(ms).toISOString().slice(0,10);
 const addDays=(d,n)=>ymd(Date.parse(d+'T12:00:00Z')+n*864e5);
 function todayLocal(){ return ymd(Date.now()-7*3600e3); }
-// weather model for the 61 days ending at endDate (plus 2 forecast days when endDate is today)
+// The model runs from 1 October of the season (so weak layers buried earlier are tracked),
+// or from 61 days back if that is earlier. The chart still shows the last 60 days.
+function startOf(endDate){
+  const y=+endDate.slice(0,4), m=+endDate.slice(5,7);
+  const oct=(m>=10?y:y-1)+'-10-01';
+  const back=addDays(endDate,-61);
+  return (m>=10||m<=5)&&oct<back?oct:back;
+}
+function mergeHourly(a,b){ // append hours from b that a does not have
+  if(!b||!b.hourly) return a; const have=new Set(a.hourly.time);
+  b.hourly.time.forEach((t,k)=>{ if(have.has(t)) return; for(const key of Object.keys(a.hourly)) a.hourly[key].push(b.hourly[key]?.[k]??null); });
+  return a;
+}
 async function getModel(endDate,isNow){
-  const start=addDays(endDate,-61);
-  if(isNow) return {j:await fetchJSON(`https://api.open-meteo.com/v1/forecast?${LL}&hourly=${WXVARS}&past_days=61&forecast_days=2&${TZ}`), name:'forecast models'};
-  const ageDays=(Date.parse(todayLocal())-Date.parse(endDate))/864e5;
-  if(ageDays<80) return {j:await fetchJSON(`https://api.open-meteo.com/v1/forecast?${LL}&hourly=${WXVARS}&start_date=${start}&end_date=${addDays(endDate,1)}&${TZ}`), name:'forecast models'};
-  if(start>='2022-01-01') return {j:await fetchJSON(`https://historical-forecast-api.open-meteo.com/v1/forecast?${LL}&hourly=${WXVARS}&start_date=${start}&end_date=${addDays(endDate,1)}&${TZ}`,25000), name:'archived forecast models'};
-  const j=await fetchJSON(`https://archive-api.open-meteo.com/v1/archive?${LL}&hourly=temperature_2m,precipitation,rain,snowfall,wind_speed_10m,wind_direction_10m,wind_gusts_10m&start_date=${start}&end_date=${addDays(endDate,1)}&${TZ}`,25000);
-  j.eraOnly=true; return {j, name:'ERA5 only (before 2022)'};
+  const start=startOf(endDate);
+  if(start>='2022-01-01'){
+    const j=await fetchJSON(`https://historical-forecast-api.open-meteo.com/v1/forecast?${LL}&hourly=${WXVARS}&start_date=${start}&end_date=${isNow?endDate:addDays(endDate,1)}&${TZ}`,30000);
+    if(isNow){ try{ mergeHourly(j,await fetchJSON(`https://api.open-meteo.com/v1/forecast?${LL}&hourly=${WXVARS}&past_days=1&forecast_days=2&${TZ}`)); }catch(e){} }
+    return {j, name:'archived forecast models from '+start};
+  }
+  const j=await fetchJSON(`https://archive-api.open-meteo.com/v1/archive?${LL}&hourly=temperature_2m,precipitation,rain,snowfall,wind_speed_10m,wind_direction_10m,wind_gusts_10m,cloud_cover,shortwave_radiation&start_date=${start}&end_date=${addDays(endDate,1)}&${TZ}`,30000);
+  j.eraOnly=true; return {j, name:'ERA5 only (before 2022), from '+start};
 }
 async function getERA(endDate){
   const last=addDays(todayLocal(),-5); const end=endDate<last?addDays(endDate,1):last;
-  return fetchJSON(`https://archive-api.open-meteo.com/v1/archive?${LL}&hourly=precipitation&start_date=${addDays(endDate,-61)}&end_date=${end}&${TZ}`,25000);
+  return fetchJSON(`https://archive-api.open-meteo.com/v1/archive?${LL}&hourly=precipitation&start_date=${startOf(endDate)}&end_date=${end}&${TZ}`,30000);
 }
-// Average the forecast-model archive with ERA5 reanalysis precipitation where both exist.
-// The two disagree by up to 3x in this area; averaging hedges between them.
-function mergeERA(j,e){
-  j.era=0; if(!e||!e.hourly||j.eraOnly) return j;
-  const m={}; e.hourly.time.forEach((t,k)=>m[t]=e.hourly.precipitation[k]);
-  j.hourly.precipitation=j.hourly.precipitation.map((p,k)=>{const q=m[j.hourly.time[k]]; if(q==null) return p; j.era++; return ((p||0)+q)/2;});
-  return j;
-}
+const mergeERA=(j,e)=>TM.mergeERA(j,e);
 // Parks Canada stations via Avalanche Canada: snow depth (Bosworth Lower = treeline, Stanley = below treeline),
 // ridgetop wind and temperature (Bosworth Upper, Whymper as backup). At most ~31 days per request.
 const STATIONS={tl:110, btl:108, ridge:111, ridge2:109};
 async function getStations(endDate,isNow){
   const endMs=isNow?Date.now():Date.parse(endDate+'T19:00:00Z');
+  const startMs=Date.parse(startOf(endDate)+'T07:00:00Z');
   const iso=ms=>new Date(ms).toISOString().slice(0,19)+'Z';
-  const chunks=[[endMs-61*864e5,endMs-31*864e5],[endMs-31*864e5,endMs]];
+  const chunks=[]; for(let a=startMs;a<endMs;a+=30*864e5) chunks.push([a,Math.min(endMs,a+30*864e5)]);
   const get=async id=>{ const parts=await Promise.all(chunks.map(([a,b])=>fetchJSON(`https://weather.prod.avalanche.ca/stations/${id}/measurements?fromDate=${iso(a)}&toDate=${iso(b)}`,20000).catch(()=>[]))); return parts.flat(); };
   const [tl,btl,ridge,ridge2]=await Promise.all([get(STATIONS.tl),get(STATIONS.btl),get(STATIONS.ridge),get(STATIONS.ridge2)]);
-  const n=tl.length+btl.length+ridge.length+ridge2.length;
-  if(!n) throw new Error('no readings for these dates');
-  // daily values, local day (Mountain time)
-  const by={};
-  const day=t=>ymd(Date.parse(t)-7*3600e3);
-  const put=(arr,f)=>arr.forEach(x=>{const d=day(x.measurementDateTime); (by[d]=by[d]||{}); f(by[d],x);});
-  put(tl,(o,x)=>{ if(x.snowHeight!=null&&x.snowHeight>=0&&x.snowHeight<600)(o.tlHS=o.tlHS||[]).push(x.snowHeight); });
-  put(btl,(o,x)=>{ if(x.snowHeight!=null&&x.snowHeight>=0&&x.snowHeight<600)(o.btlHS=o.btlHS||[]).push(x.snowHeight); });
-  const rid=ridge.length?ridge:ridge2;
-  put(rid,(o,x)=>{ if(x.windSpeedAvg!=null){(o.w=o.w||[]).push([x.windSpeedAvg,x.windDirAvg||0]);} if(x.airTempAvg!=null)(o.ta=o.ta||[]).push(x.airTempAvg); });
-  const med=a=>{const s=[...a].sort((p,q)=>p-q); return s[Math.floor(s.length/2)];};
-  const out={};
-  for(const [d,o] of Object.entries(by)){
-    const r={};
-    if(o.tlHS&&o.tlHS.length>=6) r.tlHS=med(o.tlHS);
-    if(o.btlHS&&o.btlHS.length>=6) r.btlHS=med(o.btlHS);
-    if(o.w&&o.w.length>=6){ let sx=0,sy=0,s=0; o.w.forEach(([v,a])=>{sx+=Math.sin(a*Math.PI/180)*v; sy+=Math.cos(a*Math.PI/180)*v; s+=v;}); r.wind=s/o.w.length; r.wdir=((Math.atan2(sx,sy)*180/Math.PI)+360)%360; }
-    if(o.ta&&o.ta.length>=6) r.ta=o.ta.reduce((a,b)=>a+b,0)/o.ta.length;
-    out[d]=r;
-  }
-  const last=tl[0]||btl[0]||rid[0];
-  return {days:out, count:n, latest:last?.measurementDateTime, ridgeName:ridge.length?'Bosworth Upper':'Whymper'};
+  const r=TM.stationDays(tl,btl,ridge,ridge2,-7);
+  if(!r.count) throw new Error('no readings for these dates');
+  return r;
 }
 const AVMAP={low:1,moderate:2,considerable:3,high:4,extreme:5};
 const PTMAP={'storm-slab':'storm','stormslab':'storm','wind-slab':'wind','windslab':'wind','persistent-slab':'persistent','persistentslab':'persistent','deep-persistent-slab':'deep','deeppersistentslab':'deep','wet-slab':'wetslab','wetslab':'wetslab','loose-wet':'wetloose','loosewet':'wetloose','loose-dry':'dryloose','loosedry':'dryloose','cornice':'cornice','cornices':'cornice'};
@@ -5924,9 +5977,10 @@ async function loadConditions(endDate){
     applySeason(!avOK);
   }
   if(avOK){ S.danger=fc.value.danger; S.problems=fc.value.problems; S.dangerFrom='avcan'; }
-  dangerUI(); probsUI(); wxUI(); seasonUI(); minUI(mn.status==='fulfilled'?mn.value:null); recompute(); liveUI();
+  dangerUI(); probsUI(); wxUI(); seasonUI(); layersUI(); minUI(mn.status==='fulfilled'?mn.value:null); recompute(); liveUI();
 }
 function tryLive(){ return loadConditions(document.getElementById('endDate').value||null); }
+['startTime','paceSel'].forEach(id=>document.getElementById(id).addEventListener('change',()=>{ if(SEASON) SEASON._hm=null; renderAssess(); if(typeof routeListUI==='function') routeListUI(); }));
 (function(){
   const inp=document.getElementById('endDate'); inp.max=todayLocal(); inp.min='1950-01-01'; inp.value=todayLocal();
   inp.onchange=()=>{ if(inp.value) loadConditions(inp.value); };
@@ -5940,138 +5994,323 @@ function tryLive(){ return loadConditions(document.getElementById('endDate').val
 let SEASON=null;
 const AVC={};
 const BANDZ={btl:1850, tl:2175, alp:2700};
+/* The snowpack and danger model itself lives in build/model.js (inlined below at build time)
+   and is shared with the accuracy test, so the page runs exactly the tested code. */
+/* Mount Temple snowpack and danger model.
+   Shared by the page (inlined into index.html) and the accuracy test (build/backtest.mjs),
+   so the numbers in the test report come from the same code the page runs.
+
+   Inputs: Open-Meteo hourly weather at Mount Temple (local time), optional ERA5 precipitation,
+   optional Parks Canada station readings (daily). Output: one state per day from the first day
+   of the weather record, plus an assessment (danger per band, problems, weak layers) for any day.
+
+   Every threshold lives in PARAMS. DEFAULT_PARAMS are starting guesses; the accuracy test tunes
+   them against Parks Canada ratings and writes the tuned set to build/data/temple/backtest/params.json. */
+(function (root) {
+  const BANDZ = { btl: 1850, tl: 2175, alp: 2700 };
+  const BANDS = ['btl', 'tl', 'alp'];
+  const ZP = 2100;            // precipitation is taken as valid at the model's own terrain height
+  const LAPSE = -0.0065;      // °C per m
+  const DEFAULT_PARAMS = {
+    // loading thresholds (a day reaches 1.0 at these)
+    stormCm: 30, windCm: 20, rainMm: 10, decay: 0.2, windMin: 20, windSpan: 40,
+    // weak layers
+    clearCloud: 20,  // % cloud cover counted as a clear night (user choice)
+    shWind: 10,      // km/h, night wind below which surface hoar can grow
+    shTmin: -8,      // °C, night air temperature below which surface hoar can grow
+    nsfTmin: -12,    // °C, night air temperature for near-surface facets under clear sky
+    grad: 10,        // °C per m, temperature gradient for basal faceting (ground at 0 °C)
+    basalDays: 7,    // days of strong gradient before a basal facet layer is counted
+    basalMaxHS: 100, // cm, basal faceting only in a snowpack thinner than this
+    buryCm: 5,       // cm of new snow that buries a surface layer
+    surfLife: 10,    // days an unburied surface layer survives
+    pMin: 30, pMax: 100, // cm burial depth: persistent between, deep persistent beyond
+    life: 60,        // days after which a buried layer stops counting
+    // danger
+    wPers: 0.45, wDeep: 0.35, c2: 0.25, c3: 0.6, c4: 1.0, c5: 1.6, supMin: 20, supSpan: 60,
+    // problems
+    probStorm: 0.6, probWind: 0.4, probPers: 0.5, probDeep: 0.5, probWet: 0.5,
+    // warming on sunny slopes
+    meltT: 1, meltSpan: 6
+  };
+  const addDays = (d, n) => new Date(Date.parse(d + 'T12:00:00Z') + n * 864e5).toISOString().slice(0, 10);
+  const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
+
+  /* ---- daily inputs, with station corrections ---- */
+  function prepare(j, obs) {
+    const h = j.hourly, zref = j.elevation || 3478;
+    const O = (obs && obs.days) || {};
+    const days = [], idx = {};
+    for (let k = 0; k < h.time.length; k++) {
+      const d = h.time[k].slice(0, 10);
+      if (!(d in idx)) { idx[d] = days.length; days.push({ date: d, hrs: [] }); }
+      days[idx[d]].hrs.push(k);
+    }
+    const pfOf = b => Math.max(0.35, 1 + 0.5 * (BANDZ[b] - ZP) / 1000);
+    // 1. temperature bias against the ridgetop station (2745 m)
+    let tb = 0, nb = 0;
+    for (const D of days) {
+      const o = O[D.date]; if (!o || o.ta == null) continue;
+      const m = D.hrs.reduce((a, k) => a + (h.temperature_2m[k] ?? 0), 0) / D.hrs.length + LAPSE * (2745 - zref);
+      tb += o.ta - m; nb++;
+    }
+    const tbias = nb >= 5 ? clamp(tb / nb, -6, 6) : 0;
+    // 2. snowfall scaling from treeline snow-depth gains (Bosworth Lower)
+    const obsHN = (b, d) => {
+      const key = b + 'HS', o = O[d], p = O[addDays(d, -1)];
+      if (!o || o[key] == null || !p || p[key] == null) return null;
+      return Math.max(0, o[key] - p[key]) * 1.15;
+    };
+    let so = 0, sm = 0;
+    for (const D of days) {
+      const ho = obsHN('tl', D.date); if (ho == null) continue; so += ho;
+      for (const k of D.hrs) {
+        const T = (h.temperature_2m[k] ?? 0) + tbias + LAPSE * (BANDZ.tl - zref);
+        sm += Math.max(0, h.precipitation[k] || 0) * pfOf('tl') * clamp((2 - T) / 2, 0, 1);
+      }
+    }
+    const kcal = (sm > 5 && so > 2) ? clamp(so / sm, 0.4, 3) : 1;
+    let obsDays = 0;
+    for (const D of days) {
+      let wsx = 0, wsy = 0, wsum = 0, n = 0, gust = 0, fl = 0, cn = 0, cnN = 0, wn = 0, sw = 0;
+      for (const k of D.hrs) {
+        const ws = h.wind_speed_10m[k] || 0, wd = h.wind_direction_10m[k] || 0;
+        wsx += Math.sin(wd * Math.PI / 180) * ws; wsy += Math.cos(wd * Math.PI / 180) * ws; wsum += ws; n++;
+        gust = Math.max(gust, h.wind_gusts_10m?.[k] || 0); fl += h.freezing_level_height?.[k] || 0;
+        sw += h.shortwave_radiation?.[k] || 0;
+        const hr = +h.time[k].slice(11, 13);
+        if (hr <= 6) { cn += h.cloud_cover?.[k] ?? 100; wn += ws; cnN++; }
+      }
+      D.wind = wsum / Math.max(1, n); D.windDir = ((Math.atan2(wsx, wsy) * 180 / Math.PI) + 360) % 360;
+      D.gust = gust; D.fl = fl / Math.max(1, n); D.solar = sw / 1000; // kWh/m2 per day
+      D.cloudNight = cnN ? cn / cnN : 100; D.windNight = cnN ? wn / cnN : 99;
+      const od = O[D.date];
+      if (od && od.wind != null) { D.wind = od.wind; D.windDir = od.wdir; D.obsWind = true; }
+      if (od && (od.tlHS != null || od.wind != null)) obsDays++;
+      D.b = {};
+      for (const b of BANDS) {
+        const dT = LAPSE * (BANDZ[b] - zref) + tbias, pf = pfOf(b);
+        let hn = 0, rain = 0, tmax = -99, tsum = 0, tnight = 99;
+        for (const k of D.hrs) {
+          const T = (h.temperature_2m[k] ?? 0) + dT, p = Math.max(0, h.precipitation[k] || 0) * pf;
+          const fs = clamp((2 - T) / 2, 0, 1);
+          hn += p * fs; rain += p * (1 - fs); tmax = Math.max(tmax, T); tsum += T;
+          if (+h.time[k].slice(11, 13) <= 6) tnight = Math.min(tnight, T);
+        }
+        hn *= kcal;
+        const ho = b === 'alp' ? null : obsHN(b, D.date); if (ho != null) hn = ho;
+        D.b[b] = { hn, rain, tmax, tmean: tsum / Math.max(1, D.hrs.length), tnight: tnight === 99 ? tsum / Math.max(1, D.hrs.length) : tnight,
+                   oHS: od && b !== 'alp' ? od[b + 'HS'] : null, oTL: od ? od.tlHS : null };
+      }
+    }
+    return { days, zref, tbias, kcal, obsDays, h };
+  }
+
+  /* ---- daily simulation per band ---- */
+  function simulate(I, P) {
+    const R = [];
+    const st = {};
+    for (const b of BANDS) st[b] = { HS: 0, SWE: 0, loose: 0, cold: 0, warm: 0, layers: [], hist: [] };
+    I.days.forEach((D, i) => {
+      const row = { b: {} };
+      for (const b of BANDS) {
+        const s = st[b], d = D.b[b];
+        // night: surface layers form on existing snow
+        if (s.HS > 10) {
+          const surf = s.layers.find(L => !L.buried && L.type !== 'basal');
+          const clear = D.cloudNight < P.clearCloud;
+          const snowedLast3 = s.hist.slice(-3).reduce((a, x) => a + x.hn, 0);
+          let type = null;
+          if (clear && D.windNight < P.shWind && d.tnight < P.shTmin && d.hn < 1) type = 'sh';
+          else if (clear && d.tnight < P.nsfTmin && snowedLast3 < 10) type = 'nsf';
+          if (type) {
+            if (surf && surf.type !== 'crust') { surf.str = Math.min(3, surf.str + 1); if (type === 'sh') surf.type = 'sh'; }
+            else if (!surf) s.layers.push({ type, day: i, date: D.date, depth: 0, buried: false, str: 1, asp: [1, 1, 1, 1, 1, 1, 1, 1] });
+          }
+          // crusts: rain on snow, or melt on sunny slopes
+          if (d.rain > 2) s.layers.push({ type: 'crust', day: i, date: D.date, depth: 0, buried: false, str: 1, asp: [1, 1, 1, 1, 1, 1, 1, 1] });
+          else if (d.tmax > P.meltT && D.solar > 2) s.layers.push({ type: 'crust', day: i, date: D.date, depth: 0, buried: false, str: 1, asp: [0, 0, 1, 1, 1, 1, 1, 0] });
+          // basal facets: strong gradient through a thin pack (ground at 0 °C)
+          const grad = (0 - d.tmean) / (Math.max(5, s.HS) / 100);
+          if (grad > P.grad && s.HS < P.basalMaxHS) s.cold++;
+          if (s.cold >= P.basalDays && !s.layers.some(L => L.type === 'basal'))
+            s.layers.push({ type: 'basal', day: i, date: D.date, depth: s.HS, buried: true, str: 1, asp: [1, 1, 1, 1, 1, 1, 1, 1] });
+        }
+        // snowpack depth and water equivalent
+        const melt = Math.max(0, 3 * Math.max(0, d.tmean) + 1 * Math.max(0, d.tmax - 1));
+        s.SWE = Math.max(0, s.SWE + d.hn - melt + (s.HS > 0 ? Math.min(d.rain, s.SWE * 0.1) : 0));
+        const prevHS = s.HS;
+        s.HS = s.SWE <= 0 ? 0 : Math.min(s.SWE, Math.max(s.SWE / 3, s.HS * 0.97 + d.hn - melt / 3));
+        if (d.oHS != null) { s.HS = d.oHS; s.SWE = Math.max(s.SWE, d.oHS * 2.5); }
+        if (b === 'alp' && d.oTL != null && s.HS < d.oTL) { s.HS = d.oTL; s.SWE = Math.max(s.SWE, d.oTL * 2.5); }
+        // burial and settlement of layers
+        const ratio = prevHS > 0 ? s.HS / Math.max(prevHS + d.hn, 1) : 1;
+        for (const L of s.layers) {
+          if (L.type === 'basal') { L.depth = s.HS; continue; }
+          L.depth = Math.max(0, (L.depth + d.hn) * Math.min(1, ratio + 0.02));
+          if (!L.buried && L.depth >= P.buryCm) L.buried = true;
+        }
+        // warm spells heal layers; snow-free ground removes everything
+        s.warm = d.tmean > 0 ? s.warm + 1 : 0;
+        s.layers = s.layers.filter(L => {
+          if (s.HS < 5) return false;
+          const age = i - L.day;
+          if (!L.buried) return age <= P.surfLife && !(D.wind > 40 && L.type === 'sh');
+          if (L.type === 'basal') return s.HS < 250 || age < P.life * 2;
+          if (s.warm >= 3 && L.type !== 'crust') return false;
+          return age <= P.life;
+        });
+        // loading
+        s.loose = s.loose * 0.6 + d.hn;
+        s.hist.push({ hn: d.hn });
+        const hn72 = s.hist.slice(-3).reduce((a, x) => a + x.hn, 0);
+        const bf = b === 'btl' ? 0.2 : b === 'tl' ? 0.6 : 1;
+        const transport = Math.min(40, s.loose) * clamp((D.wind - P.windMin) / P.windSpan, 0, 1) * bf;
+        const down = (D.windDir + 180) % 360;
+        const asp = [];
+        for (let k = 0; k < 8; k++) {
+          const az = k * 45, align = Math.max(0, Math.cos((az - down) * Math.PI / 180));
+          const solar = Math.max(0, Math.cos((az - 180) * Math.PI / 180));
+          const storm = hn72 / P.stormCm;
+          const wind = transport * align * 1.6 / P.windCm;
+          const wet = s.HS > 30 ? Math.max(d.rain / P.rainMm, d.tmax > P.meltT ? (d.tmax - P.meltT) / P.meltSpan * (0.4 + 0.6 * solar) : 0) : 0;
+          asp.push({ storm, wind, wet, I: Math.max(storm, wind, wet) });
+        }
+        row.b[b] = { hn: d.hn, rain: d.rain, tmax: d.tmax, tmean: d.tmean, HS: s.HS, asp, transport,
+                     layers: s.layers.filter(L => L.buried).map(L => ({ type: L.type, date: L.date, day: L.day, depth: L.depth, str: L.str, asp: L.asp })) };
+      }
+      R.push(row);
+    });
+    return R;
+  }
+
+  /* ---- assessment for one day ---- */
+  const TYPEW = { sh: 1, nsf: 0.8, crust: 0.6, basal: 1 };
+  function assess(I, R, i, P) {
+    const out = { L: {}, main: {}, trig: {}, sup: {}, pers: {}, deep: {}, danger: {}, layers: {}, wet: {} };
+    for (const b of BANDS) {
+      out.L[b] = [0, 0, 0, 0, 0, 0, 0, 0]; out.main[b] = ['', '', '', '', '', '', '', ''];
+      for (let j = Math.max(0, i - 6); j <= i; j++) {
+        const w = Math.max(0, 1 - P.decay * (i - j));
+        R[j].b[b].asp.forEach((A, k) => {
+          if (w > 0 && A.I * w > out.L[b][k]) { out.L[b][k] = A.I * w; out.main[b][k] = A.I === A.wind ? 'wind slab' : A.I === A.storm ? 'storm snow' : 'wet'; }
+        });
+      }
+      const r = R[i].b[b], hs = r.HS;
+      out.sup[b] = clamp((hs - P.supMin) / P.supSpan, 0, 1);
+      let pers = 0, deep = 0;
+      for (const L of r.layers) {
+        const age = i - L.day, wt = TYPEW[L.type] * Math.min(1, 0.6 + 0.2 * L.str);
+        if (L.type === 'basal') { if (hs > P.pMin) deep = Math.max(deep, wt * clamp(1 - age / (P.life * 2), 0.3, 1)); continue; }
+        const fade = Math.max(0, 1 - age / P.life);
+        if (L.depth >= P.pMin && L.depth <= P.pMax) pers = Math.max(pers, wt * fade);
+        else if (L.depth > P.pMax) deep = Math.max(deep, wt * fade * 0.8);
+      }
+      out.pers[b] = pers; out.deep[b] = deep; out.layers[b] = r.layers;
+      const Hh = Math.max(...out.L[b]) * Math.max(0.15, out.sup[b]) + (P.wPers * pers + P.wDeep * deep) * out.sup[b];
+      out.danger[b] = hs < 15 ? 1 : Hh < P.c2 ? 1 : Hh < P.c3 ? 2 : Hh < P.c4 ? 3 : Hh < P.c5 ? 4 : 5;
+      out.wet[b] = out.L[b].some((v, k) => out.main[b][k] === 'wet' && v >= P.probWet);
+    }
+    // problems
+    const probs = [];
+    const anyB = f => ({ alp: f('alp') ? 1 : 0, tl: f('tl') ? 1 : 0, btl: f('btl') ? 1 : 0 });
+    const has = o => o.alp || o.tl || o.btl;
+    const stormB = anyB(b => Math.max(...R[i].b[b].asp.map(a => a.storm)) >= P.probStorm && out.sup[b] > 0.1);
+    if (has(stormB)) probs.push({ type: 'storm', bands: stormB, asp: [1, 1, 1, 1, 1, 1, 1, 1], like: 2, size: 1.5 });
+    const windAsp = [0, 0, 0, 0, 0, 0, 0, 0], windB = { alp: 0, tl: 0, btl: 0 };
+    for (const b of BANDS) out.L[b].forEach((v, k) => { if (out.main[b][k] === 'wind slab' && v >= P.probWind && R[i].b[b].HS > 10) { windAsp[k] = 1; windB[b] = 1; } });
+    if (windAsp.some(x => x)) probs.push({ type: 'wind', bands: windB, asp: windAsp, like: 2, size: 1.5 });
+    const persB = anyB(b => out.pers[b] >= P.probPers && out.sup[b] > 0.1);
+    if (has(persB)) probs.push({ type: 'persistent', bands: persB, asp: [1, 1, 1, 1, 1, 1, 1, 1], like: 2, size: 2 });
+    const deepB = anyB(b => out.deep[b] >= P.probDeep && out.sup[b] > 0.1);
+    if (has(deepB)) probs.push({ type: 'deep', bands: deepB, asp: [1, 1, 1, 1, 1, 1, 1, 1], like: 1, size: 3 });
+    const wetB = anyB(b => out.wet[b]);
+    if (has(wetB)) probs.push({ type: 'wetloose', bands: wetB, asp: [0, 0, 1, 1, 1, 1, 1, 0], like: 2, size: 1.5 });
+    out.problems = probs;
+    return out;
+  }
+
+  /* ---- hourly warming factor for a point (time-of-day effect on sunny slopes) ---- */
+  function warming(I, hourIdx, z, aspectDeg, P) {
+    const h = I.h; if (hourIdx < 0 || hourIdx >= h.time.length) return 1;
+    const T = (h.temperature_2m[hourIdx] ?? 0) + I.tbias + LAPSE * (z - I.zref);
+    const sw = h.shortwave_radiation?.[hourIdx] ?? 0;
+    const solar = Math.max(0, Math.cos((aspectDeg - 180) * Math.PI / 180));
+    if (T <= 0 || sw < 100) return 1;
+    return 1 + 0.8 * clamp(T / 5, 0, 1) * clamp(sw / 600, 0, 1) * solar;
+  }
+
+  /* ---- Parks Canada station readings (Avalanche Canada weather API) to daily values ----
+     tl = Bosworth Lower (snow depth), btl = Stanley (snow depth), ridge = Bosworth Upper, ridge2 = Whymper (wind, temperature).
+     utcOffsetH: hours to add to UTC for local time (Mountain Standard Time = -7). */
+  function stationDays(tl, btl, ridge, ridge2, utcOffsetH) {
+    const ymd = ms => new Date(ms).toISOString().slice(0, 10);
+    const by = {};
+    const day = t => ymd(Date.parse(t) + utcOffsetH * 3600e3);
+    const put = (arr, f) => (arr || []).forEach(x => { const d = day(x.measurementDateTime); (by[d] = by[d] || {}); f(by[d], x); });
+    const okHS = v => v != null && v >= 0 && v < 600;
+    put(tl, (o, x) => { if (okHS(x.snowHeight)) (o.tlHS = o.tlHS || []).push(x.snowHeight); });
+    put(btl, (o, x) => { if (okHS(x.snowHeight)) (o.btlHS = o.btlHS || []).push(x.snowHeight); });
+    const rid = (ridge && ridge.length) ? ridge : ridge2;
+    put(rid, (o, x) => { if (x.windSpeedAvg != null) (o.w = o.w || []).push([x.windSpeedAvg, x.windDirAvg || 0]); if (x.airTempAvg != null) (o.ta = o.ta || []).push(x.airTempAvg); });
+    const med = a => { const s = [...a].sort((p, q) => p - q); return s[Math.floor(s.length / 2)]; };
+    const out = {};
+    for (const [d, o] of Object.entries(by)) {
+      const r = {};
+      if (o.tlHS && o.tlHS.length >= 6) r.tlHS = med(o.tlHS);
+      if (o.btlHS && o.btlHS.length >= 6) r.btlHS = med(o.btlHS);
+      if (o.w && o.w.length >= 6) { let sx = 0, sy = 0, s = 0; o.w.forEach(([v, a]) => { sx += Math.sin(a * Math.PI / 180) * v; sy += Math.cos(a * Math.PI / 180) * v; s += v; }); r.wind = s / o.w.length; r.wdir = ((Math.atan2(sx, sy) * 180 / Math.PI) + 360) % 360; }
+      if (o.ta && o.ta.length >= 6) r.ta = o.ta.reduce((a, b) => a + b, 0) / o.ta.length;
+      out[d] = r;
+    }
+    const n = (tl || []).length + (btl || []).length + (ridge || []).length + (ridge2 || []).length;
+    return { days: out, count: n, ridgeName: (ridge && ridge.length) ? 'Bosworth Upper' : 'Whymper' };
+  }
+
+  /* ---- average model precipitation with ERA5 where both exist ---- */
+  function mergeERA(j, e) {
+    j.era = 0; if (!e || !e.hourly || j.eraOnly) return j;
+    const m = {}; e.hourly.time.forEach((t, k) => m[t] = e.hourly.precipitation[k]);
+    j.hourly.precipitation = j.hourly.precipitation.map((p, k) => { const q = m[j.hourly.time[k]]; if (q == null) return p; j.era++; return ((p || 0) + q) / 2; });
+    return j;
+  }
+
+  const API = { BANDZ, BANDS, DEFAULT_PARAMS, prepare, simulate, assess, warming, addDays, stationDays, mergeERA };
+  if (typeof module !== 'undefined' && module.exports) module.exports = API;
+  else root.TempleModel = API;
+})(typeof globalThis !== 'undefined' ? globalThis : this);
+
+const TM=globalThis.TempleModel;
+const TUNED={"stormCm":34.453,"windCm":10.733,"rainMm":10,"decay":0.273,"windMin":22.981,"windSpan":40,"clearCloud":20,"shWind":10.195,"shTmin":-5.392,"nsfTmin":-14.095,"grad":13.279,"basalDays":12,"basalMaxHS":100,"buryCm":5,"surfLife":10,"pMin":16.669,"pMax":87.404,"life":79.39,"wPers":0.991,"wDeep":0.367,"c2":0.05,"c3":0.758,"c4":1.521,"c5":2.5,"supMin":4.578,"supSpan":168.755,"probStorm":0.462,"probWind":0.2,"probPers":0.31,"probDeep":0.294,"probWet":0.788,"meltT":-1.127,"meltSpan":5.435};
+const ACC={"tested_on":"2025-26","months":"Dec\u2013Mar","n_band_ratings":357,"exact":0.35,"within1":0.958,"mae":0.695,"kappa":0.624,"bench_exact":0.482,"bench_within1":0.905,"bench_mae":0.633,"bench_kappa":0.481,"beats_benchmark":false,"problems":{"storm":{"hit":0.8,"false_alarm":0.76,"parks_days":15},"wind":{"hit":0.363,"false_alarm":0.214,"parks_days":91},"persistent":{"hit":0.984,"false_alarm":0.465,"parks_days":62},"deep":{"hit":1,"false_alarm":0.727,"parks_days":33},"wet":{"hit":1,"false_alarm":0.708,"parks_days":7}},"runs":8,"range_exact":[0.269,0.409],"range_mae":[0.681,0.98],"per_season":{"2022-23":{"role":"tuning","n":363,"exact":0.424,"within1":0.961,"mae":0.614,"bias":-0.466,"kappa":0.304,"wind_hit":0,"persistent_hit":0.952},"2023-24":{"role":"tuning","n":359,"exact":0.398,"within1":0.947,"mae":0.655,"bias":0.214,"kappa":0.425,"wind_hit":0.269,"persistent_hit":1},"2024-25":{"role":"tuning","n":363,"exact":0.435,"within1":0.992,"mae":0.573,"bias":0.193,"kappa":0.496,"wind_hit":0.203,"persistent_hit":1},"2025-26":{"role":"test","n":357,"exact":0.35,"within1":0.958,"mae":0.695,"bias":0.499,"kappa":0.624,"wind_hit":0.363,"persistent_hit":0.984}},"per_season_benchmark":{"2022-23":{"exact":0.559,"within1":0.915,"mae":0.534},"2023-24":{"exact":0.549,"within1":0.889,"mae":0.577},"2024-25":{"exact":0.617,"within1":0.972,"mae":0.41},"2025-26":{"exact":0.482,"within1":0.905,"mae":0.633}},"disclosure":"Test winter scored three times while adjusting the tuning setup; earlier setups scored average error 0.60 to 0.66."};
+const MP=Object.assign({},TM.DEFAULT_PARAMS,TUNED||{});
 function seasonModel(j,src,obs,refMs){
-  const h=j.hourly, zref=j.elevation||3478, zP=2100, off=(j.utc_offset_seconds||0)*1000;
-  const tms=h.time.map(t=>Date.parse(t+'Z')-off), now=refMs||Date.now();
-  const dayOf=k=>h.time[k].slice(0,10);
+  const I=TM.prepare(j,obs), R=TM.simulate(I,MP), h=j.hourly, zref=I.zref, off=(j.utc_offset_seconds||0)*1000;
+  const now=refMs||Date.now();
   const todayStr=new Date(now+off).toISOString().slice(0,10);
-  const days=[]; const idx={};
-  for(let k=0;k<h.time.length;k++){
-    const d=dayOf(k); if(!(d in idx)){idx[d]=days.length; days.push({date:d,hrs:[]});}
-    days[idx[d]].hrs.push(k);
-  }
-  const bands=['btl','tl','alp'];
-  // ---- station corrections (Parks Canada stations near Lake Louise) ----
-  const O=(obs&&obs.days)||{};
-  const pfOf=b=>Math.max(0.35,1+0.5*(BANDZ[b]-zP)/1000);
-  // 1. temperature bias of the model against the ridgetop station (2745 m)
-  let tb=0, nb=0;
-  for(const D of days){ const o=O[D.date]; if(!o||o.ta==null) continue;
-    const m=D.hrs.reduce((a,k)=>a+(h.temperature_2m[k]??0),0)/D.hrs.length-0.0065*(2745-zref); tb+=o.ta-m; nb++; }
-  const tbias=nb>=5?Math.max(-6,Math.min(6,tb/nb)):0;
-  // 2. snowfall scaling: treeline snow-depth gains at Bosworth Lower against modelled treeline snowfall
-  const obsHN=(b,d)=>{ const key=b+'HS'; const o=O[d], p=O[addDays(d,-1)]; if(!o||o[key]==null||!p||p[key]==null) return null; return Math.max(0,o[key]-p[key])*1.15; };
-  let so=0, sm=0;
-  for(const D of days){ const ho=obsHN('tl',D.date); if(ho==null) continue; so+=ho;
-    for(const k of D.hrs){ const T=(h.temperature_2m[k]??0)+tbias-0.0065*(BANDZ.tl-zref); sm+=Math.max(0,h.precipitation[k]||0)*pfOf('tl')*Math.min(1,Math.max(0,(2-T)/2)); } }
-  const kcal=(sm>5&&so>2)?Math.max(0.4,Math.min(3,so/sm)):1;
-  let obsDays=0;
-  const out={days:[], src, zref, label:'', bands};
-  const HS={btl:0,tl:0,alp:0}, SWE={btl:0,tl:0,alp:0}, loose={btl:0,tl:0,alp:0}, face={btl:0,tl:0,alp:0};
-  const hist={btl:[],tl:[],alp:[]};
-  for(const D of days){
-    const fc = D.date>todayStr || (D.date===todayStr && false);
-    const row={date:D.date, forecast:D.date>todayStr, today:D.date===todayStr, b:{}};
-    let wsx=0, wsy=0, wsum=0, wmax=0, n=0, gust=0, fl=0;
-    for(const k of D.hrs){ const ws=h.wind_speed_10m[k]||0, wd=h.wind_direction_10m[k]||0;
-      wsx+=Math.sin(wd*Math.PI/180)*ws; wsy+=Math.cos(wd*Math.PI/180)*ws; wsum+=ws; n++; wmax=Math.max(wmax,ws); gust=Math.max(gust,h.wind_gusts_10m?.[k]||0); fl+=h.freezing_level_height?.[k]||0; }
-    row.wind=wsum/Math.max(1,n); row.windDir=((Math.atan2(wsx,wsy)*180/Math.PI)+360)%360; row.gust=gust; row.fl=fl/Math.max(1,n);
-    const od=O[D.date]; if(od&&od.wind!=null){ row.wind=od.wind; row.windDir=od.wdir; row.obsWind=true; }
-    if(od&&(od.tlHS!=null||od.wind!=null)) obsDays++;
-    for(const b of bands){
-      // temperature is valid at the API elevation (zref); precipitation at the model's own terrain height (~zP)
-      const zb=BANDZ[b], dT=-0.0065*(zb-zref)+tbias, pf=pfOf(b);
-      let hn=0, rain=0, tmax=-99, tsum=0;
-      for(const k of D.hrs){
-        const T=(h.temperature_2m[k]??0)+dT, p=Math.max(0,h.precipitation[k]||0)*pf;
-        const fs=Math.min(1,Math.max(0,(2-T)/2));
-        hn+=p*fs; rain+=p*(1-fs); tmax=Math.max(tmax,T); tsum+=T;
-      }
-      const tmean=tsum/Math.max(1,D.hrs.length);
-      hn*=kcal;
-      const ho=b==='alp'?null:obsHN(b,D.date); if(ho!=null) hn=ho;
-      // snowpack depth (cm): new snow at ~100 kg/m3 (1 mm water = 1 cm), settles 3 %/day, degree-day melt
-      const melt=Math.max(0,3*Math.max(0,tmean)+1*Math.max(0,tmax-1));
-      // water equivalent (mm) and depth (cm): fresh snow ~100 kg/m3, settles 3 %/day down to ~300 kg/m3
-      SWE[b]=Math.max(0,SWE[b]+hn-melt+(HS[b]>0?Math.min(rain,SWE[b]*0.1):0));
-      HS[b]=SWE[b]<=0?0:Math.min(SWE[b], Math.max(SWE[b]/3, HS[b]*0.97+hn-melt/3));
-      const oHS=od&&b!=='alp'?od[b+'HS']:null;
-      if(oHS!=null){ HS[b]=oHS; SWE[b]=Math.max(SWE[b],oHS*2.5); }
-      if(b==='alp'&&od&&od.tlHS!=null&&HS.alp<od.tlHS){ HS.alp=od.tlHS; SWE.alp=Math.max(SWE.alp,od.tlHS*2.5); }
-      // snow available for wind transport (decays as it bonds)
-      loose[b]=loose[b]*0.6+hn;
-      // faceting: thin, cold, dry snowpack (early-season weak layers)
-      if(HS[b]>5&&HS[b]<100&&tmean<-8&&hn<2) face[b]+=1; else if(hn>15) face[b]=Math.max(0,face[b]-0.5);
-      hist[b].push({hn,rain});
-      const last=(arr,nd)=>arr.slice(-nd).reduce((a,x)=>a+x,0);
-      const hn72=last(hist[b].map(x=>x.hn),3), rain24=rain;
-      const bf=b==='btl'?0.2:b==='tl'?0.6:1;
-      const transport=Math.min(40,loose[b])*Math.max(0,Math.min(1,(row.wind-20)/40))*bf;
-      const down=(row.windDir+180)%360;
-      const asp=[];
-      for(let s=0;s<8;s++){
-        const az=s*45, align=Math.max(0,Math.cos((az-down)*Math.PI/180));
-        const solar=Math.max(0,Math.cos((az-180)*Math.PI/180));
-        const storm=hn72/30;
-        const wind=transport*align*1.6/20;
-        const wet=(HS[b]>30? Math.max(rain24/10, tmax>1 ? (tmax-1)/6*(0.4+0.6*solar):0) : 0);
-        asp.push({storm,wind,wet,I:Math.max(storm,wind,wet)});
-      }
-      row.b[b]={hn,rain,tmax,tmean,HS:HS[b],face:face[b],asp,transport};
-    }
-    out.days.push(row);
-  }
-  // keep the last 61 past days plus today and forecast
-  const ti=out.days.findIndex(d=>d.today); const endI=ti>=0?ti:out.days.length-1;
+  let endI=I.days.findIndex(d=>d.date===todayStr); if(endI<0) endI=I.days.length-1;
+  const A=TM.assess(I,R,endI,MP);
   const startI=Math.max(0,endI-60);
-  out.days=out.days.slice(startI);
+  const bands=TM.BANDS;
+  const out={src, zref, bands, I, label:''};
+  out.days=I.days.slice(startI).map((D,k)=>{ const r=R[startI+k]; return {date:D.date, forecast:D.date>todayStr, today:D.date===todayStr, wind:D.wind, windDir:D.windDir, obsWind:!!D.obsWind,
+    b:Object.fromEntries(bands.map(b=>[b,{hn:r.b[b].hn, rain:r.b[b].rain, tmax:r.b[b].tmax, tmean:r.b[b].tmean, HS:r.b[b].HS, asp:r.b[b].asp}]))}; });
   const nowI=endI-startI;
-  // recent loading: loading counts 100 % today, 80 % yesterday, 60 % two days ago, ...
-  out.L={}; out.sup={}; out.pers={}; out.trig={}; out.main={};
-  for(const b of bands){
-    out.L[b]=[0,0,0,0,0,0,0,0]; out.trig[b]=[0,0,0,0,0,0,0,0]; out.main[b]=['','','','','','','',''];
-    for(let i=0;i<=nowI;i++){
-      const age=nowI-i, w=Math.max(0,1-0.2*age);
-      out.days[i].b[b].asp.forEach((A,s)=>{
-        if(A.I>=1) out.trig[b][s]++;
-        if(w>0&&A.I*w>out.L[b][s]){ out.L[b][s]=A.I*w; out.main[b][s]= A.I===A.wind?'wind slab':A.I===A.storm?'storm snow':'wet'; }
-      });
-    }
-    const hs=out.days[nowI].b[b].HS;
-    out.sup[b]=Math.max(0,Math.min(1,(hs-20)/60));
-    out.pers[b]=hs>20?Math.min(1,out.days[nowI].b[b].face/14):0;
-  }
-  // modelled danger per band (not an official rating)
-  out.danger={};
-  for(const b of bands){
-    const Hh=Math.max(...out.L[b])*Math.max(0.15,out.sup[b])+0.45*out.pers[b]*out.sup[b];
-    out.danger[b]= out.days[nowI].b[b].HS<15?1: Hh<0.25?1: Hh<0.6?2: Hh<1.0?3: Hh<1.6?4:5;
-  }
-  // derived problems
-  const probs=[];
-  const anyB=f=>({alp:f('alp')?1:0,tl:f('tl')?1:0,btl:f('btl')?1:0});
-  const stormB=anyB(b=>Math.max(...out.days[nowI].b[b].asp.map(a=>a.storm))*1>=0.6&&out.sup[b]>0.1);
-  if(stormB.alp||stormB.tl||stormB.btl) probs.push({type:'storm',bands:stormB,asp:[1,1,1,1,1,1,1,1],like:2,size:1.5});
-  const windAsp=[0,0,0,0,0,0,0,0]; const windB={alp:0,tl:0,btl:0};
-  for(const b of bands) out.L[b].forEach((v,s)=>{ if(out.main[b][s]==='wind slab'&&v>=0.4&&out.days[nowI].b[b].HS>10){windAsp[s]=1; windB[b]=1;} });
-  if(windAsp.some(x=>x)) probs.push({type:'wind',bands:windB,asp:windAsp,like:2,size:1.5});
-  const persB=anyB(b=>out.pers[b]>=0.5);
-  if(persB.alp||persB.tl||persB.btl) probs.push({type:'persistent',bands:persB,asp:[1,1,1,1,1,1,1,1],like:2,size:2});
-  const wetB=anyB(b=>out.L[b].some((v,s)=>out.main[b][s]==='wet'&&v>=0.5));
-  if(wetB.alp||wetB.tl||wetB.btl) probs.push({type:'wetloose',bands:wetB,asp:[0,0,1,1,1,1,1,0],like:2,size:1.5});
-  out.problems=probs.slice(0,3);
-  // current weather for the Weather now fields (treeline band, last hours)
-  const nk=Math.max(1,tms.findIndex(t=>t>now)); const kk=nk<0?tms.length:nk;
-  const sumH=(arr,hrs,b)=>{ const nd=Math.round(hrs/24); let s=0; for(let i=Math.max(0,nowI-nd+1);i<=nowI;i++) s+=out.days[i].b[b].hn; return s; };
+  Object.assign(out,{L:A.L, main:A.main, sup:A.sup, pers:A.pers, deep:A.deep, danger:A.danger, problems:A.problems.slice(0,3), layers:A.layers, seasonStart:I.days[0].date});
+  // weather at the selected time
+  const tms=h.time.map(t=>Date.parse(t+'Z')-off);
+  const nk=tms.findIndex(t=>t>now); const kk=nk<0?tms.length:Math.max(1,nk);
+  const sumD=(nd,b)=>{ let s=0; for(let i=Math.max(0,nowI-nd+1);i<=nowI;i++) s+=out.days[i].b[b].hn; return s; };
   let ws=h.wind_speed_10m.slice(Math.max(0,kk-12),kk), wd=h.wind_direction_10m.slice(Math.max(0,kk-12),kk);
   if(out.days[nowI].obsWind){ ws=[out.days[nowI].wind]; wd=[out.days[nowI].windDir]; }
   const sx=wd.reduce((a,d,k)=>a+Math.sin(d*Math.PI/180)*(ws[k]||1),0), sy=wd.reduce((a,d,k)=>a+Math.cos(d*Math.PI/180)*(ws[k]||1),0);
-  out.wx={hn24:Math.round(sumH(null,24,'tl')), hn72:Math.round(sumH(null,72,'tl')),
+  out.wx={hn24:Math.round(sumD(1,'tl')), hn72:Math.round(sumD(3,'tl')),
     wind:Math.round(ws.reduce((a,b)=>a+(b||0),0)/Math.max(1,ws.length)), windDir:Math.round((((Math.atan2(sx,sy)*180/Math.PI)+360)%360)/45)%8,
-    temp:Math.round((h.temperature_2m[kk-1]??0)+tbias-0.0065*(BANDZ.alp-zref)), fl:Math.round((h.freezing_level_height?.[kk-1]??Math.max(0,zref+((h.temperature_2m[kk-1]??0)+tbias)/0.0065))/50)*50};
-  out.nowI=nowI; out.era=j.era||0; out.obsUsed=obsDays; out.kcal=kcal; out.tbias=tbias; out.eraOnly=!!j.eraOnly;
+    temp:Math.round((h.temperature_2m[kk-1]??0)+I.tbias-0.0065*(BANDZ.alp-zref)), fl:Math.round((h.freezing_level_height?.[kk-1]??Math.max(0,zref+((h.temperature_2m[kk-1]??0)+I.tbias)/0.0065))/50)*50};
+  out.nowI=nowI; out.era=j.era||0; out.obsUsed=I.obsDays; out.kcal=I.kcal; out.tbias=I.tbias; out.eraOnly=!!j.eraOnly;
   out.label=new Date(tms[Math.min(tms.length-1,kk-1)]).toLocaleString([], {month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
   out.range=out.days[0].date+' to '+out.days[nowI].date;
+  out.endDate=todayStr;
   return out;
 }
 function applySeason(useDanger){
@@ -6087,6 +6326,7 @@ function seasonUI(){
   const bits=[Sx.range, Sx.src==='snapshot'?'saved snapshot':'live pull', Sx.eraOnly?'ERA5 reanalysis':Sx.era?'model precipitation averaged with ERA5':'forecast models only'];
   if(Sx.obsUsed) bits.push(`corrected with Parks Canada stations on ${Sx.obsUsed} days (snowfall ×${Sx.kcal.toFixed(2)}, temperature ${Sx.tbias>=0?'+':''}${Sx.tbias.toFixed(1)} °C)`);
   else bits.push('no station readings for these dates');
+  if(Sx.seasonStart&&Sx.seasonStart<Sx.days[0].date) bits.push('snowpack and weak layers tracked from '+Sx.seasonStart);
   head.textContent=bits.join(' · ');
   // chart
   const c=document.getElementById('seasonCv'), pr=window.devicePixelRatio||1, Wc=c.clientWidth||320, Hc=190;
@@ -6167,6 +6407,42 @@ function assessArea(R){
   const p90=sc[Math.floor(0.9*(sc.length-1))];
   return {area:true, ha:cells.length*G.res*G.res/1e4, zmin, zmax, maxS, maxA, maxScore, p90, routeScore:0.55*p90+0.45*maxScore, lenByCls, mi, dist:0};
 }
+/* ---------------- exposure time (Munter pace + hourly warming) ----------------
+   Munter: 1 km horizontal or 100 m up/down = 1 unit; units per hour = 4 up, 6 down (normal), half that in deep snow.
+   Start zone = release potential > 0.45 and runout = runout reach >= 0.25: the same cut-offs the terrain build uses. */
+const PACE={normal:{up:4,down:6}, deep:{up:2,down:3}};
+function hourIndexMap(){
+  if(!SEASON||!SEASON.I) return null;
+  if(SEASON._hm) return SEASON._hm;
+  const m={}; SEASON.I.h.time.forEach((t,k)=>m[t.slice(0,13)]=k); SEASON._hm=m; return m;
+}
+function exposure(sm){
+  const pace=PACE[document.getElementById('paceSel')?.value||'normal'];
+  const st=(document.getElementById('startTime')?.value||'07:00').split(':').map(Number);
+  const date=(SEASON&&SEASON.endDate)||S.endDate||todayLocal();
+  const t0=Date.parse(date+'T00:00:00Z')+(st[0]*60+st[1])*60e3; // wall-clock time in Mountain time, kept as a UTC-style label
+  const hm=hourIndexMap();
+  let tH=0, startMin=0, runMin=0, wExp=0, warmMax=1, peak={v:0,t:0,k:0};
+  const times=[0], warm=[1], scw=[sm[0].sc];
+  for(let k=1;k<sm.length;k++){
+    const dd=sm[k].d-sm[k-1].d, dz=sm[k].z-sm[k-1].z;
+    const units=dd/1000+Math.abs(dz)/100;
+    const dt=units/(dz>=0?pace.up:pace.down);
+    tH+=dt; times.push(tH);
+    const i=sm[k].i;
+    const clock=new Date(t0+tH*3600e3).toISOString().slice(0,13);
+    const hk=hm?hm[clock]:undefined;
+    const wf=hk!=null?TM.warming(SEASON.I,hk,sm[k].z,G.aspect[i]*360/256,MP):1;
+    warm.push(wf); warmMax=Math.max(warmMax,wf);
+    const raw=-Math.log(Math.max(1e-6,1-sm[k].sc/100))/1.4, sc=100*(1-Math.exp(-1.4*raw*wf)); scw.push(sc);
+    const inStart=G.pra[i]/255>0.45, inRun=G.runout[i]/255>=0.25;
+    const min=dt*60;
+    if(inStart) startMin+=min; else if(inRun) runMin+=min;
+    if(inStart||inRun){ wExp+=min*sc/100; if(sc>peak.v) peak={v:sc,t:tH,k}; }
+  }
+  const clockOf=h=>{const m=Math.round((st[0]*60+st[1])+h*60); return String(Math.floor(m/60)%24).padStart(2,'0')+':'+String(m%60).padStart(2,'0');};
+  return {hours:tH, startMin, runMin, wExp, warmMax, peak, end:clockOf(tH), peakAt:clockOf(peak.t), times, warm, scw, hasHourly:!!hm, date};
+}
 function assessRoute(R){
   if(R.area) return assessArea(R);
   const parts=(R.parts||[R.g]).map(p=>resample(p).filter(q=>inGrid(q[0],q[1]))).filter(p=>p.length);
@@ -6197,7 +6473,8 @@ function assessRoute(R){
   if(cur)cr.push(cur);
   cr.forEach(c=>c.len=sm[c.b].d-sm[c.a].d);
   const cruxes=cr.filter(c=>c.len>=30||c.max>=CUT[2]).sort((a,b)=>b.max-a.max).slice(0,4);
-  return {sm,dist,gain,loss,maxS,maxA,maxScore,p90,routeScore,lenByCls,cruxes};
+  const ex=exposure(sm);
+  return {sm,dist,gain,loss,maxS,maxA,maxScore,p90,routeScore,lenByCls,cruxes,ex};
 }
 function reason(i){
   const F=factorsAt(i); const parts=[];
@@ -6260,6 +6537,16 @@ function renderAssess0(){
       <div class="stat"><div class="v">${A.p90.toFixed(0)}</div><div class="l">90th pct</div></div>
       <div class="stat"><div class="v">${ATES[A.maxA].n}</div><div class="l">Max ATES</div></div>
     </div>
+    <div class="small muted" style="margin-top:10px">Time and exposure on ${A.ex.date}, one way</div>
+    <div class="stats">
+      <div class="stat"><div class="v">${Math.floor(A.ex.hours)} h ${Math.round((A.ex.hours%1)*60)} min</div><div class="l">Travel time, arrive ${A.ex.end}</div></div>
+      <div class="stat"><div class="v">${Math.round(A.ex.startMin)} min</div><div class="l">In start zones</div></div>
+      <div class="stat"><div class="v">${Math.round(A.ex.runMin)} min</div><div class="l">Under slopes (runout)</div></div>
+      <div class="stat"><div class="v">${A.ex.wExp.toFixed(1)}</div><div class="l">Risk-weighted exposure (min × score/100)</div></div>
+      <div class="stat"><div class="v">${A.ex.peak.v?A.ex.peakAt:'–'}</div><div class="l">Most exposed moment</div></div>
+      <div class="stat"><div class="v">×${A.ex.warmMax.toFixed(2)}</div><div class="l">Peak warming effect</div></div>
+    </div>
+    ${A.ex.hasHourly?'':'<div class="muted small">No hourly weather for this date, so time-of-day warming is not applied.</div>'}
     <div class="small muted" style="margin-top:10px">Distance by risk class</div>
     <div class="bar">${A.lenByCls.map((l,k)=>l>0?`<div title="${CLS[k].n}: ${fmtKm(l)}" style="width:${l/tot*100}%;background:${CLS[k].c}"></div>`:'').join('')}</div>
     <div class="small">${A.lenByCls.map((l,k)=>l>0?`<span style="margin-right:10px"><span class="sw" style="background:${CLS[k].c};width:9px;height:9px"></span> ${CLS[k].n} ${Math.round(l/tot*100)}%</span>`:'').join('')}</div>
@@ -6442,6 +6729,7 @@ const unq=p=>{const o=[]; for(let k=0;k<p.length;k+=2) o.push([p[k]/10,p[k+1]/10
     ROUTES=ROUTEDATA.routes.map(r=>Object.assign(routeFromLL(r.name,r.kind,r.note,r.pts),{group:r.group,season:r.season,rid:r.id}));
     RUNS=RUNDATA.runs.map((r,k)=>{const parts=r.p.map(unq); return {id:'run'+k,name:r.n,kind:'run',diff:r.d,mtn:r.m,area:!!r.a,parts,g:parts.flat(),note:''};});
     LIFTS=RUNDATA.lifts.map(l=>({name:l.n,type:l.t,g:unq(l.p)}));
+    accUI();
     if(WXSNAP){ SEASON=seasonModel(mergeERA(structuredClone(WXSNAP),WXSNAP.era5),'snapshot',null,Date.now()); applySeason(true); S.source='snapshot'; }
     dangerUI(); probsUI(); wxUI(); liveUI(); renderLegend(); wLbl(); seasonUI(); histUI();
     computeScores(); prepTexture(); renderBase();
