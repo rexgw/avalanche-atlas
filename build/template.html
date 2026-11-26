@@ -350,15 +350,23 @@ a{color:var(--gold2)}
 
     <div class="pane" id="pane-print" role="tabpanel">
       <h2>3D print</h2>
-      <p class="small">Download an STL of the mountain to print. Routes stand up as smooth, rounded ridges you can see and feel. The terrain surface itself is plain, with no risk texture. Preview print shows the exact model on the map before you download it.</p>
+      <p class="small">Download an STL of the whole mountain, or of one section you choose, to print. Routes stand up as smooth, rounded ridges you can see and feel. The terrain surface itself is plain, with no risk texture. Preview print shows the exact model on the map before you download it.</p>
       <div class="card">
-        <div class="rowf"><label class="small" for="printW">Width</label>
+        <div class="small" style="color:var(--gold2)">Print area</div>
+        <div class="rowf" style="margin-top:6px">
+          <button class="btn sm" id="areaBtn">Select area on map</button>
+          <button class="btn ghost sm" id="areaAll" disabled>Whole mountain</button>
+        </div>
+        <div class="muted small" id="areaInfo" style="margin-top:6px"></div>
+        <div class="rowf" style="margin-top:12px"><label class="small" for="printW">Width</label>
           <select id="printW"><option value="100">100 mm</option><option value="150" selected>150 mm</option><option value="200">200 mm</option></select></div>
+        <div class="rowf" style="margin-top:8px"><label class="small" for="printV">Height exaggeration</label>
+          <input type="range" id="printV" min="1" max="3" step="0.1" value="1.5" style="flex:1;min-width:80px" aria-describedby="printVV"><span class="small" id="printVV" style="min-width:34px;text-align:right">1.5×</span></div>
         <div class="muted small" id="printDims" style="margin-top:6px"></div>
-        <div class="muted small" style="margin-top:6px">Heights are exaggerated 1.5 times on a 3 mm base. Route ridges are 2.2 mm wide and 2.2 mm tall. A 0.4 mm nozzle at 0.12 to 0.2 mm layers works well.</div>
+        <div class="muted small" id="printNote" style="margin-top:6px"></div>
         <div class="small" style="margin-top:10px;color:var(--gold2)">Raised routes</div>
         <div id="printList" style="margin-top:4px"></div>
-        <div class="muted small" style="margin-top:6px">Select a route in the Routes tab to add it. Your drawn routes and the safest route are included when they exist.</div>
+        <div class="muted small" style="margin-top:6px">Select a route in the Routes tab to add it. Your drawn routes and the safest route are included when they exist. With a section chosen, only routes that cross it are shown, trimmed at its edge.</div>
         <div class="rowf" style="margin-top:12px"><button class="btn" id="printBtn">Download STL</button><button class="btn ghost" id="pvBtn">Preview print</button></div>
         <div class="small" id="printMsg" style="margin-top:8px"></div>
       </div>
@@ -870,6 +878,18 @@ function toScreen(x,y,z){
   const r=mapwrap.getBoundingClientRect(); return [(_v.x+1)/2*r.width,(1-_v.y)/2*r.height];
 }
 const gridScreen=(gx,gy,lift=6)=>toScreen(wx(gx),(meshH(gx,gy)+lift)*KM,wz(gy));
+function drawArea(){
+  const B=PA, N=28, pts=[];
+  const add=(x,y)=>pts.push(gridScreen(x,y,4));
+  for(let k=0;k<=N;k++) add(B.x0+(B.x1-B.x0)*k/N,B.y0);
+  for(let k=0;k<=N;k++) add(B.x1,B.y0+(B.y1-B.y0)*k/N);
+  for(let k=0;k<=N;k++) add(B.x1-(B.x1-B.x0)*k/N,B.y1);
+  for(let k=0;k<=N;k++) add(B.x0,B.y1-(B.y1-B.y0)*k/N);
+  const path=()=>{ octx.beginPath(); let pen=false; for(const p of pts){ if(!p){pen=false; continue;} if(pen) octx.lineTo(p[0],p[1]); else {octx.moveTo(p[0],p[1]); pen=true;} } };
+  path(); octx.closePath(); octx.fillStyle='rgba(201,162,39,.18)'; octx.fill();
+  path(); octx.setLineDash([]); octx.lineWidth=5; octx.strokeStyle='rgba(255,255,255,.9)'; octx.stroke();
+  path(); octx.lineWidth=2.5; octx.strokeStyle='#C9A227'; octx.setLineDash([9,5]); octx.stroke(); octx.setLineDash([]);
+}
 function drawOverlay(){
   const r=mapwrap.getBoundingClientRect();
   octx.setTransform(dpr,0,0,dpr,0,0); octx.clearRect(0,0,r.width,r.height);
@@ -886,6 +906,7 @@ function drawOverlay(){
     const clash=placed.some(b=>!(box[2]<b[0]||box[0]>b[2]||box[3]<b[1]||box[1]>b[3]));
     if(!clash&&dist<48){placed.push(box); octx.lineWidth=3; octx.strokeStyle='rgba(255,255,255,.88)'; octx.strokeText(l.name,sx+6,sy+2); octx.fillText(l.name,sx+6,sy+2);}
   }
+  if(PA&&(S.mode==='area'||document.getElementById('pane-print').classList.contains('on'))) drawArea();
   const dot=(g,fill,rad,stroke)=>{const s=gridScreen(g[0],g[1]); if(!s)return; octx.beginPath(); octx.arc(s[0],s[1],rad,0,7); octx.fillStyle=fill; octx.fill(); if(stroke){octx.strokeStyle=stroke; octx.lineWidth=2; octx.stroke();}};
   if(S.mode==='draw'||S.draw.length) S.draw.forEach(p=>dot(p,'#7B2CBF',4.5,'#fff'));
   if(S.start) dot(S.start,'#2bb673',7,'#fff');
@@ -966,6 +987,37 @@ cv.addEventListener('pointermove',e=>{
 cv.addEventListener('pointerleave',e=>{if(e.pointerType==='mouse'&&!nPtr&&!probe.classList.contains('act'))hideProbe();});
 cv.addEventListener('contextmenu',e=>e.preventDefault());
 
+/* print area: drag a box on the terrain */
+let areaDrag=null, areaReq=null;
+cv.addEventListener('pointerdown',e=>{
+  if(S.mode!=='area'||e.button>0||S.preview||!R3) return;
+  const g=pickTerrain(e.offsetX,e.offsetY); if(!g) return;
+  areaDrag={a:g,last:g,id:e.pointerId,prev:PA,x:e.offsetX,y:e.offsetY};
+  try{ cv.setPointerCapture(e.pointerId); }catch(_){}
+  PA={x0:g[0],y0:g[1],x1:g[0],y1:g[1]}; dirty=true;
+});
+cv.addEventListener('pointermove',e=>{
+  if(!areaDrag||e.pointerId!==areaDrag.id||areaReq) return;
+  const x=e.offsetX,y=e.offsetY;
+  areaReq=requestAnimationFrame(()=>{ areaReq=null; if(!areaDrag) return; const g=pickTerrain(x,y); if(g){ areaDrag.last=g; setArea(areaDrag.a,g); dirty=true; } });
+});
+function areaEnd(e){
+  if(!areaDrag||e.pointerId!==areaDrag.id) return;
+  const d=areaDrag; areaDrag=null;
+  if(e.type==='pointerup'&&Math.hypot(e.offsetX-d.x,e.offsetY-d.y)>=7){
+    const g=pickTerrain(e.offsetX,e.offsetY)||d.last; setArea(d.a,g); finishArea(); setMode('inspect');
+  } else PA=d.prev;   // a tap or a cancelled drag keeps the old area
+  printUI(); dirty=true;
+}
+cv.addEventListener('pointerup',areaEnd); cv.addEventListener('pointercancel',areaEnd);
+document.getElementById('areaBtn').onclick=()=>{
+  if(S.mode==='area'){ setMode('inspect'); return; }
+  if(S.preview) setPreview(false);
+  setMode('area');
+  if(window.innerWidth<=860) mapwrap.scrollIntoView({behavior:'smooth'});
+};
+document.getElementById('areaAll').onclick=()=>{ PA=null; printUI(); dirty=true; };
+
 const probe=document.getElementById('probe');
 function describeCell(i){
   const F=factorsAt(i);
@@ -1005,9 +1057,10 @@ function openAssess(){
 function setMode(m){
   S.mode=m; cv.classList.toggle('drawing',m!=='inspect');
   const hint=document.getElementById('modehint');
-  const msg={draw:'Tap the terrain to add route points',start:'Tap the terrain to set the start',end:'Tap the terrain to set the end'}[m];
+  const msg={draw:'Tap the terrain to add route points',start:'Tap the terrain to set the start',end:'Tap the terrain to set the end',area:'Drag across the terrain to draw the print area'}[m];
   hint.style.display=msg?'block':'none'; hint.textContent=msg||'';
-  hideProbe();
+  hideProbe(); if(R3) R3.controls.enabled=m!=='area';
+  const ab=document.getElementById('areaBtn'); if(ab&&typeof printUI==='function'&&G) printUI();
   document.getElementById('drawCtl').style.display = m==='draw'?'flex':'none';
   document.getElementById('drawBtn').textContent = m==='draw'?'Cancel drawing':'Draw on map';
   dirty=true;
@@ -1035,9 +1088,45 @@ document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{
   document.querySelectorAll('.pane').forEach(p=>p.classList.toggle('on',p.id==='pane-'+b.dataset.t));
   if(b.dataset.t==='routes' && S.selected && S.selected.A && !S.selected.A.area) drawProfile(S.selected.A);
   if(b.dataset.t==='print') printUI();
+  dirty=true;
 });
 /* ---------------- 3D print (STL) ---------------- */
 const PRINT={vex:1.5, base:3, ridgeH:2.2, ridgeR:1.1, fade:1.0};
+let PA=null;                 // print section in grid units {x0,y0,x1,y1}, or null for the whole mountain
+const MINSEC=12;             // smallest section side, in cells (360 m)
+const printBox=()=>PA?{x0:PA.x0,y0:PA.y0,w:PA.x1-PA.x0,h:PA.y1-PA.y0}:{x0:0,y0:0,w:G.W,h:G.H};
+function setArea(a,b){
+  PA={x0:clamp(Math.min(a[0],b[0]),0,G.W), x1:clamp(Math.max(a[0],b[0]),0,G.W),
+      y0:clamp(Math.min(a[1],b[1]),0,G.H), y1:clamp(Math.max(a[1],b[1]),0,G.H)};
+}
+function fitSpan(lo,hi,max){
+  if(hi-lo<MINSEC){ const c=(lo+hi)/2; lo=c-MINSEC/2; hi=c+MINSEC/2; }
+  if(lo<0){ hi-=lo; lo=0; } if(hi>max){ lo-=hi-max; hi=max; }
+  return [Math.max(0,lo),Math.min(max,hi)];
+}
+function finishArea(){
+  const [x0,x1]=fitSpan(PA.x0,PA.x1,G.W), [y0,y1]=fitSpan(PA.y0,PA.y1,G.H);
+  PA={x0,x1,y0,y1};
+}
+const inBox=(x,y,B)=>x>=B.x0&&x<=B.x0+B.w&&y>=B.y0&&y<=B.y0+B.h;
+function routeInBox(R,B){
+  for(const g of (R.parts||[R.g])) for(let s=0;s<g.length;s++){
+    if(inBox(g[s][0],g[s][1],B)) return true;
+    if(s){
+      const dx=g[s][0]-g[s-1][0], dy=g[s][1]-g[s-1][1], n=Math.ceil(Math.hypot(dx,dy)/2);
+      for(let k=1;k<n;k++) if(inBox(g[s-1][0]+dx*k/n,g[s-1][1]+dy*k/n,B)) return true;
+    }
+  }
+  return false;
+}
+let AS=null;
+function areaStats(B){
+  const key=[B.x0,B.y0,B.w,B.h].map(v=>v.toFixed(1)).join();
+  if(AS&&AS.key===key) return AS;
+  let lo=1e9,hi=-1e9;
+  for(let y=0;y<=B.h;y+=2) for(let x=0;x<=B.w;x+=2){ const e=bil(G.elev,B.x0+x,B.y0+y); if(e<lo)lo=e; if(e>hi)hi=e; }
+  return AS={key,lo,hi};
+}
 function printRoutes(){
   const list=[...ROUTES,...S.userRoutes,...(S.safe?[S.safe]:[])];
   if(S.selected&&S.selected.kind==='run') list.push(S.selected);
@@ -1046,30 +1135,43 @@ function printRoutes(){
 function printUI(){
   const host=document.getElementById('printList'); if(!host) return;
   schedulePreview();
-  host.innerHTML=printRoutes().map(R=>`<div class="small">· ${R.name}${R.kind==='run'?' (selected run)':''}</div>`).join('');
-  const w=+document.getElementById('printW').value;
-  if(!G.zr){let lo=1e9,hi=-1e9; for(const e of G.elev){if(e<lo)lo=e; if(e>hi)hi=e;} G.zr=hi-lo;}
-  document.getElementById('printDims').textContent=`${w} × ${Math.round(w*G.H/G.W+legendDepth(w))} mm footprint, up to about ${Math.round(PRINT.base+G.zr*w/(G.W*G.res)*PRINT.vex+PRINT.ridgeH)} mm tall`;
+  const B=printBox(), all=printRoutes(), shown=PA?all.filter(R=>routeInBox(R,B)):all;
+  host.innerHTML=(shown.length?shown.map(R=>`<div class="small">· ${R.name}${R.kind==='run'?' (selected run)':''}</div>`).join(''):'<div class="small muted">None in this area.</div>')+
+    (PA&&all.length>shown.length?`<div class="muted small">${all.length-shown.length} more outside this area, not printed.</div>`:'');
+  const w=+document.getElementById('printW').value, vex=+document.getElementById('printV').value||PRINT.vex;
+  PRINT.vex=vex; document.getElementById('printVV').textContent=vex.toFixed(1)+'×';
+  const st=areaStats(B), kmW=B.w*G.res/1000, kmH=B.h*G.res/1000, mmPerM=w/(B.w*G.res);
+  const dep=w*B.h/B.w, tall=PRINT.base+(st.hi-st.lo)*mmPerM*vex+PRINT.ridgeH;
+  const fm=n=>Math.round(n).toLocaleString('en-CA');
+  document.getElementById('areaInfo').textContent=(PA?'Section: ':'Whole mountain: ')+`${kmW.toFixed(1)} × ${kmH.toFixed(1)} km, ${fm(st.lo)} to ${fm(st.hi)} m.`+
+    (PA&&Math.min(kmW,kmH)<1?' Small area: the elevation data has 30 m cells, so surfaces look blocky below about 1 km.':'');
+  document.getElementById('printDims').textContent=`${w} × ${Math.round(dep)} mm footprint, up to about ${Math.round(tall)} mm tall. Horizontal scale 1:${fm(B.w*G.res/w*1000)}.`+(tall>200?' That is taller than many printer beds. Lower the height exaggeration or choose a larger area.':'');
+  document.getElementById('printNote').textContent=`Heights are exaggerated ${vex.toFixed(1)} times on a ${PRINT.base} mm base. Route ridges are ${2*PRINT.ridgeR} mm wide and ${PRINT.ridgeH} mm tall. A 0.4 mm nozzle at 0.12 to 0.2 mm layers works well.`;
+  document.getElementById('areaAll').disabled=!PA;
+  document.getElementById('areaBtn').textContent=S.mode==='area'?'Done':(PA?'Redraw area':'Select area on map');
 }
 function legendDepth(w){ return 0; }
 function buildPrintGrid(widthMM){
-  const P=PRINT, Wmm=widthMM, Dmm=widthMM*G.H/G.W;
+  const P=PRINT, B=printBox(), Wmm=widthMM, Dmm=widthMM*B.h/B.w, vex=+document.getElementById('printV').value||P.vex;
   const sp=Math.max(0.4,Math.sqrt(Wmm*Dmm/260000));
   const nx=Math.round(Wmm/sp)+1, nyT=Math.round(Dmm/sp)+1, syp=Dmm/(nyT-1);
   const ny=nyT, Dtot=(ny-1)*syp;
-  const mmPerM=Wmm/(G.W*G.res);
-  const Z=new Float32Array(nx*ny), D=new Float32Array(nx*ny).fill(1e9);
+  const mmPerM=Wmm/(B.w*G.res);
+  const Z=new Float32Array(nx*ny), D=new Float32Array(nx*ny).fill(1e9), E=new Float32Array(nx*ny);
   let zmin=1e9;
-  for(let k=0;k<G.elev.length;k++) zmin=Math.min(zmin,G.elev[k]);
+  if(PA){ /* section: lowest point of the section sits on the base */ }
+  else for(let k=0;k<G.elev.length;k++) zmin=Math.min(zmin,G.elev[k]);
   // plain terrain surface (no risk texture, no legend strip)
   for(let j=0;j<nyT;j++)for(let i=0;i<nx;i++){
-    const k=j*nx+i, gx=i/(nx-1)*G.W, gy=j/(nyT-1)*G.H;
-    Z[k]=P.base+(bil(G.elev,gx,gy)-zmin)*mmPerM*P.vex;
+    const k=j*nx+i, gx=B.x0+i/(nx-1)*B.w, gy=B.y0+j/(nyT-1)*B.h;
+    E[k]=bil(G.elev,gx,gy); if(PA&&E[k]<zmin) zmin=E[k];
   }
-  // distance from each vertex to the nearest route, in mm
-  const reach=P.ridgeR+P.fade, gxmm=Wmm/G.W, gymm=Dmm/G.H;
+  for(let k=0;k<Z.length;k++) Z[k]=P.base+(E[k]-zmin)*mmPerM*vex;
+  // distance from each vertex to the nearest route, in mm (routes are cut off at the section edge)
+  const reach=P.ridgeR+P.fade, gxmm=Wmm/B.w, gymm=Dmm/B.h;
   for(const R of printRoutes()) for(const g of (R.parts||[R.g])) for(let s=1;s<g.length;s++){
-    const ax=g[s-1][0]*gxmm, ay=g[s-1][1]*gymm, bx=g[s][0]*gxmm, by=g[s][1]*gymm;
+    const ax=(g[s-1][0]-B.x0)*gxmm, ay=(g[s-1][1]-B.y0)*gymm, bx=(g[s][0]-B.x0)*gxmm, by=(g[s][1]-B.y0)*gymm;
+    if(Math.max(ax,bx)<-reach||Math.min(ax,bx)>Wmm+reach||Math.max(ay,by)<-reach||Math.min(ay,by)>Dmm+reach) continue;
     const i0=Math.max(0,Math.floor((Math.min(ax,bx)-reach)/Wmm*(nx-1))), i1=Math.min(nx-1,Math.ceil((Math.max(ax,bx)+reach)/Wmm*(nx-1)));
     const j0=Math.max(0,Math.floor((Math.min(ay,by)-reach)/syp)), j1=Math.min(nyT-1,Math.ceil((Math.max(ay,by)+reach)/syp));
     for(let j=j0;j<=j1;j++)for(let i=i0;i<=i1;i++){
@@ -1143,11 +1245,12 @@ async function zipOne(name,u8){
 let dlCap=null;
 if(window.claude&&typeof window.claude.use==='function'){ window.claude.use('downloads').then(d=>{dlCap=d;}).catch(()=>{}); }
 document.getElementById('printW').onchange=printUI;
+document.getElementById('printV').oninput=printUI;
 /* print preview: the STL surface shown in the 3D view, lit so texture and ridges read */
 let PV=null, pvT=null;
 function buildPreview(){
   const w=+document.getElementById('printW').value;
-  const M=buildPrintGrid(w), {Z,nx,ny,syp,Wmm}=M, D=M.Dmm, s=wx(G.W)/Wmm;
+  const M=buildPrintGrid(w), {Z,nx,ny,syp,Wmm}=M, D=M.Dmm, s=wx(printBox().w)/Wmm;
   if(PV){ PV.group.traverse(o=>{if(o.geometry)o.geometry.dispose(); if(o.material)o.material.dispose();}); R3.scene.remove(PV.group); }
   const pos=new Float32Array(nx*ny*3);
   for(let j=0;j<ny;j++)for(let i=0;i<nx;i++){const k=j*nx+i; pos[k*3]=i*Wmm/(nx-1)*s; pos[k*3+1]=Z[k]*s; pos[k*3+2]=j*syp*s;}
@@ -1180,6 +1283,7 @@ function fitPreview(){
 }
 function setPreview(on){
   if(!R3) return;
+  if(on&&S.mode==='area') setMode('inspect');
   S.preview=on;
   if(on) buildPreview();
   R3.terrainParts.forEach(m=>m.visible=!on);
@@ -1204,7 +1308,7 @@ document.getElementById('printBtn').onclick=async()=>{
   btn.disabled=true; msg.textContent='Building the model…';
   await new Promise(r=>setTimeout(r,30));
   try{
-    const M=buildSTL(w), base=`whistler-blackcomb-terrain-${w}mm`;
+    const M=buildSTL(w), base=PA?`whistler-blackcomb-section-${w}mm`:`whistler-blackcomb-terrain-${w}mm`;
     const info=`${(M.nTri/1000).toFixed(0)}k triangles, ${M.Wmm.toFixed(0)} × ${M.Dmm.toFixed(0)} × ${M.hmax.toFixed(0)} mm`;
     if(dlCap){
       msg.textContent='Compressing…';
